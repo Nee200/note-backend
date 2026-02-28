@@ -361,6 +361,36 @@ app.post('/admin/login', (req, res) => {
     }
 });
 
+// --- NEW API-based Admin Routes ---
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body;
+    if (password === ADMIN_PASSWORD) {
+        // Set a Secure/HttpOnly cookie or just a simple boolean string for now (since we use parseCookies)
+        res.cookie('api_admin_auth', 'true', {
+            httpOnly: false, // Accessible to JS if needed, but we rely on server check
+            secure: false, // True in production with HTTPS
+            maxAge: 3600 * 1000 // 1 hour
+        });
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ error: 'Falsches Passwort' });
+    }
+});
+
+app.post('/api/admin/logout', (req, res) => {
+    res.clearCookie('api_admin_auth');
+    res.json({ success: true });
+});
+
+app.get('/api/admin/check', (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth === 'true') {
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ error: 'Not authorized' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
