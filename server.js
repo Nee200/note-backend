@@ -391,8 +391,9 @@ app.post('/api/admin/login', (req, res) => {
         delete loginAttempts[ip];
         res.cookie('api_admin_auth', 'true', {
             httpOnly: false,
-            secure: false,
-            maxAge: 3600 * 1000 // 1 hour
+            secure: true,        // Required for SameSite=None
+            sameSite: 'None',    // Allow cross-origin requests to send this cookie
+            maxAge: 3600 * 1000  // 1 hour
         });
         res.json({ success: true });
     } else {
