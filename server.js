@@ -37,7 +37,7 @@ const cors = require('cors');
 
 // Enable CORS for frontend
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5500', 'http://localhost:5500'], // Allow common local UI ports
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'https://keen-mooncake-5c73e2.netlify.app'], // Allow common local UI ports and netlify
     credentials: true
 }));
 // Webhook-Route MUSS vor app.use(express.json()) definiert werden
@@ -566,7 +566,7 @@ app.post('/create-checkout-session', async (req, res) => {
         const { items, customerEmail } = req.body; // Expecting { items: [{ id: "1-50", quantity: 2 }, ...], customerEmail: "..." }
 
         if (!items || !Array.isArray(items) || items.length === 0) {
-             return res.status(400).json({ error: 'Warenkorb ist leer oder ungültig' });
+            return res.status(400).json({ error: 'Warenkorb ist leer oder ungültig' });
         }
 
         const line_items = [];
@@ -577,7 +577,7 @@ app.post('/create-checkout-session', async (req, res) => {
             // "G1-50" -> baseId "G1", size "50"
             const match = item.id.match(/^(.+?)-(\d+)$/);
             if (!match) return res.status(400).json({ error: 'Ungültige Produkt-ID: ' + item.id });
-            const [ , baseId, sizeStr ] = match;
+            const [, baseId, sizeStr] = match;
             const size = parseInt(sizeStr, 10);
 
             const product = await Product.findOne({ id: baseId });
@@ -641,8 +641,8 @@ app.post('/create-checkout-session', async (req, res) => {
                     },
                 },
             ],
-            success_url: 'http://localhost:3000/success.html',
-            cancel_url: 'http://localhost:3000/cancel.html',
+            success_url: 'https://keen-mooncake-5c73e2.netlify.app/success.html',
+            cancel_url: 'https://keen-mooncake-5c73e2.netlify.app/cancel.html',
         };
 
         if (customerEmail) {
