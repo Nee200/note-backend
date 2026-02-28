@@ -37,7 +37,7 @@ const cors = require('cors');
 
 // Enable CORS for frontend
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'https://keen-mooncake-5c73e2.netlify.app'], // Allow common local UI ports and netlify
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'https://keen-mooncake-5c73e2.netlify.app', 'https://note-fragrances.de', 'https://www.note-fragrances.de'], // Allow common local UI ports, netlify and custom domain
     credentials: true
 }));
 // Webhook-Route MUSS vor app.use(express.json()) definiert werden
@@ -641,8 +641,8 @@ app.post('/create-checkout-session', async (req, res) => {
                     },
                 },
             ],
-            success_url: 'https://keen-mooncake-5c73e2.netlify.app/success.html',
-            cancel_url: 'https://keen-mooncake-5c73e2.netlify.app/cancel.html',
+            success_url: 'https://note-fragrances.de/success.html',
+            cancel_url: 'https://note-fragrances.de/cancel.html',
         };
 
         if (customerEmail) {
