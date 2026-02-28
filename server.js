@@ -477,6 +477,45 @@ app.put('/api/admin/products-bulk', async (req, res) => {
     }
 });
 
+// Create new product
+app.post('/api/admin/products', async (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth !== 'true') {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    try {
+        const { id, name, category, inspiredBy, description, images, notes, variants } = req.body;
+
+        if (!id || !name) {
+            return res.status(400).json({ error: 'ID und Name sind Pflichtfelder' });
+        }
+
+        // Check for duplicate ID
+        const existing = await Product.findOne({ id: id.toUpperCase() });
+        if (existing) {
+            return res.status(409).json({ error: 'Produkt-ID existiert bereits: ' + id });
+        }
+
+        const newProduct = new Product({
+            id: id.toUpperCase(),
+            name,
+            category: category || 'unisex',
+            inspiredBy: inspiredBy || '',
+            description: description || '',
+            images: images || [],
+            notes: notes || {},
+            variants: variants || {}
+        });
+
+        await newProduct.save();
+        res.status(201).json({ success: true, product: newProduct });
+    } catch (err) {
+        console.error('Fehler beim Anlegen:', err);
+        res.status(500).json({ error: 'Server Fehler beim Anlegen' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
