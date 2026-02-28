@@ -409,6 +409,43 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
+app.put('/api/admin/products/:id', async (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth !== 'true') {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    try {
+        const { name, inspiredBy, description, category, price30, price50, originalPrice30, originalPrice50 } = req.body;
+
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (inspiredBy !== undefined) updateData.inspiredBy = inspiredBy;
+        if (description !== undefined) updateData.description = description;
+        if (category !== undefined) updateData.category = category;
+
+        // Variants
+        if (price30 !== undefined) updateData['variants.30.price'] = parseFloat(price30);
+        if (price50 !== undefined) updateData['variants.50.price'] = parseFloat(price50);
+        if (originalPrice30 !== undefined) updateData['variants.30.originalPrice'] = parseFloat(originalPrice30) || null;
+        if (originalPrice50 !== undefined) updateData['variants.50.originalPrice'] = parseFloat(originalPrice50) || null;
+
+        const updated = await Product.findOneAndUpdate(
+            { id: req.params.id },
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ error: 'Produkt nicht gefunden' });
+        }
+        res.json({ success: true, product: updated });
+    } catch (err) {
+        console.error('Fehler beim Aktualisieren:', err);
+        res.status(500).json({ error: 'Server Fehler beim Aktualisieren' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
