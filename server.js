@@ -516,6 +516,21 @@ app.post('/api/admin/products', async (req, res) => {
     }
 });
 
+// Admin: fetch all orders (newest first)
+app.get('/api/admin/orders', async (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth !== 'true') {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    try {
+        const orders = await Order.find({}).sort({ date: -1 });
+        res.json({ orders });
+    } catch (err) {
+        console.error('Fehler beim Laden der Bestellungen:', err);
+        res.status(500).json({ error: 'Server Fehler' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
