@@ -361,19 +361,61 @@ app.post('/admin/login', (req, res) => {
     }
 });
 
+// --- Brute-force protection for admin login ---
+const loginAttempts = {}; // { ip: { count, lockedUntil } }
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+function getClientIp(req) {
+    return (req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown').split(',')[0].trim();
+}
+
 // --- NEW API-based Admin Routes ---
 app.post('/api/admin/login', (req, res) => {
+    const ip = getClientIp(req);
+    const now = Date.now();
+    const record = loginAttempts[ip] || { count: 0, lockedUntil: 0 };
+
+    // Check if currently locked
+    if (record.lockedUntil > now) {
+        const minutesLeft = Math.ceil((record.lockedUntil - now) / 60000);
+        return res.status(429).json({
+            error: `Zu viele Fehlversuche. Bitte ${minutesLeft} Minute(n) warten.`,
+            lockedMinutes: minutesLeft
+        });
+    }
+
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
-        // Set a Secure/HttpOnly cookie or just a simple boolean string for now (since we use parseCookies)
+        // Success – clear attempts
+        delete loginAttempts[ip];
         res.cookie('api_admin_auth', 'true', {
-            httpOnly: false, // Accessible to JS if needed, but we rely on server check
-            secure: false, // True in production with HTTPS
+            httpOnly: false,
+            secure: false,
             maxAge: 3600 * 1000 // 1 hour
         });
         res.json({ success: true });
     } else {
-        res.status(401).json({ error: 'Falsches Passwort' });
+        // Wrong password – increment counter
+        record.count = (record.count || 0) + 1;
+        const remaining = MAX_ATTEMPTS - record.count;
+
+        if (record.count >= MAX_ATTEMPTS) {
+            record.lockedUntil = now + LOCKOUT_MS;
+            record.count = 0; // reset after lockout starts
+            loginAttempts[ip] = record;
+            console.warn(`Admin login: IP ${ip} gesperrt nach ${MAX_ATTEMPTS} Fehlversuchen`);
+            return res.status(429).json({
+                error: `Zu viele Fehlversuche. IP fuer 15 Minuten gesperrt.`,
+                lockedMinutes: 15
+            });
+        }
+
+        loginAttempts[ip] = record;
+        return res.status(401).json({
+            error: `Falsches Passwort. Noch ${remaining} Versuch(e) verbleibend.`,
+            attemptsLeft: remaining
+        });
     }
 });
 
