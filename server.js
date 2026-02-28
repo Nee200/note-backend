@@ -422,7 +422,12 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 app.post('/api/admin/logout', (req, res) => {
-    res.clearCookie('api_admin_auth');
+    res.clearCookie('api_admin_auth', {
+        httpOnly: false,
+        secure: true,
+        sameSite: 'None',
+        path: '/'
+    });
     res.json({ success: true });
 });
 
