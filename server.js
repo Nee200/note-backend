@@ -446,6 +446,37 @@ app.put('/api/admin/products/:id', async (req, res) => {
     }
 });
 
+// Bulk price update – updates any subset of products (or ALL if ids array is empty/missing)
+app.put('/api/admin/products-bulk', async (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth !== 'true') {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    try {
+        const { ids, price30, price50, originalPrice30, originalPrice50 } = req.body;
+
+        const updateData = {};
+        if (price30 !== undefined && price30 !== '') updateData['variants.30.price'] = parseFloat(price30);
+        if (price50 !== undefined && price50 !== '') updateData['variants.50.price'] = parseFloat(price50);
+        if (originalPrice30 !== undefined) updateData['variants.30.originalPrice'] = originalPrice30 !== '' ? parseFloat(originalPrice30) : null;
+        if (originalPrice50 !== undefined) updateData['variants.50.originalPrice'] = originalPrice50 !== '' ? parseFloat(originalPrice50) : null;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ error: 'Keine Preisfelder angegeben' });
+        }
+
+        // If ids provided → only update those, else update ALL
+        const filter = (ids && ids.length > 0) ? { id: { $in: ids } } : {};
+
+        const result = await Product.updateMany(filter, { $set: updateData });
+        res.json({ success: true, updated: result.modifiedCount });
+    } catch (err) {
+        console.error('Bulk update Fehler:', err);
+        res.status(500).json({ error: 'Server Fehler beim Massenupdate' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
