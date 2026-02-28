@@ -391,6 +391,24 @@ app.get('/api/admin/check', (req, res) => {
     }
 });
 
+app.delete('/api/admin/products/:id', async (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth !== 'true') {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    try {
+        const deletedProduct = await Product.findOneAndDelete({ id: req.params.id });
+        if (!deletedProduct) {
+            return res.status(404).json({ error: 'Produkt nicht gefunden' });
+        }
+        res.json({ success: true, message: 'Produkt gelöscht' });
+    } catch (err) {
+        console.error('Fehler beim Löschen:', err);
+        res.status(500).json({ error: 'Server Fehler beim Löschen' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
