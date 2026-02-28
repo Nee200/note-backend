@@ -85,31 +85,26 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                 date: new Date().toISOString(),
                 email: session.customer_details && session.customer_details.email,
                 name: session.customer_details && session.customer_details.name,
-                amount: session.amount_total ? session.amount_total / 100 : null,
+                amount: session.amount_total,  // kept in cents; admin UI divides by 100
                 address: addressData,
-                items: items // Produkte hinzufügen
+                items: items
             };
 
-            const ordersFilePath = path.join(__dirname, 'orders.json');
-            let orders = [];
-
-            if (fs.existsSync(ordersFilePath)) {
-                try {
-                    const data = fs.readFileSync(ordersFilePath, 'utf8');
-                    orders = data ? JSON.parse(data) : [];
-                } catch (err) {
-                    console.error('Fehler beim Lesen von orders.json:', err);
-                    orders = [];
-                }
-            }
-
-            orders.push(newOrder);
-
+            // Save to MongoDB (primary)
             try {
-                fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), 'utf8');
-                console.log('Bestellung in orders.json gespeichert!');
-            } catch (err) {
-                console.error('Fehler beim Schreiben in orders.json:', err);
+                const order = new Order(newOrder);
+                await order.save();
+                console.log('Bestellung in MongoDB gespeichert:', order._id);
+            } catch (dbErr) {
+                console.error('MongoDB Fehler, Fallback auf orders.json:', dbErr);
+                // Fallback: write to orders.json
+                const ordersFilePath = path.join(__dirname, 'orders.json');
+                let orders = [];
+                if (fs.existsSync(ordersFilePath)) {
+                    try { orders = JSON.parse(fs.readFileSync(ordersFilePath, 'utf8')); } catch (e) { }
+                }
+                orders.push(newOrder);
+                try { fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), 'utf8'); } catch (e) { }
             }
             break;
         default:
