@@ -668,6 +668,7 @@ app.get('/api/products', async (req, res) => {
         const products = await Product.find({}, '-_id -__v');
         res.json(products);
     } catch (e) {
-        res.status(500).json({ error: 'Server error' });
+        console.error("Products error:", e);
+        res.status(500).json({ error: e.message || 'Server error' });
     }
 });
