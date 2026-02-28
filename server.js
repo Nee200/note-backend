@@ -45,13 +45,19 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
     const sig = request.headers['stripe-signature'];
     let event;
 
-    // Use the secret provided by the user
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    console.log('[Webhook] Eingehend | Secret gesetzt:', !!endpointSecret, '| Sig vorhanden:', !!sig);
+
+    if (!endpointSecret) {
+        console.error('[Webhook] STRIPE_WEBHOOK_SECRET fehlt in den Umgebungsvariablen!');
+        return response.status(400).send('Webhook secret not configured');
+    }
 
     try {
         event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+        console.log('[Webhook] Signatur OK | Event:', event.type);
     } catch (err) {
-        console.log(`Webhook Error: ${err.message}`);
+        console.error(`[Webhook] Signatur FEHLER: ${err.message}`);
         response.status(400).send(`Webhook Error: ${err.message}`);
         return;
     }
