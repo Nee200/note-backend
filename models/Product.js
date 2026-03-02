@@ -18,6 +18,7 @@ const ProductSchema = new mongoose.Schema({
         base: String
     },
     images: [String],
+    bestseller: { type: Boolean, default: false },
     variants: {
         30: VariantSchema,
         50: VariantSchema,
