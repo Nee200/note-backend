@@ -472,6 +472,7 @@ app.put('/api/admin/products/:id', async (req, res) => {
         if (inspiredBy !== undefined) updateData.inspiredBy = inspiredBy;
         if (description !== undefined) updateData.description = description;
         if (category !== undefined) updateData.category = category;
+        if (req.body.bestseller !== undefined) updateData.bestseller = req.body.bestseller;
 
         // Variants
         if (price30 !== undefined) updateData['variants.30.price'] = parseFloat(price30);
@@ -523,6 +524,28 @@ app.put('/api/admin/products-bulk', async (req, res) => {
     } catch (err) {
         console.error('Bulk update Fehler:', err);
         res.status(500).json({ error: 'Server Fehler beim Massenupdate' });
+    }
+});
+
+// Bulk bestseller update – set/unset bestseller for a list of product IDs
+app.put('/api/admin/products-bestseller', async (req, res) => {
+    const cookies = parseCookies(req);
+    if (cookies.api_admin_auth !== 'true') {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    try {
+        const { ids, bestseller } = req.body;
+        if (!ids || !Array.isArray(ids)) {
+            return res.status(400).json({ error: 'ids array required' });
+        }
+        const result = await Product.updateMany(
+            { id: { $in: ids } },
+            { $set: { bestseller: !!bestseller } }
+        );
+        res.json({ success: true, updated: result.modifiedCount });
+    } catch (err) {
+        console.error('Bestseller bulk update Fehler:', err);
+        res.status(500).json({ error: 'Server Fehler' });
     }
 });
 
