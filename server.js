@@ -843,7 +843,10 @@ app.post('/api/admin/orders/:id/notify-pickup', async (req, res) => {
 </body></html>`
         });
 
-        res.json({ success: true });
+        order.pickupEmailSent = true;
+        await order.save();
+
+        res.json({ success: true, order });
     } catch (err) {
         console.error('Fehler beim Senden der Abhol-Email:', err);
         res.status(500).json({ error: 'Fehler beim Senden der Mail' });
