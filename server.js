@@ -1043,6 +1043,49 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+app.post('/create-pickup-order', async (req, res) => {
+    try {
+        const { items, customerName, customerEmail } = req.body;
+        if (!items || !items.length) return res.status(400).json({ error: 'Warenkorb leer' });
+
+        const line_items = [];
+        let totalCents = 0;
+
+        for (const item of items) {
+            const match = item.id.match(/^(.+?)-(\d+)$/);
+            if (!match) continue;
+            const [, baseId, sizeStr] = match;
+            const size = parseInt(sizeStr, 10);
+            const product = await Product.findOne({ id: baseId });
+            if (!product || !product.variants[size]) continue;
+
+            const priceCents = Math.round(product.variants[size].price * 100);
+            totalCents += priceCents * item.quantity;
+
+            line_items.push({
+                quantity: item.quantity,
+                description: product.name + ' (' + size + 'ml) [BARZAHLUNG]',
+                amount_total: priceCents * item.quantity
+            });
+        }
+
+        const newOrder = new Order({
+            date: new Date().toISOString(),
+            email: customerEmail,
+            name: customerName,
+            amount: totalCents,
+            address: { line1: 'Selbstabholung (Zahlung vor Ort)', city: '', postal_code: '', country: '' },
+            items: line_items
+        });
+        await newOrder.save();
+
+        res.json({ success: true, orderId: newOrder._id });
+    } catch (e) {
+        console.error('Pickup order error:', e);
+        res.status(500).json({ error: 'Serverfehler' });
+    }
+});
+
 const PORT = 4242;
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
