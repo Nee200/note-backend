@@ -13,7 +13,9 @@ const OrderSchema = new mongoose.Schema({
     name: String,
     amount: Number,
     address: mongoose.Schema.Types.Mixed,
-    items: [OrderItemSchema]
+    items: [OrderItemSchema],
+    status: { type: String, default: 'neu' }, // neu, in_bearbeitung, abgeschlossen, archiv
+    statusUpdatedAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('Order', OrderSchema);
