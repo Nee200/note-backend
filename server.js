@@ -776,6 +776,70 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
     }
 });
 
+app.post('/api/admin/orders/:id/notify-pickup', async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ error: 'Order nicht gefunden' });
+        if (!order.email) return res.status(400).json({ error: 'Keine Email vorhanden' });
+
+        // Update status to "in_bearbeitung" if it was "neu", 
+        // but typically the admin might have packed it and wants to notify
+        // Actually this is just sending the email, but we could also auto-advance the status if requested.
+
+        await resend.emails.send({
+            from: 'NOTE. fragrances <info@note-fragrances.de>',
+            to: order.email,
+            subject: `Dein Parfum ist abholbereit! \u2713`,
+            html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
+        <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Abholbereit</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${order.name}!</h1>
+        <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:380px;">
+          Deine Bestellung ist nun fertig gepackt und liegt zur **Abholung in unserem Store** f&uuml;r dich bereit.
+          <br><br>
+          Bringe bitte den Zahlbetrag von **${(order.amount / 100).toFixed(2).replace('.', ',')} \u20ac** m&ouml;glichst passend in Bar mit. Wir freuen uns auf deinen Besuch!
+        </p>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 \u00b7 13057 Berlin \u00b7 Deutschland</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Fehler beim Senden der Abhol-Email:', err);
+        res.status(500).json({ error: 'Fehler beim Senden der Mail' });
+    }
+});
+
 app.post('/admin/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
     res.redirect('/admin');
