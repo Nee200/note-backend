@@ -816,19 +816,19 @@ app.post('/api/admin/orders/:id/notify-pickup', async (req, res) => {
         <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Abholbereit</p>
         <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${order.name}!</h1>
-        <p style="margin:0 auto;font-size:14px;color:#666;line-height:1.8;max-width:380px;">
-          Deine Bestellung ist nun fertig gepackt und liegt zur Abholung f&uuml;r dich bereit. Du findest unseren Store hier:
+        <p style="margin:0 auto;font-size:15px;color:#444;line-height:1.8;max-width:400px;">
+          Deine Bestellung ist nun fertig gepackt und liegt zur **Abholung** f&uuml;r dich bereit. Du findest unseren Store hier:
           <br><br>
-          <strong style="color:#000;">N\u00d8TE. fragrances</strong><br>
-          Warnitzer Str. 20<br>
-          13057 Berlin
+          <strong style="color:#000; font-size: 16px;">N\u00d8TE. fragrances</strong><br>
+          <strong style="color:#000; font-size: 16px;">Warnitzer Str. 20</strong><br>
+          <strong style="color:#000; font-size: 16px;">13057 Berlin</strong>
           <br><br>
           Bitte bringe den folgenden Zahlbetrag m&ouml;glichst passend in Bar mit. Wir freuen uns auf deinen Besuch!
         </p>
         
-        <div style="margin: 28px auto 0; padding: 18px 24px; background: #fff; border: 2px solid #d4af37; border-radius: 8px; max-width: 250px;">
-            <p style="margin:0; font-size:11px; color:#999; text-transform:uppercase; letter-spacing:0.15em; margin-bottom: 6px;">Zu zahlen vor Ort</p>
-            <p style="margin:0; font-family:Georgia,serif; font-size:26px; color:#1a1a1a; font-weight:400;">${(order.amount / 100).toFixed(2).replace('.', ',')} \u20ac</p>
+        <div style="margin: 30px auto 0; padding: 22px 24px; background: #fff; border: 3px solid #d4af37; border-radius: 8px; max-width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <p style="margin:0; font-size:12px; color:#555; text-transform:uppercase; letter-spacing:0.15em; margin-bottom: 8px; font-weight:700;">Zu zahlen vor Ort</p>
+            <p style="margin:0; font-family:Georgia,serif; font-size:32px; color:#000; font-weight:700;">${(order.amount / 100).toFixed(2).replace('.', ',')} \u20ac</p>
         </div>
 
       </td></tr>
