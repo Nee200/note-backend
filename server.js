@@ -736,10 +736,42 @@ app.get('/api/admin/orders', async (req, res) => {
         return res.status(401).json({ error: 'Not authorized' });
     }
     try {
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+        // Auto-archive
+        await Order.updateMany(
+            { status: 'abgeschlossen', statusUpdatedAt: { $lte: threeDaysAgo } },
+            { $set: { status: 'archiv', statusUpdatedAt: new Date() } }
+        );
+
         const orders = await Order.find({}).sort({ date: -1 });
         res.json({ orders });
     } catch (err) {
         console.error('Fehler beim Laden der Bestellungen:', err);
+        res.status(500).json({ error: 'Server Fehler' });
+    }
+});
+
+app.put('/api/admin/orders/:id/status', async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    try {
+        const { status } = req.body;
+        if (!['neu', 'in_bearbeitung', 'abgeschlossen', 'archiv'].includes(status)) {
+            return res.status(400).json({ error: 'Ungültiger Status' });
+        }
+
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ error: 'Order nicht gefunden' });
+
+        order.status = status;
+        order.statusUpdatedAt = new Date();
+        await order.save();
+
+        res.json({ success: true, order });
+    } catch (err) {
+        console.error('Fehler beim Update des Order Status:', err);
         res.status(500).json({ error: 'Server Fehler' });
     }
 });
