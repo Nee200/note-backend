@@ -21,6 +21,11 @@ const { v4: uuidv4 } = require('uuid');
 const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
+function isAdmin(req) {
+    const cookies = parseCookies(req);
+    return cookies.api_admin_auth === 'true' || req.headers.authorization === 'Bearer true';
+}
+
 // Helper to parse cookies
 const parseCookies = (request) => {
     const list = {};
@@ -539,7 +544,7 @@ app.post('/api/admin/login', (req, res) => {
             sameSite: 'None',    // Allow cross-origin requests to send this cookie
             maxAge: 3600 * 1000  // 1 hour
         });
-        res.json({ success: true });
+        res.json({ success: true, token: 'true' });
     } else {
         // Wrong password – increment counter
         record.count = (record.count || 0) + 1;
@@ -575,8 +580,7 @@ app.post('/api/admin/logout', (req, res) => {
 });
 
 app.get('/api/admin/check', (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth === 'true') {
+    if (isAdmin(req)) {
         res.json({ success: true });
     } else {
         res.status(401).json({ error: 'Not authorized' });
@@ -584,8 +588,7 @@ app.get('/api/admin/check', (req, res) => {
 });
 
 app.delete('/api/admin/products/:id', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth !== 'true') {
+    if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
 
@@ -602,8 +605,7 @@ app.delete('/api/admin/products/:id', async (req, res) => {
 });
 
 app.put('/api/admin/products/:id', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth !== 'true') {
+    if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
 
@@ -641,8 +643,7 @@ app.put('/api/admin/products/:id', async (req, res) => {
 
 // Bulk price update – updates any subset of products (or ALL if ids array is empty/missing)
 app.put('/api/admin/products-bulk', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth !== 'true') {
+    if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
 
@@ -694,8 +695,7 @@ app.put('/api/admin/products-bestseller', async (req, res) => {
 
 // Create new product
 app.post('/api/admin/products', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth !== 'true') {
+    if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
 
@@ -731,10 +731,8 @@ app.post('/api/admin/products', async (req, res) => {
     }
 });
 
-// Admin: fetch all orders (newest first)
 app.get('/api/admin/orders', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth !== 'true') {
+    if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
     try {
