@@ -1,10 +1,12 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const User = require('./models/User');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI, {
@@ -68,15 +70,34 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
             const session = event.data.object;
             console.log('Zahlung erfolgreich!');
 
-            // Line Items von Stripe abrufen
+            // Line Items von Stripe abrufen + Produktbilder aus MongoDB
             let items = [];
             try {
                 const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-                items = lineItems.data.map(item => ({
-                    description: item.description,
-                    quantity: item.quantity,
-                    amount_total: item.amount_total / 100,
-                    currency: item.currency
+                items = await Promise.all(lineItems.data.map(async item => {
+                    // Produktname extrahieren (z.B. "Rose Oud (50ml)" → "Rose Oud")
+                    const nameMatch = item.description ? item.description.match(/^(.+?)\s*\(\d+ml\)/) : null;
+                    const baseName = nameMatch ? nameMatch[1].trim() : null;
+
+                    let imageUrl = null;
+                    if (baseName) {
+                        try {
+                            const dbProduct = await Product.findOne({ name: new RegExp(baseName, 'i') }, 'images');
+                            if (dbProduct && dbProduct.images && dbProduct.images.length > 0) {
+                                imageUrl = 'https://note-fragrances.de/' + dbProduct.images[0];
+                            }
+                        } catch (imgErr) {
+                            console.error('Fehler beim Laden des Produktbildes:', imgErr);
+                        }
+                    }
+
+                    return {
+                        description: item.description,
+                        quantity: item.quantity,
+                        amount_total: item.amount_total / 100,
+                        currency: item.currency,
+                        imageUrl
+                    };
                 }));
             } catch (err) {
                 console.error('Fehler beim Abrufen der Line Items:', err);
@@ -112,6 +133,126 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                 orders.push(newOrder);
                 try { fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), 'utf8'); } catch (e) { }
             }
+
+            // Send order confirmation email to customer
+            const customerEmail = session.customer_details && session.customer_details.email;
+            const customerName = session.customer_details && session.customer_details.name || 'Kunde';
+            if (customerEmail) {
+                try {
+                    const itemsHtml = items.length > 0
+                        ? items.map(i => {
+                            const imgTag = i.imageUrl
+                                ? `<img src="${i.imageUrl}" width="60" height="60" alt="${i.description}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
+                                : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
+                            return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
+                              <tr>
+                                <td style="width:70px;vertical-align:middle;">${imgTag}</td>
+                                <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
+                                  <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${i.description}</p>
+                                  <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${i.quantity}</p>
+                                </td>
+                                <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${i.amount_total.toFixed(2).replace('.', ',')} €</td>
+                              </tr>
+                            </table>`;
+                        }).join('')
+                        : '<p style="color:#999;font-size:13px;">–</p>';
+
+                    const totalFormatted = (newOrder.amount / 100).toFixed(2).replace('.', ',');
+
+                    // Lieferadresse des Kunden aufbereiten
+                    const addr = session.shipping_details && session.shipping_details.address
+                        ? session.shipping_details.address
+                        : (session.customer_details && session.customer_details.address);
+                    const addrHtml = addr
+                        ? `${addr.line1 || ''}${addr.line2 ? '<br>' + addr.line2 : ''}<br>${addr.postal_code || ''} ${addr.city || ''}<br>${addr.country || ''}`
+                        : '–';
+
+                    await resend.emails.send({
+                        from: 'NOTE. fragrances <info@note-fragrances.de>',
+                        to: customerEmail,
+                        subject: `Deine Bestellung bei NOTE. fragrances \u2713`,
+                        html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
+        <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Bestellbest\u00e4tigung</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Vielen Dank, ${customerName}!</h1>
+        <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Deine Bestellung ist bei uns eingegangen und wird schnellstm\u00f6glich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.</p>
+      </td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:28px 40px 0;">
+        <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#aaaaaa;font-weight:600;">Deine Bestellung</p>
+        ${itemsHtml}
+      </td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:0 40px 40px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0 16px;">
+          <tr>
+            <td style="font-size:13px;color:#999;">Versand</td>
+            <td style="text-align:right;font-size:13px;color:#999;">${session.shipping_cost ? (session.shipping_cost.amount_total / 100).toFixed(2).replace('.', ',') + ' \u20ac' : 'Kostenlos'}</td>
+          </tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:4px;">
+          <tr>
+            <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.15em;vertical-align:bottom;">Gesamtbetrag</td>
+            <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;font-weight:400;vertical-align:bottom;">${totalFormatted} \u20ac</td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+
+      <tr><td style="background:#f5f3ee;padding:32px 48px 40px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:13px;color:#888;">Fragen zu deiner Bestellung?</p>
+        <a href="mailto:info@note-fragrances.de" style="font-size:14px;color:#000;font-weight:700;text-decoration:none;">info@note-fragrances.de</a>
+      </td></tr>
+
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 \u00b7 13057 Berlin \u00b7 Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body></html>`
+                    });
+
+                    console.log('[Email] Bestellbestätigung gesendet an:', customerEmail);
+                } catch (emailErr) {
+                    console.error('[Email] Fehler beim Senden der Bestellbestätigung:', emailErr);
+                }
+            }
             break;
         default:
             console.log(`Unhandled event type ${event.type}`);
@@ -124,6 +265,8 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 // Middleware for parsing JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+
 
 // --- User Auth Routes ---
 
@@ -301,7 +444,7 @@ try {
 }
 
 // --- Live Viewer Tracking ---
-const productViewers = {}; // { productId: [ { ip, timestamp } ] }
+const productViewers = {}; // {productId: [ {ip, timestamp} ] }
 
 // Helper to clean up old viewers (> 60 seconds inactivity)
 function cleanupViewers(productId) {
@@ -357,13 +500,13 @@ app.post('/admin/login', (req, res) => {
         res.redirect('/admin');
     } else {
         res.send(`
-            <script>alert('Falsches Passwort'); window.location.href='/admin';</script>
+    < script > alert('Falsches Passwort'); window.location.href = '/admin';</script >
         `);
     }
 });
 
 // --- Brute-force protection for admin login ---
-const loginAttempts = {}; // { ip: { count, lockedUntil } }
+const loginAttempts = {}; // {ip: {count, lockedUntil} }
 const MAX_ATTEMPTS = 3;
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -381,7 +524,7 @@ app.post('/api/admin/login', (req, res) => {
     if (record.lockedUntil > now) {
         const minutesLeft = Math.ceil((record.lockedUntil - now) / 60000);
         return res.status(429).json({
-            error: `Zu viele Fehlversuche. Bitte ${minutesLeft} Minute(n) warten.`,
+            error: `Zu viele Fehlversuche.Bitte ${minutesLeft} Minute(n) warten.`,
             lockedMinutes: minutesLeft
         });
     }
@@ -408,14 +551,14 @@ app.post('/api/admin/login', (req, res) => {
             loginAttempts[ip] = record;
             console.warn(`Admin login: IP ${ip} gesperrt nach ${MAX_ATTEMPTS} Fehlversuchen`);
             return res.status(429).json({
-                error: `Zu viele Fehlversuche. IP fuer 15 Minuten gesperrt.`,
+                error: `Zu viele Fehlversuche.IP fuer 15 Minuten gesperrt.`,
                 lockedMinutes: 15
             });
         }
 
         loginAttempts[ip] = record;
         return res.status(401).json({
-            error: `Falsches Passwort. Noch ${remaining} Versuch(e) verbleibend.`,
+            error: `Falsches Passwort.Noch ${remaining} Versuch(e) verbleibend.`,
             attemptsLeft: remaining
         });
     }
@@ -612,32 +755,32 @@ app.get('/admin', async (req, res) => {
     const cookies = parseCookies(req);
     if (cookies.admin_auth !== 'true') {
         res.send(`
-        <!DOCTYPE html>
+    < !DOCTYPE html >
         <html lang="de">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Admin Login</title>
-            <style>
-                body { font-family: sans-serif; background-color: #f9f8f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #1a1a1a; }
-                .login-container { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 400px; }
-                input { padding: 0.8rem; margin-bottom: 1.5rem; border: 1px solid #e6e6e6; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 1rem; }
-                button { background-color: #000; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: 500; transition: background 0.3s; }
-                button:hover { background-color: #333; }
-                h1 { margin-top: 0; margin-bottom: 1.5rem; font-weight: 600; }
-            </style>
-        </head>
-        <body>
-            <div class="login-container">
-                <h1>Admin Login</h1>
-                <form action="/admin/login" method="POST">
-                    <input type="password" name="password" placeholder="Passwort eingeben" required>
-                    <button type="submit">Anmelden</button>
-                </form>
-            </div>
-        </body>
-        </html>
-      `);
+            <head>
+                <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Admin Login</title>
+                        <style>
+                            body {font - family: sans-serif; background-color: #f9f8f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #1a1a1a; }
+                            .login-container {background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 400px; }
+                            input {padding: 0.8rem; margin-bottom: 1.5rem; border: 1px solid #e6e6e6; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 1rem; }
+                            button {background - color: #000; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: 500; transition: background 0.3s; }
+                            button:hover {background - color: #333; }
+                            h1 {margin - top: 0; margin-bottom: 1.5rem; font-weight: 600; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="login-container">
+                            <h1>Admin Login</h1>
+                            <form action="/admin/login" method="POST">
+                                <input type="password" name="password" placeholder="Passwort eingeben" required>
+                                    <button type="submit">Anmelden</button>
+                            </form>
+                        </div>
+                    </body>
+                </html>
+                `);
         return;
     }
 
@@ -744,68 +887,68 @@ app.get('/admin', async (req, res) => {
             }
 
             return `
-        <tr>
-          <td>${date}</td>
-          <td>${name}</td>
-          <td>${email}</td>
-          <td>${address}</td>
-          <td>${productsHtml}</td>
-          <td>${amount}</td>
-        </tr>
-      `;
+                <tr>
+                    <td>${date}</td>
+                    <td>${name}</td>
+                    <td>${email}</td>
+                    <td>${address}</td>
+                    <td>${productsHtml}</td>
+                    <td>${amount}</td>
+                </tr>
+                `;
         })
         .join('');
 
     const html = `
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Bestellungen</title>
-      <style>
-        body { font-family: Arial, sans-serif; background-color: #111; color: #f5f5f5; padding: 2rem; }
-        h1 { margin-bottom: 1.5rem; }
-        table { width: 100%; border-collapse: collapse; background-color: #1a1a1a; border-radius: 8px; overflow: hidden; }
-        thead { background-color: #333; }
-        th, td { padding: 0.75rem 1rem; text-align: left; font-size: 0.9rem; }
-        th { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem; color: #ddd; }
-        tbody tr:nth-child(even) { background-color: #181818; }
-        tbody tr:nth-child(odd) { background-color: #141414; }
-        tbody tr:hover { background-color: #222; }
-      </style>
-    </head>
-    <body>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h1 style="margin-bottom: 0;">Bestellungen</h1>
-          <form action="/admin/logout" method="POST">
-              <button type="submit" style="background: #444; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px;">Abmelden</button>
-          </form>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th>Kunde</th>
-            <th>E-Mail</th>
-            <th>Adresse</th>
-            <th>Produkte</th>
-            <th>Betrag</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </body>
-    </html>
-  `;
+                <!DOCTYPE html>
+                <html lang="de">
+                    <head>
+                        <meta charset="UTF-8" />
+                        <title>Bestellungen</title>
+                        <style>
+                            body {font - family: Arial, sans-serif; background-color: #111; color: #f5f5f5; padding: 2rem; }
+                            h1 {margin - bottom: 1.5rem; }
+                            table {width: 100%; border-collapse: collapse; background-color: #1a1a1a; border-radius: 8px; overflow: hidden; }
+                            thead {background - color: #333; }
+                            th, td {padding: 0.75rem 1rem; text-align: left; font-size: 0.9rem; }
+                            th {text - transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem; color: #ddd; }
+                            tbody tr:nth-child(even) {background - color: #181818; }
+                            tbody tr:nth-child(odd) {background - color: #141414; }
+                            tbody tr:hover {background - color: #222; }
+                        </style>
+                    </head>
+                    <body>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h1 style="margin-bottom: 0;">Bestellungen</h1>
+                            <form action="/admin/logout" method="POST">
+                                <button type="submit" style="background: #444; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px;">Abmelden</button>
+                            </form>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Kunde</th>
+                                    <th>E-Mail</th>
+                                    <th>Adresse</th>
+                                    <th>Produkte</th>
+                                    <th>Betrag</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </body>
+                </html>
+                `;
 
     res.send(html);
 });
 
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        const { items, customerEmail } = req.body; // Expecting { items: [{ id: "1-50", quantity: 2 }, ...], customerEmail: "..." }
+        const { items, customerEmail } = req.body; // Expecting {items: [{id: "1-50", quantity: 2 }, ...], customerEmail: "..." }
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'Warenkorb ist leer oder ungültig' });
@@ -914,3 +1057,5 @@ app.get('/api/products', async (req, res) => {
         res.status(500).json({ error: e.message || 'Server error' });
     }
 });
+
+
