@@ -342,6 +342,8 @@ app.post('/api/contact', async (req, res) => {
           <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
           <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
           <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
         </p>
       </td></tr>
     </table>
