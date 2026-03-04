@@ -757,7 +757,7 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
         return res.status(401).json({ error: 'Not authorized' });
     }
     try {
-        const { status } = req.body;
+        const { status, trackingUrl } = req.body;
         if (!['neu', 'in_bearbeitung', 'abgeschlossen', 'archiv'].includes(status)) {
             return res.status(400).json({ error: 'Ungültiger Status' });
         }
@@ -765,9 +765,91 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
         const order = await Order.findById(req.params.id);
         if (!order) return res.status(404).json({ error: 'Order nicht gefunden' });
 
+        const previousStatus = order.status;
         order.status = status;
         order.statusUpdatedAt = new Date();
         await order.save();
+
+        // Automatically send shipping notification when status changes to 'abgeschlossen'
+        if (status === 'abgeschlossen' && previousStatus !== 'abgeschlossen' && order.email) {
+            try {
+                const isPickup = order.address && order.address.line1 &&
+                    order.address.line1.toLowerCase().includes('selbstabholung');
+
+                if (!isPickup) {
+                    // Optional gold tracking button
+                    const trackingBlock = trackingUrl
+                        ? `<table border="0" cellpadding="0" cellspacing="0" style="margin:12px auto 0;border-collapse:collapse;"><tr><td style="background:#d4af37;border-radius:2px;padding:14px 32px;"><a href="${trackingUrl}" style="font-family:Arial,sans-serif;font-size:12px;color:#000;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">&#128269;&nbsp;Sendung verfolgen</a></td></tr></table>`
+                        : '';
+
+                    await resend.emails.send({
+                        from: 'NOTE. fragrances <info@note-fragrances.de>',
+                        to: order.email,
+                        subject: `Deine Bestellung ist unterwegs! \u{1F4E6}`,
+                        html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
+        <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:28px;color:#d4af37;margin-bottom:22px;">&#128230;</div>
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Auf dem Weg zu dir</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${order.name}!</h1>
+        <p style="margin:0 auto;font-size:14px;color:#666;line-height:1.8;max-width:380px;">
+          Gute Neuigkeiten &ndash; deine Bestellung ist soeben auf dem Weg zu dir!
+          <br><br>
+          Du kannst deinen Duft in den n&auml;chsten <strong style="color:#000;">1&ndash;3 Werktagen</strong> erwarten.
+          <br><br>
+          Wir w&uuml;nschen dir viel Freude mit deinem neuen Extraits de Parfum.
+        </p>
+        <br>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:24px auto 0;border-collapse:collapse;">
+          <tr>
+            <td style="background:#1a1a1a;border-radius:2px;padding:14px 32px;">
+              <a href="https://note-fragrances.de" style="font-family:Arial,sans-serif;font-size:12px;color:#ffffff;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">Zur Website</a>
+            </td>
+          </tr>
+        </table>
+        ${trackingBlock}
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 &middot; 13057 Berlin &middot; Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;&middot;&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;&middot;&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
+                    });
+                    console.log(`Versand-Email gesendet an ${order.email} für Bestellung ${order._id}`);
+                }
+            } catch (emailErr) {
+                // Email fehler soll den Status-Update nicht blockieren
+                console.error('Fehler beim Senden der Versand-Email:', emailErr);
+            }
+        }
 
         res.json({ success: true, order });
     } catch (err) {
@@ -1094,12 +1176,13 @@ app.post('/create-checkout-session', async (req, res) => {
             subtotal += priceInCents * item.quantity;
         }
 
-        // Kostenloser Versand ab 50€ (5000 Cents)
-        const shippingRate = subtotal >= 5000 ? 0 : 499;
-        const shippingDisplayName = subtotal >= 5000 ? 'Kostenloser Versand' : 'Standardversand';
+        // Kostenloser Versand ab 60€ (6000 Cents)
+        const shippingRate = subtotal >= 6000 ? 0 : 699;
+        const shippingDisplayName = subtotal >= 6000 ? 'Kostenloser Versand' : 'Standardversand';
 
         const sessionConfig = {
-            payment_method_types: ['card', 'paypal', 'klarna'],
+            // Kein payment_method_types → Stripe nutzt automatisch alle im Dashboard aktivierten
+            // Zahlungsmethoden (Karte, PayPal, Klarna, SEPA etc.)
             line_items: line_items,
             mode: 'payment',
             shipping_address_collection: {
