@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
+const Subscriber = require('./models/Subscriber');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -271,7 +272,131 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// --- Contact Form ---
+app.post('/api/contact', async (req, res) => {
+    const { name, email, subject, message } = req.body;
+    if (!name || !email || !subject || !message) {
+        return res.status(400).json({ error: 'Alle Felder sind erforderlich.' });
+    }
 
+    try {
+        // 1. Nachricht an info@note-fragrances.de
+        await resend.emails.send({
+            from: 'NØTE. Kontakt <noreply@note-fragrances.de>',
+            to: 'info@note-fragrances.de',
+            replyTo: email,
+            subject: `Kontaktanfrage: ${subject}`,
+            html: `
+                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f9f9f9;border-radius:8px;">
+                    <h2 style="font-size:20px;margin-bottom:8px;color:#1a1a1a;">Neue Kontaktanfrage</h2>
+                    <p style="color:#666;font-size:13px;margin-bottom:24px;border-bottom:1px solid #eee;padding-bottom:16px;">
+                        Eingegangen am ${new Date().toLocaleString('de-DE')}
+                    </p>
+                    <table style="width:100%;font-size:14px;color:#333;">
+                        <tr><td style="padding:6px 0;font-weight:600;width:100px;">Name</td><td>${name}</td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;">E-Mail</td><td><a href="mailto:${email}">${email}</a></td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;">Betreff</td><td>${subject}</td></tr>
+                    </table>
+                    <div style="margin-top:20px;padding:16px;background:#fff;border-radius:6px;border:1px solid #eee;">
+                        <p style="margin:0;font-size:14px;line-height:1.7;color:#444;white-space:pre-wrap;">${message}</p>
+                    </div>
+                </div>
+            `
+        });
+
+        // 2. Bestätigung an den Absender
+        await resend.emails.send({
+            from: 'NØTE. Fragrances <noreply@note-fragrances.de>',
+            to: email,
+            subject: 'Wir haben Ihre Nachricht erhalten',
+            html: `
+                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f9f9f9;border-radius:8px;">
+                    <h2 style="font-size:20px;color:#1a1a1a;margin-bottom:8px;">Danke, ${name}!</h2>
+                    <p style="color:#555;font-size:14px;line-height:1.7;">
+                        Wir haben Ihre Nachricht zum Thema <strong>${subject}</strong> erhalten und melden uns schnellstmöglich bei Ihnen.
+                    </p>
+                    <p style="color:#999;font-size:12px;margin-top:32px;border-top:1px solid #eee;padding-top:16px;">
+                        NØTE. Fragrances · info@note-fragrances.de
+                    </p>
+                </div>
+            `
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Kontaktformular Fehler:', err);
+        res.status(500).json({ error: 'E-Mail konnte nicht gesendet werden.' });
+    }
+});
+
+// --- Newsletter Anmeldung ---
+app.post('/api/newsletter', async (req, res) => {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
+    }
+    try {
+        const existing = await Subscriber.findOne({ email: email.toLowerCase().trim() });
+        if (existing) {
+            return res.status(409).json({ error: 'Diese E-Mail ist bereits angemeldet.', alreadySubscribed: true });
+        }
+
+        // Personalisierten Code generieren: NOTE- + 5 zufällige Zeichen
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code;
+        do {
+            code = 'NOTE-' + Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        } while (await Subscriber.findOne({ code }));
+
+        await new Subscriber({ email: email.toLowerCase().trim(), code }).save();
+
+        await resend.emails.send({
+            from: 'NØTE. Fragrances <noreply@note-fragrances.de>',
+            to: email,
+            subject: 'Dein persönlicher Rabattcode – 5% auf deine erste Bestellung',
+            html: `
+                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;background:#f5f3ee;">
+                    <div style="background:#1a1a1a;padding:32px;text-align:center;">
+                        <p style="margin:0;font-size:11px;letter-spacing:0.25em;color:#d4af37;text-transform:uppercase;">NØTE. Fragrances</p>
+                        <h1 style="margin:8px 0 0;font-family:Georgia,serif;font-size:28px;color:#fff;font-weight:400;">Willkommen</h1>
+                    </div>
+                    <div style="padding:40px 48px;text-align:center;">
+                        <p style="font-size:15px;color:#444;line-height:1.8;margin-bottom:28px;">
+                            Danke für deine Anmeldung! Als Dankeschön erhältst du exklusiv <strong>5% Rabatt</strong> auf deine erste Bestellung.
+                        </p>
+                        <div style="background:#1a1a1a;display:inline-block;padding:18px 36px;border-radius:4px;margin-bottom:28px;">
+                            <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.2em;color:#d4af37;text-transform:uppercase;">Dein persönlicher Code</p>
+                            <p style="margin:0;font-family:Georgia,serif;font-size:26px;color:#fff;letter-spacing:0.15em;">${code}</p>
+                        </div>
+                        <p style="font-size:13px;color:#888;">
+                            Gib diesen Code im Warenkorb unter „Gutscheincode" ein.<br>
+                            Gültig für eine Bestellung. Nicht kombinierbar mit anderen Aktionen.
+                        </p>
+                    </div>
+                    <div style="background:#1a1a1a;padding:20px;text-align:center;">
+                        <a href="https://note-fragrances.de/suche" style="color:#d4af37;font-size:12px;text-decoration:none;letter-spacing:0.15em;">ZUR KOLLEKTION →</a>
+                    </div>
+                </div>
+            `
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Newsletter Fehler:', err);
+        res.status(500).json({ error: 'Anmeldung fehlgeschlagen.' });
+    }
+});
+
+// --- Coupon validieren ---
+app.post('/api/validate-coupon', async (req, res) => {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ valid: false });
+    const upper = code.trim().toUpperCase();
+    if (upper === 'DENIZ10') return res.json({ valid: true, discount: 10, label: '-10%' });
+    const sub = await Subscriber.findOne({ code: upper });
+    if (sub) return res.json({ valid: true, discount: sub.discount, label: `-${sub.discount}%` });
+    res.json({ valid: false });
+});
 
 // --- User Auth Routes ---
 
@@ -814,7 +939,7 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
           <br><br>
           Du kannst deinen Duft in den n&auml;chsten <strong style="color:#000;">1&ndash;3 Werktagen</strong> erwarten.
           <br><br>
-          Wir w&uuml;nschen dir viel Freude mit deinem neuen Extraits de Parfum.
+          Wir w&uuml;nschen dir viel Freude mit deinem neuen Extrait de Parfum.
         </p>
         <br>
         <table border="0" cellpadding="0" cellspacing="0" style="margin:24px auto 0;border-collapse:collapse;">
