@@ -392,9 +392,16 @@ app.post('/api/validate-coupon', async (req, res) => {
     const { code } = req.body;
     if (!code) return res.status(400).json({ valid: false });
     const upper = code.trim().toUpperCase();
-    if (upper === 'DENIZ10') return res.json({ valid: true, discount: 10, label: '-10%' });
+
+    // Nur Newsletter-Codes aus der Datenbank
     const sub = await Subscriber.findOne({ code: upper });
-    if (sub) return res.json({ valid: true, discount: sub.discount, label: `-${sub.discount}%` });
+    if (sub) {
+        return res.json({
+            valid: true,
+            discount: sub.discount,
+            label: `-${sub.discount}% Newsletter-Rabatt`
+        });
+    }
     res.json({ valid: false });
 });
 
