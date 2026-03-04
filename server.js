@@ -306,20 +306,48 @@ app.post('/api/contact', async (req, res) => {
 
         // 2. Bestätigung an den Absender
         await resend.emails.send({
-            from: 'NØTE. Fragrances <noreply@note-fragrances.de>',
+            from: 'NOTE. fragrances <info@note-fragrances.de>',
             to: email,
-            subject: 'Wir haben Ihre Nachricht erhalten',
-            html: `
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f9f9f9;border-radius:8px;">
-                    <h2 style="font-size:20px;color:#1a1a1a;margin-bottom:8px;">Danke, ${name}!</h2>
-                    <p style="color:#555;font-size:14px;line-height:1.7;">
-                        Wir haben Ihre Nachricht zum Thema <strong>${subject}</strong> erhalten und melden uns schnellstmöglich bei Ihnen.
-                    </p>
-                    <p style="color:#999;font-size:12px;margin-top:32px;border-top:1px solid #eee;padding-top:16px;">
-                        NØTE. Fragrances · info@note-fragrances.de
-                    </p>
-                </div>
-            `
+            subject: `Wir haben Ihre Nachricht erhalten \u2713`,
+            html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
+        <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2709</div>
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Nachricht erhalten</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Danke, ${name}!</h1>
+        <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:400px;">Wir haben Ihre Nachricht zum Thema <strong style="color:#1a1a1a;">${subject}</strong> erhalten und melden uns schnellstm\u00f6glich bei Ihnen zur\u00fcck.</p>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 \u00b7 13057 Berlin \u00b7 Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
         });
 
         res.json({ success: true });
@@ -351,33 +379,64 @@ app.post('/api/newsletter', async (req, res) => {
         await new Subscriber({ email: email.toLowerCase().trim(), code }).save();
 
         await resend.emails.send({
-            from: 'NØTE. Fragrances <noreply@note-fragrances.de>',
+            from: 'NOTE. fragrances <info@note-fragrances.de>',
             to: email,
-            subject: 'Dein persönlicher Rabattcode – 5% auf deine erste Bestellung',
-            html: `
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;background:#f5f3ee;">
-                    <div style="background:#1a1a1a;padding:32px;text-align:center;">
-                        <p style="margin:0;font-size:11px;letter-spacing:0.25em;color:#d4af37;text-transform:uppercase;">NØTE. Fragrances</p>
-                        <h1 style="margin:8px 0 0;font-family:Georgia,serif;font-size:28px;color:#fff;font-weight:400;">Willkommen</h1>
-                    </div>
-                    <div style="padding:40px 48px;text-align:center;">
-                        <p style="font-size:15px;color:#444;line-height:1.8;margin-bottom:28px;">
-                            Danke für deine Anmeldung! Als Dankeschön erhältst du exklusiv <strong>5% Rabatt</strong> auf deine erste Bestellung.
-                        </p>
-                        <div style="background:#1a1a1a;display:inline-block;padding:18px 36px;border-radius:4px;margin-bottom:28px;">
-                            <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.2em;color:#d4af37;text-transform:uppercase;">Dein persönlicher Code</p>
-                            <p style="margin:0;font-family:Georgia,serif;font-size:26px;color:#fff;letter-spacing:0.15em;">${code}</p>
-                        </div>
-                        <p style="font-size:13px;color:#888;">
-                            Gib diesen Code im Warenkorb unter „Gutscheincode" ein.<br>
-                            Gültig für eine Bestellung. Nicht kombinierbar mit anderen Aktionen.
-                        </p>
-                    </div>
-                    <div style="background:#1a1a1a;padding:20px;text-align:center;">
-                        <a href="https://note-fragrances.de/suche" style="color:#d4af37;font-size:12px;text-decoration:none;letter-spacing:0.15em;">ZUR KOLLEKTION →</a>
-                    </div>
-                </div>
-            `
+            subject: 'Dein pers\u00f6nlicher Rabattcode \u2013 5% auf deine erste Bestellung',
+            html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 32px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Willkommen</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Sch\u00f6n, dass du dabei bist!</h1>
+        <p style="margin:0 auto 32px;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Danke f\u00fcr deine Anmeldung. Als Danksch\u00f6n erh\u00e4ltst du exklusiv <strong style="color:#1a1a1a;">5&nbsp;% Rabatt</strong> auf deine erste Bestellung.</p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px;">
+          <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.2em;color:#d4af37;text-transform:uppercase;">Dein pers\u00f6nlicher Code</p>
+            <p style="margin:0;font-family:Georgia,serif;font-size:28px;color:#ffffff;letter-spacing:0.2em;">${code}</p>
+          </td></tr>
+        </table>
+        <p style="margin:0 auto;font-size:12px;color:#999;max-width:360px;line-height:1.7;">Gib diesen Code im Warenkorb unter &bdquo;Gutscheincode&ldquo; ein.<br>G\u00fcltig f\u00fcr eine Bestellung &middot; Nicht kombinierbar mit anderen Aktionen.</p>
+      </td></tr>
+      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+      <tr><td style="background:#f5f3ee;padding:28px 48px;text-align:center;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr><td style="background:#1a1a1a;padding:14px 36px;">
+            <a href="https://note-fragrances.de/suche" style="font-family:Arial,sans-serif;font-size:11px;color:#d4af37;text-decoration:none;letter-spacing:0.18em;text-transform:uppercase;">Zur Kollektion &rarr;</a>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 \u00b7 13057 Berlin \u00b7 Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
         });
 
         res.json({ success: true });
