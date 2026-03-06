@@ -1448,7 +1448,8 @@ app.post('/create-pickup-order', async (req, res) => {
             line_items.push({
                 quantity: item.quantity,
                 description: product.name + ' (' + size + 'ml) [BARZAHLUNG]',
-                amount_total: priceCents * item.quantity
+                amount_total: priceCents * item.quantity,
+                imageUrl: product.images && product.images.length > 0 ? product.images[0] : ''
             });
         }
 
@@ -1462,6 +1463,108 @@ app.post('/create-pickup-order', async (req, res) => {
         });
         await newOrder.save();
 
+        if (customerEmail) {
+            try {
+                const itemsHtml = line_items.length > 0
+                    ? line_items.map(i => {
+                        const imgTag = i.imageUrl
+                            ? `<img src="${i.imageUrl}" width="60" height="60" alt="${i.description}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
+                            : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
+                        return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
+                          <tr>
+                            <td style="width:70px;vertical-align:middle;">${imgTag}</td>
+                            <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
+                              <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${i.description}</p>
+                              <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${i.quantity}</p>
+                            </td>
+                            <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${(i.amount_total / 100).toFixed(2).replace('.', ',')} €</td>
+                          </tr>
+                        </table>`;
+                    }).join('')
+                    : '<p style="color:#999;font-size:13px;">–</p>';
+
+                const totalFormatted = (totalCents / 100).toFixed(2).replace('.', ',');
+
+                await resend.emails.send({
+                    from: 'NOTE. fragrances <info@note-fragrances.de>',
+                    to: customerEmail,
+                    subject: `Deine Abhol-Bestellung bei NOTE. fragrances \u2713`,
+                    html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
+        <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Bestellbest\u00e4tigung</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Vielen Dank, ${customerName}!</h1>
+        <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird für dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.</p>
+      </td></tr>
+      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+      <tr><td style="background:#f5f3ee;padding:28px 40px 0;">
+        <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#aaaaaa;font-weight:600;">Deine Bestellung</p>
+        ${itemsHtml}
+      </td></tr>
+      <tr><td style="background:#f5f3ee;padding:0 40px 40px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0 16px;">
+          <tr>
+            <td style="font-size:13px;color:#999;">Versandart</td>
+            <td style="text-align:right;font-size:13px;color:#999;">Selbstabholung</td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;color:#999;padding-top:8px;">Zahlungsart</td>
+            <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">Bar bei Abholung</td>
+          </tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:4px;">
+          <tr>
+            <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.15em;vertical-align:bottom;">Gesamtbetrag (Bar)</td>
+            <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;font-weight:400;vertical-align:bottom;">${totalFormatted} \u20ac</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+      <tr><td style="background:#f5f3ee;padding:32px 48px 40px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:13px;color:#888;">Fragen zu deiner Bestellung?</p>
+        <a href="mailto:info@note-fragrances.de" style="font-size:14px;color:#000;font-weight:700;text-decoration:none;">info@note-fragrances.de</a>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 \u00b7 13057 Berlin \u00b7 Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
+                });
+                console.log('[Email] Pickup-Bestellbestätigung gesendet an:', customerEmail);
+            } catch (emailErr) {
+                console.error('[Email] Fehler beim Senden Pickup-Bestellbestätigung:', emailErr);
+            }
+        }
+
         res.json({ success: true, orderId: newOrder._id });
     } catch (e) {
         console.error('Pickup order error:', e);
@@ -1469,7 +1572,7 @@ app.post('/create-pickup-order', async (req, res) => {
     }
 });
 
-const PORT = 4242;
+const PORT = process.env.PORT || 4242;
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
 });
