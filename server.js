@@ -11,7 +11,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI, {
-}).then(() => console.log('MongoDB connected')).catch(err => console.log('MongoDB connection error:', err));
+}).then(() => {
+    console.log('MongoDB connected');
+    refreshProductCache(); // Initial cache load
+}).catch(err => console.log('MongoDB connection error:', err));
 
 const path = require('path');
 const fs = require('fs');
@@ -21,6 +24,17 @@ const { v4: uuidv4 } = require('uuid');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+// --- SERVER-SIDE CACHE ---
+let productCache = null;
+async function refreshProductCache() {
+    try {
+        productCache = await Product.find({}, '-_id -__v');
+        console.log('[Cache] Produkt-Cache aktualisiert.');
+    } catch (e) {
+        console.error('[Cache] Fehler beim Cache-Update:', e);
+    }
+}
 
 function isAdmin(req) {
     const cookies = parseCookies(req);
@@ -790,6 +804,7 @@ app.delete('/api/admin/products/:id', async (req, res) => {
         if (!deletedProduct) {
             return res.status(404).json({ error: 'Produkt nicht gefunden' });
         }
+        productCache = null; // Invalidate cache
         res.json({ success: true, message: 'Produkt gelöscht' });
     } catch (err) {
         console.error('Fehler beim Löschen:', err);
@@ -827,6 +842,7 @@ app.put('/api/admin/products/:id', async (req, res) => {
         if (!updated) {
             return res.status(404).json({ error: 'Produkt nicht gefunden' });
         }
+        productCache = null; // Invalidate cache
         res.json({ success: true, product: updated });
     } catch (err) {
         console.error('Fehler beim Aktualisieren:', err);
@@ -857,6 +873,7 @@ app.put('/api/admin/products-bulk', async (req, res) => {
         const filter = (ids && ids.length > 0) ? { id: { $in: ids } } : {};
 
         const result = await Product.updateMany(filter, { $set: updateData });
+        productCache = null; // Invalidate cache
         res.json({ success: true, updated: result.modifiedCount });
     } catch (err) {
         console.error('Bulk update Fehler:', err);
@@ -879,6 +896,7 @@ app.put('/api/admin/products-bestseller', async (req, res) => {
             { id: { $in: ids } },
             { $set: { bestseller: !!bestseller } }
         );
+        productCache = null; // Invalidate cache
         res.json({ success: true, updated: result.modifiedCount });
     } catch (err) {
         console.error('Bestseller bulk update Fehler:', err);
@@ -917,6 +935,7 @@ app.post('/api/admin/products', async (req, res) => {
         });
 
         await newProduct.save();
+        productCache = null; // Invalidate cache
         res.status(201).json({ success: true, product: newProduct });
     } catch (err) {
         console.error('Fehler beim Anlegen:', err);
@@ -1579,8 +1598,11 @@ app.listen(PORT, () => {
 
 app.get('/api/products', async (req, res) => {
     try {
-        const products = await Product.find({}, '-_id -__v');
-        res.json(products);
+        if (!productCache) {
+            console.log('[Cache] Cache leer, lade aus Datenbank...');
+            await refreshProductCache();
+        }
+        res.json(productCache);
     } catch (e) {
         console.error("Products error:", e);
         res.status(500).json({ error: e.message || 'Server error' });
