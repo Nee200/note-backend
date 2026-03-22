@@ -1,0 +1,14 @@
+COUNT: 13
+G81 | men | Dior Fahrenheit
+G105 | men | Gisada Ambassador
+G133 | men | Jean Paul Gaultier Le Male Elixier
+G145 | men | Kilian Angels Share
+G163 | men | Louis Vuitton Imagination
+G183 | men | Maison Crivelli Oud Maracuja
+G299 | men | Xerjoff Erba Pura
+L37 | women | Chanel Chance Eau Tendre
+L93 | women | Jean Paul Gaultier La Belle
+L95 | women | Jean Paul Gaultier Scandal Le Parfum
+L154 | women | Prada Paradox
+L170 | women | Valentino Born in Roma
+L190 | women | YSL Libre
