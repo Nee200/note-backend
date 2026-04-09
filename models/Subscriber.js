@@ -5,6 +5,7 @@ const subscriberSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'active'], default: 'pending' },
     code: { type: String, unique: true, sparse: true, trim: true },
     discount: { type: Number, default: 5 }, // percent
+    freeShipping: { type: Boolean, default: false },
     used: { type: Boolean, default: false },
     confirmToken: { type: String, index: true },
     confirmTokenExpiresAt: { type: Date },

@@ -1565,11 +1565,15 @@ app.post('/api/validate-coupon', couponLimiter, requireTrustedOrigin, requireCsr
 
         const sub = await findValidCoupon(code);
         if (sub) {
+            const freeShipping = sub.freeShipping === true;
+            const discountLabel = `-${sub.discount}% Newsletter-Rabatt`;
+            const label = freeShipping ? `${discountLabel} + Gratis Versand` : discountLabel;
             return res.json({
                 valid: true,
                 code: sub.code,
                 discount: sub.discount,
-                label: `-${sub.discount}% Newsletter-Rabatt`
+                freeShipping,
+                label
             });
         }
         res.json({ valid: false });
@@ -3507,9 +3511,10 @@ app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, asy
             discountAmountCents = Math.round(subtotal * (appliedCoupon.discount / 100));
         }
 
-        // Kostenloser Versand ab 60€ (6000 Cents)
-        const shippingRate = subtotal >= 6000 ? 0 : 699;
-        const shippingDisplayName = subtotal >= 6000 ? 'Kostenloser Versand' : 'Standardversand';
+        // Kostenloser Versand ab 60€ (6000 Cents) oder wenn Coupon freien Versand erzwingt.
+        const hasCouponFreeShipping = !!(appliedCoupon && appliedCoupon.freeShipping === true);
+        const shippingRate = (subtotal >= 6000 || hasCouponFreeShipping) ? 0 : 699;
+        const shippingDisplayName = (subtotal >= 6000 || hasCouponFreeShipping) ? 'Kostenloser Versand' : 'Standardversand';
 
         const sessionConfig = {
             // Kein payment_method_types → Stripe nutzt automatisch alle im Dashboard aktivierten
@@ -3552,7 +3557,8 @@ app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, asy
             metadata: {
                 couponCode: appliedCoupon ? appliedCoupon.code : '',
                 discountAmountCents: String(discountAmountCents),
-                discountPercent: appliedCoupon ? String(appliedCoupon.discount) : '0'
+                discountPercent: appliedCoupon ? String(appliedCoupon.discount) : '0',
+                freeShippingCoupon: hasCouponFreeShipping ? '1' : '0'
             }
         };
 
@@ -3577,6 +3583,7 @@ app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, asy
                 couponCode: appliedCoupon ? appliedCoupon.code : '',
                 subtotalCents: subtotal,
                 discountAmountCents,
+                couponFreeShipping: hasCouponFreeShipping,
                 shippingRateCents: shippingRate,
                 totalCents: Math.max(0, subtotal - discountAmountCents + shippingRate),
                 message: 'Lokaler Testmodus: Keine echte Stripe-Session erzeugt.'
