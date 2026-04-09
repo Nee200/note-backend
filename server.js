@@ -532,41 +532,262 @@ function renderBrandEmail({ badge, title, introHtml, iconHtml = '', bodyHtml = '
 </body></html>`;
 }
 
-async function sendNewsletterConfirmationEmail({ email, confirmUrl }) {
-    await resend.emails.send({
-        from: 'NOTE. fragrances <info@note-fragrances.de>',
-        to: email,
-        subject: 'Bitte bestätige deine Newsletter-Anmeldung',
+function formatEuroFromCents(amountCents) {
+    const normalized = Number.isFinite(Number(amountCents)) ? Number(amountCents) : 0;
+    return (Math.max(0, normalized) / 100).toFixed(2).replace('.', ',');
+}
+
+function formatAddressHtml(address) {
+    if (!address || typeof address !== 'object') {
+        return '&ndash;';
+    }
+
+    const line1 = escapeHtml(address.line1 || '');
+    const line2 = escapeHtml(address.line2 || '');
+    const postalCode = escapeHtml(address.postal_code || '');
+    const city = escapeHtml(address.city || '');
+    const country = escapeHtml(address.country || '');
+    const middleLine = [postalCode, city].filter(Boolean).join(' ');
+    const lines = [line1];
+    if (line2) lines.push(line2);
+    if (middleLine) lines.push(middleLine);
+    if (country) lines.push(country);
+    const rendered = lines.filter(Boolean).join('<br>');
+    return rendered || '&ndash;';
+}
+
+function buildEmailItemsHtml(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return '<p style="color:#999;font-size:13px;">&ndash;</p>';
+    }
+
+    return items.map((item, index) => {
+        const safeDescription = escapeHtml(item.description || '');
+        const safeImageUrl = sanitizeTrackingUrl(item.imageUrl || '');
+        const qty = Number.isFinite(Number(item.quantity))
+            ? Math.max(1, Math.floor(Number(item.quantity)))
+            : 1;
+        const amountText = escapeHtml(String(item.amountText || '0,00'));
+        const isLast = index === items.length - 1;
+        const rowBorder = isLast ? 'border-bottom:none;' : 'border-bottom:1px solid #e6e6e6;';
+        const imageBlock = safeImageUrl
+            ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:60px;height:60px;border:1px solid #e6e6e6;border-radius:4px;background:#ffffff;"><tr><td align="center" valign="middle" style="width:60px;height:60px;padding:0;">
+<img src="${safeImageUrl}" alt="${safeDescription}" style="display:block;border:0;outline:none;text-decoration:none;width:auto;height:auto;max-width:60px;max-height:60px;">
+</td></tr></table>`
+            : '<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>';
+
+        return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;${rowBorder}">
+  <tr>
+    <td style="width:70px;vertical-align:middle;">${imageBlock}</td>
+    <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
+      <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${safeDescription}</p>
+      <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${qty}</p>
+    </td>
+    <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${amountText} &euro;</td>
+  </tr>
+</table>`;
+    }).join('');
+}
+
+function buildOrderConfirmationEmailPayload({
+    customerName = 'Kunde',
+    items = [],
+    shippingCostCents = null,
+    discountAmountCents = 0,
+    couponCode = '',
+    totalAmountCents = 0,
+    address = null
+}) {
+    const safeCustomerName = escapeHtml(customerName || 'Kunde');
+    const safeCouponCode = escapeHtml(couponCode || '');
+    const shippingText = Number.isFinite(Number(shippingCostCents))
+        ? `${formatEuroFromCents(shippingCostCents)} &euro;`
+        : 'Kostenlos';
+    const discountHtml = Number(discountAmountCents) > 0
+        ? `<tr>
+  <td style="font-size:13px;color:#7f776a;padding-top:8px;">Rabatt${safeCouponCode ? ` (${safeCouponCode})` : ''}</td>
+  <td style="text-align:right;font-size:13px;color:#7f776a;padding-top:8px;">-${formatEuroFromCents(discountAmountCents)} &euro;</td>
+</tr>`
+        : '';
+    const itemsHtml = buildEmailItemsHtml(items);
+    const addressHtml = formatAddressHtml(address);
+
+    return {
+        subject: 'Deine Bestellung bei NOTE. fragrances \u2713',
+        html: renderBrandEmail({
+            badge: 'Bestellbestaetigung',
+            title: `Vielen Dank, ${safeCustomerName}!`,
+            introHtml: 'Deine Bestellung ist bei uns eingegangen und wird schnellstmoeglich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.',
+            iconHtml: '&#10003;',
+            bodyHtml: `<tr><td style="background:#f5f3ee;padding:26px 40px 0;">
+  <div style="border-top:1px solid #dfd8ca;padding-top:18px;">
+    <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#9d9688;font-weight:700;">Deine Bestellung</p>
+    ${itemsHtml}
+  </div>
+</td></tr>
+<tr><td style="background:#f5f3ee;padding:0 40px 10px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f0e8;border:1px solid #e0dacd;border-left:3px solid #d4af37;border-radius:8px;overflow:hidden;">
+    <tr>
+      <td style="padding:14px 16px 6px;font-size:10px;color:#8f887a;text-transform:uppercase;letter-spacing:0.14em;font-weight:700;">Lieferadresse</td>
+    </tr>
+    <tr>
+      <td style="padding:0 16px 14px;font-size:14px;color:#2f2f2f;line-height:1.6;">${addressHtml}</td>
+    </tr>
+  </table>
+</td></tr>
+<tr><td style="background:#f5f3ee;padding:0 40px 40px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 16px;background:#f3f0e8;border:1px solid #e0dacd;border-radius:8px;padding:10px 14px;">
+    <tr>
+      <td style="font-size:13px;color:#7f776a;">Versand</td>
+      <td style="text-align:right;font-size:13px;color:#7f776a;">${shippingText}</td>
+    </tr>
+    ${discountHtml}
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:2px;">
+    <tr>
+      <td style="font-size:11px;color:#8f887a;text-transform:uppercase;letter-spacing:0.15em;vertical-align:bottom;">Gesamtbetrag</td>
+      <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;font-weight:400;vertical-align:bottom;">${formatEuroFromCents(totalAmountCents)} &euro;</td>
+    </tr>
+  </table>
+</td></tr>`,
+            afterBodyHtml: `<tr><td style="background:#f5f3ee;padding:32px 48px 40px;text-align:center;">
+  <p style="margin:0 0 6px;font-size:13px;color:#888;">Fragen zu deiner Bestellung?</p>
+  <a href="mailto:info@note-fragrances.de" style="font-size:14px;color:#000;font-weight:700;text-decoration:none;">info@note-fragrances.de</a>
+</td></tr>`
+        })
+    };
+}
+
+function buildPickupOrderConfirmationEmailPayload({
+    customerName = 'Kunde',
+    items = [],
+    discountAmountCents = 0,
+    couponCode = '',
+    totalAmountCents = 0
+}) {
+    const safeCustomerName = escapeHtml(customerName || 'Kunde');
+    const safeCouponCode = escapeHtml(couponCode || '');
+    const itemsHtml = buildEmailItemsHtml(items);
+    const discountHtml = Number(discountAmountCents) > 0
+        ? `<tr>
+  <td style="font-size:13px;color:#7f776a;padding-top:8px;">Rabatt${safeCouponCode ? ` (${safeCouponCode})` : ''}</td>
+  <td style="text-align:right;font-size:13px;color:#7f776a;padding-top:8px;">-${formatEuroFromCents(discountAmountCents)} &euro;</td>
+</tr>`
+        : '';
+
+    return {
+        subject: 'Deine Abhol-Bestellung bei NOTE. fragrances \u2713',
+        html: renderBrandEmail({
+            badge: 'Bestellbestaetigung',
+            title: `Vielen Dank, ${safeCustomerName}!`,
+            introHtml: 'Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird fuer dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.',
+            iconHtml: '&#10003;',
+            bodyHtml: `<tr><td style="background:#f5f3ee;padding:26px 40px 0;">
+  <div style="border-top:1px solid #dfd8ca;padding-top:18px;">
+    <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#9d9688;font-weight:700;">Deine Bestellung</p>
+    ${itemsHtml}
+  </div>
+</td></tr>
+<tr><td style="background:#f5f3ee;padding:0 40px 40px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 16px;background:#f3f0e8;border:1px solid #e0dacd;border-radius:8px;padding:10px 14px;">
+    <tr>
+      <td style="font-size:13px;color:#7f776a;">Versandart</td>
+      <td style="text-align:right;font-size:13px;color:#7f776a;">Selbstabholung</td>
+    </tr>
+    <tr>
+      <td style="font-size:13px;color:#7f776a;padding-top:8px;">Zahlungsart</td>
+      <td style="text-align:right;font-size:13px;color:#7f776a;padding-top:8px;">Bar bei Abholung</td>
+    </tr>
+    ${discountHtml}
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:2px;">
+    <tr>
+      <td style="font-size:11px;color:#8f887a;text-transform:uppercase;letter-spacing:0.15em;vertical-align:bottom;">Gesamtbetrag (Bar)</td>
+      <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;font-weight:400;vertical-align:bottom;">${formatEuroFromCents(totalAmountCents)} &euro;</td>
+    </tr>
+  </table>
+</td></tr>`,
+            afterBodyHtml: `<tr><td style="background:#f5f3ee;padding:32px 48px 40px;text-align:center;">
+  <p style="margin:0 0 6px;font-size:13px;color:#888;">Fragen zu deiner Bestellung?</p>
+  <a href="mailto:info@note-fragrances.de" style="font-size:14px;color:#000;font-weight:700;text-decoration:none;">info@note-fragrances.de</a>
+</td></tr>`
+        })
+    };
+}
+
+function buildShippingEmailPayload({ customerName = 'du', trackingUrl = '' }) {
+    const safeOrderName = escapeHtml(customerName || 'du');
+    const safeTrackingUrl = sanitizeTrackingUrl(trackingUrl);
+    const trackingBlock = safeTrackingUrl
+        ? `<table border="0" cellpadding="0" cellspacing="0" style="margin:12px auto 0;border-collapse:collapse;"><tr><td style="background:#d4af37;border-radius:2px;padding:14px 32px;"><a href="${safeTrackingUrl}" style="font-family:Arial,sans-serif;font-size:12px;color:#000;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">&#128269;&nbsp;Sendung verfolgen</a></td></tr></table>`
+        : '';
+
+    return {
+        subject: 'Deine Bestellung ist unterwegs! \u{1F4E6}',
+        html: renderBrandEmail({
+            badge: 'Auf dem Weg zu dir',
+            title: `Hallo ${safeOrderName}!`,
+            introHtml: 'Gute Neuigkeiten &ndash; deine Bestellung ist soeben auf dem Weg zu dir!<br><br>Du kannst deinen Duft in den naechsten <strong style="color:#000;">1&ndash;3 Werktagen</strong> erwarten.<br><br>Wir wuenschen dir viel Freude mit deinem neuen Extrait de Parfum.',
+            iconHtml: '&#128230;',
+            ctaHtml: `<table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+  <tr>
+    <td style="background:#1a1a1a;border-radius:2px;padding:14px 32px;">
+      <a href="https://note-fragrances.de" style="font-family:Arial,sans-serif;font-size:12px;color:#ffffff;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">Zur Website</a>
+    </td>
+  </tr>
+</table>
+${trackingBlock}`
+        })
+    };
+}
+
+function buildPickupReadyEmailPayload({ customerName = 'du', amountCents = 0 }) {
+    const safeCustomerName = escapeHtml(customerName || 'du');
+    return {
+        subject: 'Dein Parfum ist abholbereit! \u2713',
+        html: renderBrandEmail({
+            badge: 'Abholbereit',
+            title: `Hallo ${safeCustomerName}!`,
+            introHtml: `Deine Bestellung ist nun fertig gepackt und liegt zur Abholung fuer dich bereit. Hier findest du uns:<br><span style="color:#333;">Warnitzer Str. 20, 13057 Berlin</span><br><br>Bitte bringe den Zahlbetrag von <strong style="color:#000; font-weight:700;">${formatEuroFromCents(amountCents)} &euro;</strong> moeglichst passend in Bar mit. Wir freuen uns auf deinen Besuch!`,
+            iconHtml: '&#10003;'
+        })
+    };
+}
+
+function buildNewsletterConfirmationEmailPayload({ confirmUrl }) {
+    const safeConfirmUrl = sanitizeTrackingUrl(confirmUrl) || '#';
+    return {
+        subject: 'Bitte bestaetige deine Newsletter-Anmeldung',
         html: renderBrandEmail({
             badge: 'Ein letzter Schritt',
             title: 'Bestaetige deine Anmeldung',
             introHtml: 'Bitte bestaetige mit einem Klick deine Newsletter-Anmeldung. Erst danach senden wir dir deinen persoenlichen Rabattcode zu.',
             ctaHtml: `<table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 22px;">
   <tr><td style="background:#1a1a1a;padding:14px 36px;">
-    <a href="${confirmUrl}" style="font-family:Arial,sans-serif;font-size:11px;color:#d4af37;text-decoration:none;letter-spacing:0.18em;text-transform:uppercase;">Anmeldung bestaetigen</a>
+    <a href="${safeConfirmUrl}" style="font-family:Arial,sans-serif;font-size:11px;color:#d4af37;text-decoration:none;letter-spacing:0.18em;text-transform:uppercase;">Anmeldung bestaetigen</a>
   </td></tr>
 </table>`,
             afterBodyHtml: `<tr><td style="background:#f5f3ee;padding:0 48px 34px;text-align:center;">
   <p style="margin:0 auto;font-size:12px;color:#999;max-width:360px;line-height:1.7;">Falls du dich nicht selbst eingetragen hast, kannst du diese E-Mail einfach ignorieren.</p>
 </td></tr>`
         })
-    });
+    };
 }
 
-async function sendNewsletterDiscountEmail({ email, code, discount }) {
-    await resend.emails.send({
-        from: 'NOTE. fragrances <info@note-fragrances.de>',
-        to: email,
-        subject: `Dein persönlicher Rabattcode – ${discount}% auf deine erste Bestellung`,
+function buildNewsletterDiscountEmailPayload({ code, discount }) {
+    const safeCode = escapeHtml(code || '');
+    const safeDiscount = Number.isFinite(Number(discount)) ? Number(discount) : 0;
+    return {
+        subject: `Dein persoenlicher Rabattcode - ${safeDiscount}% auf deine erste Bestellung`,
         html: renderBrandEmail({
             badge: 'Willkommen',
             title: 'Schoen, dass du dabei bist!',
-            introHtml: `Danke fuer deine Bestaetigung. Als Dankeschoen erhaeltst du exklusiv <strong style="color:#1a1a1a;">${discount}&nbsp;% Rabatt</strong> auf deine erste Bestellung.`,
+            introHtml: `Danke fuer deine Bestaetigung. Als Dankeschoen erhaeltst du exklusiv <strong style="color:#1a1a1a;">${safeDiscount}&nbsp;% Rabatt</strong> auf deine erste Bestellung.`,
             bodyHtml: `<tr><td style="background:#f5f3ee;padding:0 48px 0;text-align:center;">
   <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px;">
     <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center;">
       <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.2em;color:#d4af37;text-transform:uppercase;">Dein persoenlicher Code</p>
-      <p style="margin:0;font-family:Georgia,serif;font-size:28px;color:#ffffff;letter-spacing:0.2em;">${code}</p>
+      <p style="margin:0;font-family:Georgia,serif;font-size:28px;color:#ffffff;letter-spacing:0.2em;">${safeCode}</p>
     </td></tr>
   </table>
   <p style="margin:0 auto 26px;font-size:12px;color:#999;max-width:360px;line-height:1.7;">Gib diesen Code im Warenkorb unter "Gutscheincode" ein.<br>Gueltig fuer eine Bestellung &middot; Nicht kombinierbar mit anderen Aktionen.</p>
@@ -577,6 +798,156 @@ async function sendNewsletterDiscountEmail({ email, code, discount }) {
   </td></tr>
 </table>`
         })
+    };
+}
+
+function buildContactConfirmationEmailPayload({ name, subjectText }) {
+    const safeName = escapeHtml(name || 'Kunde');
+    const safeSubject = escapeHtml(subjectText || 'deine Nachricht');
+    return {
+        subject: 'Wir haben Ihre Nachricht erhalten \u2713',
+        html: renderBrandEmail({
+            badge: 'Nachricht erhalten',
+            title: `Danke, ${safeName}!`,
+            introHtml: `Wir haben Ihre Nachricht zum Thema <strong style="color:#1a1a1a;">${safeSubject}</strong> erhalten und melden uns schnellstmoeglich bei Ihnen zurueck.`,
+            iconHtml: '&#9993;'
+        })
+    };
+}
+
+function buildContactInternalEmailHtml({ name, email, subjectText, message, receivedAtText }) {
+    const safeName = escapeHtml(name || '');
+    const safeEmail = escapeHtml(email || '');
+    const safeSubject = escapeHtml(subjectText || '');
+    const safeMessage = escapeHtml(message || '');
+    const safeDate = escapeHtml(receivedAtText || '');
+
+    return `
+                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f9f9f9;border-radius:8px;">
+                    <h2 style="font-size:20px;margin-bottom:8px;color:#1a1a1a;">Neue Kontaktanfrage</h2>
+                    <p style="color:#666;font-size:13px;margin-bottom:24px;border-bottom:1px solid #eee;padding-bottom:16px;">
+                        Eingegangen am ${safeDate}
+                    </p>
+                    <table style="width:100%;font-size:14px;color:#333;">
+                        <tr><td style="padding:6px 0;font-weight:600;width:100px;">Name</td><td>${safeName}</td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;">E-Mail</td><td><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;">Betreff</td><td>${safeSubject}</td></tr>
+                    </table>
+                    <div style="margin-top:20px;padding:16px;background:#fff;border-radius:6px;border:1px solid #eee;">
+                        <p style="margin:0;font-size:14px;line-height:1.7;color:#444;white-space:pre-wrap;">${safeMessage}</p>
+                    </div>
+                </div>
+            `;
+}
+
+function buildAdminEmailTemplatePreviews() {
+    const sampleItems = [
+        {
+            description: 'No. L3 (50ml)',
+            quantity: 2,
+            amountText: '49,98',
+            imageUrl: 'https://note-fragrances.de/logo.webp'
+        }
+    ];
+    const sampleAddress = {
+        line1: 'Dr.-Rosenthal-Weg 4',
+        line2: '',
+        postal_code: '77694',
+        city: 'Kehl',
+        country: 'DE'
+    };
+    const orderMail = buildOrderConfirmationEmailPayload({
+        customerName: 'Max',
+        items: sampleItems,
+        shippingCostCents: 0,
+        discountAmountCents: 0,
+        couponCode: '',
+        totalAmountCents: 7497,
+        address: sampleAddress
+    });
+    const shippingMail = buildShippingEmailPayload({ customerName: 'Max', trackingUrl: '' });
+    const pickupReadyMail = buildPickupReadyEmailPayload({ customerName: 'Max', amountCents: 8990 });
+    const pickupOrderMail = buildPickupOrderConfirmationEmailPayload({
+        customerName: 'Max',
+        items: sampleItems,
+        discountAmountCents: 0,
+        couponCode: '',
+        totalAmountCents: 7497
+    });
+    const newsletterConfirmMail = buildNewsletterConfirmationEmailPayload({ confirmUrl: 'https://note-fragrances.de/newsletter-confirmation.html' });
+    const newsletterMail = buildNewsletterDiscountEmailPayload({ code: 'NOTE-M7K2X', discount: 5 });
+    const contactConfirmMail = buildContactConfirmationEmailPayload({ name: 'Maria', subjectText: 'Frage zur Bestellung' });
+
+    return {
+        order: {
+            subject: orderMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Kunde',
+            html: orderMail.html
+        },
+        shipping: {
+            subject: shippingMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Kunde',
+            html: shippingMail.html
+        },
+        pickup: {
+            subject: pickupReadyMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Kunde (Abholung)',
+            html: pickupReadyMail.html
+        },
+        'pickup-order': {
+            subject: pickupOrderMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Kunde (Abhol-Kauf)',
+            html: pickupOrderMail.html
+        },
+        'newsletter-confirm': {
+            subject: newsletterConfirmMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Abonnent',
+            html: newsletterConfirmMail.html
+        },
+        newsletter: {
+            subject: newsletterMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Abonnent',
+            html: newsletterMail.html
+        },
+        'contact-confirm': {
+            subject: contactConfirmMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Absender',
+            html: contactConfirmMail.html
+        },
+        'contact-internal': {
+            subject: 'Kontaktanfrage: Frage zur Bestellung',
+            from: 'Von: N&Oslash;TE. Kontakt <noreply@note-fragrances.de>  \u2022  An: info@note-fragrances.de',
+            html: `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:40px 20px;background:#f0f0f0;font-family:Arial,sans-serif;">
+${buildContactInternalEmailHtml({
+                name: 'Maria Mueller',
+                email: 'maria@beispiel.de',
+                subjectText: 'Frage zur Bestellung',
+                message: 'Hallo, ich wuerde gerne wissen wann meine Bestellung ankommt. Vielen Dank!',
+                receivedAtText: new Date().toLocaleString('de-DE')
+            })}
+</body></html>`
+        }
+    };
+}
+
+async function sendNewsletterConfirmationEmail({ email, confirmUrl }) {
+    const mail = buildNewsletterConfirmationEmailPayload({ confirmUrl });
+    await resend.emails.send({
+        from: 'NOTE. fragrances <info@note-fragrances.de>',
+        to: email,
+        subject: mail.subject,
+        html: mail.html
+    });
+}
+
+async function sendNewsletterDiscountEmail({ email, code, discount }) {
+    const mail = buildNewsletterDiscountEmailPayload({ code, discount });
+    await resend.emails.send({
+        from: 'NOTE. fragrances <info@note-fragrances.de>',
+        to: email,
+        subject: mail.subject,
+        html: mail.html
     });
 }
 
@@ -887,92 +1258,36 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
             // Send order confirmation email to customer
             const customerEmail = session.customer_details && session.customer_details.email;
             const customerName = session.customer_details && session.customer_details.name || 'Kunde';
-            const safeCustomerName = escapeHtml(customerName);
             if (customerEmail) {
                 try {
-                    const itemsHtml = items.length > 0
-                        ? items.map(i => {
-                            const safeDescription = escapeHtml(i.description || '');
-                            const safeImageUrl = sanitizeTrackingUrl(i.imageUrl);
-                            const imgTag = safeImageUrl
-                                ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:60px;height:60px;border:1px solid #e6e6e6;border-radius:4px;background:#ffffff;"><tr><td align="center" valign="middle" style="width:60px;height:60px;padding:0;">
-<img src="${safeImageUrl}" alt="${safeDescription}" style="display:block;border:0;outline:none;text-decoration:none;width:auto;height:auto;max-width:60px;max-height:60px;">
-</td></tr></table>`
-                                : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
-                            return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
-                              <tr>
-                                <td style="width:70px;vertical-align:middle;">${imgTag}</td>
-                                <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
-                                  <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${safeDescription}</p>
-                                  <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${i.quantity}</p>
-                                </td>
-                                <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${i.amount_total.toFixed(2).replace('.', ',')} €</td>
-                              </tr>
-                            </table>`;
-                        }).join('')
-                        : '<p style="color:#999;font-size:13px;">–</p>';
-
-                    const totalFormatted = (newOrder.amount / 100).toFixed(2).replace('.', ',');
-                    const discountHtml = discountAmount > 0
-                        ? `<tr>
-            <td style="font-size:13px;color:#999;padding-top:8px;">Rabatt (${couponCode})</td>
-            <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">-${(discountAmount / 100).toFixed(2).replace('.', ',')} €</td>
-          </tr>`
-                        : '';
-
-                    // Lieferadresse des Kunden aufbereiten
                     const addr = session.shipping_details && session.shipping_details.address
                         ? session.shipping_details.address
                         : (session.customer_details && session.customer_details.address);
-                    const addrHtml = addr
-                        ? `${addr.line1 || ''}${addr.line2 ? '<br>' + addr.line2 : ''}<br>${addr.postal_code || ''} ${addr.city || ''}<br>${addr.country || ''}`
-                        : '–';
+                    const emailItems = items.map((item) => ({
+                        description: item.description,
+                        quantity: item.quantity,
+                        imageUrl: item.imageUrl,
+                        amountText: Number.isFinite(Number(item.amount_total))
+                            ? Number(item.amount_total).toFixed(2).replace('.', ',')
+                            : '0,00'
+                    }));
+                    const mail = buildOrderConfirmationEmailPayload({
+                        customerName,
+                        items: emailItems,
+                        shippingCostCents: session.shipping_cost && Number.isFinite(Number(session.shipping_cost.amount_total))
+                            ? Number(session.shipping_cost.amount_total)
+                            : null,
+                        discountAmountCents: discountAmount,
+                        couponCode,
+                        totalAmountCents: newOrder.amount,
+                        address: addr
+                    });
 
                     await resend.emails.send({
                         from: 'NOTE. fragrances <info@note-fragrances.de>',
                         to: customerEmail,
-                        subject: `Deine Bestellung bei NOTE. fragrances \u2713`,
-                        html: renderBrandEmail({
-                            badge: 'Bestellbestaetigung',
-                            title: `Vielen Dank, ${safeCustomerName}!`,
-                            introHtml: 'Deine Bestellung ist bei uns eingegangen und wird schnellstmoeglich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.',
-                            iconHtml: '&#10003;',
-                            bodyHtml: `<tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
-<tr><td style="background:#f5f3ee;padding:28px 40px 0;">
-  <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#aaaaaa;font-weight:600;">Deine Bestellung</p>
-  ${itemsHtml}
-</td></tr>
-<tr><td style="background:#f5f3ee;padding:0 40px 10px;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e6e2da;border-radius:4px;padding:14px 16px;">
-    <tr>
-      <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.12em;padding-bottom:6px;">Lieferadresse</td>
-    </tr>
-    <tr>
-      <td style="font-size:13px;color:#444;line-height:1.65;">${addrHtml}</td>
-    </tr>
-  </table>
-</td></tr>
-<tr><td style="background:#f5f3ee;padding:0 40px 40px;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0 16px;">
-    <tr>
-      <td style="font-size:13px;color:#999;">Versand</td>
-      <td style="text-align:right;font-size:13px;color:#999;">${session.shipping_cost ? (session.shipping_cost.amount_total / 100).toFixed(2).replace('.', ',') + ' &euro;' : 'Kostenlos'}</td>
-    </tr>
-    ${discountHtml}
-  </table>
-  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:4px;">
-    <tr>
-      <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.15em;vertical-align:bottom;">Gesamtbetrag</td>
-      <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;font-weight:400;vertical-align:bottom;">${totalFormatted} &euro;</td>
-    </tr>
-  </table>
-</td></tr>
-<tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>`,
-                            afterBodyHtml: `<tr><td style="background:#f5f3ee;padding:32px 48px 40px;text-align:center;">
-  <p style="margin:0 0 6px;font-size:13px;color:#888;">Fragen zu deiner Bestellung?</p>
-  <a href="mailto:info@note-fragrances.de" style="font-size:14px;color:#000;font-weight:700;text-decoration:none;">info@note-fragrances.de</a>
-</td></tr>`
-                        })
+                        subject: mail.subject,
+                        html: mail.html
                     });
 
                     console.log('[Email] Bestellbestätigung gesendet an:', customerEmail);
@@ -1079,11 +1394,11 @@ app.post('/api/contact', formLimiter, requireTrustedOrigin, requireCsrfToken, as
     }
 
     try {
-        const safeName = escapeHtml(name.trim());
+        const normalizedName = String(name || '').trim();
         const safeEmail = sanitizeEmail(email);
-        const safeSubject = escapeHtml(subject.trim());
+        const normalizedSubject = String(subject || '').trim();
         const safeSubjectHeader = sanitizeHeaderText(subject);
-        const safeMessage = escapeHtml(message.trim());
+        const normalizedMessage = String(message || '').trim();
 
         if (!safeEmail) {
             return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
@@ -1095,35 +1410,25 @@ app.post('/api/contact', formLimiter, requireTrustedOrigin, requireCsrfToken, as
             to: 'info@note-fragrances.de',
             replyTo: safeEmail,
             subject: `Kontaktanfrage: ${safeSubjectHeader}`,
-            html: `
-                <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f9f9f9;border-radius:8px;">
-                    <h2 style="font-size:20px;margin-bottom:8px;color:#1a1a1a;">Neue Kontaktanfrage</h2>
-                    <p style="color:#666;font-size:13px;margin-bottom:24px;border-bottom:1px solid #eee;padding-bottom:16px;">
-                        Eingegangen am ${new Date().toLocaleString('de-DE')}
-                    </p>
-                    <table style="width:100%;font-size:14px;color:#333;">
-                        <tr><td style="padding:6px 0;font-weight:600;width:100px;">Name</td><td>${safeName}</td></tr>
-                        <tr><td style="padding:6px 0;font-weight:600;">E-Mail</td><td><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>
-                        <tr><td style="padding:6px 0;font-weight:600;">Betreff</td><td>${safeSubject}</td></tr>
-                    </table>
-                    <div style="margin-top:20px;padding:16px;background:#fff;border-radius:6px;border:1px solid #eee;">
-                        <p style="margin:0;font-size:14px;line-height:1.7;color:#444;white-space:pre-wrap;">${safeMessage}</p>
-                    </div>
-                </div>
-            `
+            html: buildContactInternalEmailHtml({
+                name: normalizedName,
+                email: safeEmail,
+                subjectText: normalizedSubject,
+                message: normalizedMessage,
+                receivedAtText: new Date().toLocaleString('de-DE')
+            })
         });
 
         // 2. Bestätigung an den Absender
+        const contactConfirmationMail = buildContactConfirmationEmailPayload({
+            name: normalizedName,
+            subjectText: normalizedSubject
+        });
         await resend.emails.send({
             from: 'NOTE. fragrances <info@note-fragrances.de>',
             to: safeEmail,
-            subject: `Wir haben Ihre Nachricht erhalten \u2713`,
-            html: renderBrandEmail({
-                badge: 'Nachricht erhalten',
-                title: `Danke, ${safeName}!`,
-                introHtml: `Wir haben Ihre Nachricht zum Thema <strong style="color:#1a1a1a;">${safeSubject}</strong> erhalten und melden uns schnellstmoeglich bei Ihnen zurueck.`,
-                iconHtml: '&#9993;'
-            })
+            subject: contactConfirmationMail.subject,
+            html: contactConfirmationMail.html
         });
 
         res.json({ success: true });
@@ -2437,6 +2742,19 @@ app.get('/api/admin/check', (req, res) => {
     }
 });
 
+app.get('/api/admin/email-templates', (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    try {
+        return res.json({ templates: buildAdminEmailTemplatePreviews() });
+    } catch (err) {
+        console.error('Fehler beim Erstellen der E-Mail-Template-Previews:', err);
+        return res.status(500).json({ error: 'Server Fehler' });
+    }
+});
+
 app.get('/api/admin/security-status', async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
@@ -2870,30 +3188,16 @@ app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin,
                     order.address.line1.toLowerCase().includes('selbstabholung');
 
                 if (!isPickup) {
-                    // Optional gold tracking button
-                    const trackingBlock = safeTrackingUrl
-                        ? `<table border="0" cellpadding="0" cellspacing="0" style="margin:12px auto 0;border-collapse:collapse;"><tr><td style="background:#d4af37;border-radius:2px;padding:14px 32px;"><a href="${safeTrackingUrl}" style="font-family:Arial,sans-serif;font-size:12px;color:#000;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">&#128269;&nbsp;Sendung verfolgen</a></td></tr></table>`
-                        : '';
-                    const safeOrderName = escapeHtml(order.name || 'du');
+                    const shippingMail = buildShippingEmailPayload({
+                        customerName: order.name || 'du',
+                        trackingUrl: safeTrackingUrl
+                    });
 
                     await resend.emails.send({
                         from: 'NOTE. fragrances <info@note-fragrances.de>',
                         to: order.email,
-                        subject: `Deine Bestellung ist unterwegs! \u{1F4E6}`,
-                        html: renderBrandEmail({
-                            badge: 'Auf dem Weg zu dir',
-                            title: `Hallo ${safeOrderName}!`,
-                            introHtml: 'Gute Neuigkeiten &ndash; deine Bestellung ist soeben auf dem Weg zu dir!<br><br>Du kannst deinen Duft in den naechsten <strong style="color:#000;">1&ndash;3 Werktagen</strong> erwarten.<br><br>Wir wuenschen dir viel Freude mit deinem neuen Extrait de Parfum.',
-                            iconHtml: '&#128230;',
-                            ctaHtml: `<table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
-  <tr>
-    <td style="background:#1a1a1a;border-radius:2px;padding:14px 32px;">
-      <a href="https://note-fragrances.de" style="font-family:Arial,sans-serif;font-size:12px;color:#ffffff;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;">Zur Website</a>
-    </td>
-  </tr>
-</table>
-${trackingBlock}`
-                        })
+                        subject: shippingMail.subject,
+                        html: shippingMail.html
                     });
                     console.log(`Versand-Email gesendet an ${order.email} für Bestellung ${order._id}`);
                 }
@@ -2944,16 +3248,16 @@ app.post('/api/admin/orders/:id/notify-pickup', adminWriteLimiter, requireTruste
         // but typically the admin might have packed it and wants to notify
         // Actually this is just sending the email, but we could also auto-advance the status if requested.
 
+        const pickupReadyMail = buildPickupReadyEmailPayload({
+            customerName: order.name || 'du',
+            amountCents: order.amount
+        });
+
         await resend.emails.send({
             from: 'NOTE. fragrances <info@note-fragrances.de>',
             to: order.email,
-            subject: `Dein Parfum ist abholbereit! \u2713`,
-            html: renderBrandEmail({
-                badge: 'Abholbereit',
-                title: `Hallo ${escapeHtml(order.name || 'du')}!`,
-                introHtml: `Deine Bestellung ist nun fertig gepackt und liegt zur Abholung fuer dich bereit. Hier findest du uns:<br><span style="color:#333;">Warnitzer Str. 20, 13057 Berlin</span><br><br>Bitte bringe den Zahlbetrag von <strong style="color:#000; font-weight:700;">${(order.amount / 100).toFixed(2).replace('.', ',')} &euro;</strong> moeglichst passend in Bar mit. Wir freuen uns auf deinen Besuch!`,
-                iconHtml: '&#10003;'
-            })
+            subject: pickupReadyMail.subject,
+            html: pickupReadyMail.html
         });
 
         order.pickupEmailSent = true;
@@ -3358,73 +3662,27 @@ app.post('/create-pickup-order', requireTrustedOrigin, requireCsrfToken, async (
 
         if (normalizedCustomerEmail && !LOCAL_DEV_SAFE_MODE) {
             try {
-                const itemsHtml = line_items.length > 0
-                    ? line_items.map(i => {
-                        const safeDescription = escapeHtml(i.description || '');
-                        const safeImageUrl = sanitizeTrackingUrl(i.imageUrl);
-                        const imgTag = safeImageUrl
-                            ? `<img src="${safeImageUrl}" width="60" height="60" alt="${safeDescription}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
-                            : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
-                        return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
-                          <tr>
-                            <td style="width:70px;vertical-align:middle;">${imgTag}</td>
-                            <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
-                              <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${safeDescription}</p>
-                              <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${i.quantity}</p>
-                            </td>
-                            <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${(i.amount_total / 100).toFixed(2).replace('.', ',')} €</td>
-                          </tr>
-                        </table>`;
-                    }).join('')
-                    : '<p style="color:#999;font-size:13px;">–</p>';
-
-                const totalFormatted = (totalCents / 100).toFixed(2).replace('.', ',');
-                const discountHtml = discountAmountCents > 0
-                    ? `<tr>
-            <td style="font-size:13px;color:#999;padding-top:8px;">Rabatt (${appliedCoupon.code})</td>
-            <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">-${(discountAmountCents / 100).toFixed(2).replace('.', ',')} €</td>
-          </tr>`
-                    : '';
+                const emailItems = line_items.map((item) => ({
+                    description: item.description,
+                    quantity: item.quantity,
+                    imageUrl: item.imageUrl,
+                    amountText: Number.isFinite(Number(item.amount_total))
+                        ? formatEuroFromCents(item.amount_total)
+                        : '0,00'
+                }));
+                const pickupOrderMail = buildPickupOrderConfirmationEmailPayload({
+                    customerName: safeCustomerName,
+                    items: emailItems,
+                    discountAmountCents,
+                    couponCode: appliedCoupon ? appliedCoupon.code : '',
+                    totalAmountCents: totalCents
+                });
 
                 await resend.emails.send({
                     from: 'NOTE. fragrances <info@note-fragrances.de>',
                     to: normalizedCustomerEmail,
-                    subject: `Deine Abhol-Bestellung bei NOTE. fragrances \u2713`,
-                    html: renderBrandEmail({
-                        badge: 'Bestellbestaetigung',
-                        title: `Vielen Dank, ${escapeHtml(safeCustomerName)}!`,
-                        introHtml: 'Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird fuer dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.',
-                        iconHtml: '&#10003;',
-                        bodyHtml: `<tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
-<tr><td style="background:#f5f3ee;padding:28px 40px 0;">
-  <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#aaaaaa;font-weight:600;">Deine Bestellung</p>
-  ${itemsHtml}
-</td></tr>
-<tr><td style="background:#f5f3ee;padding:0 40px 40px;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0 16px;">
-    <tr>
-      <td style="font-size:13px;color:#999;">Versandart</td>
-      <td style="text-align:right;font-size:13px;color:#999;">Selbstabholung</td>
-    </tr>
-    <tr>
-      <td style="font-size:13px;color:#999;padding-top:8px;">Zahlungsart</td>
-      <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">Bar bei Abholung</td>
-    </tr>
-    ${discountHtml}
-  </table>
-  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:4px;">
-    <tr>
-      <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.15em;vertical-align:bottom;">Gesamtbetrag (Bar)</td>
-      <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;font-weight:400;vertical-align:bottom;">${totalFormatted} &euro;</td>
-    </tr>
-  </table>
-</td></tr>
-<tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>`,
-                        afterBodyHtml: `<tr><td style="background:#f5f3ee;padding:32px 48px 40px;text-align:center;">
-  <p style="margin:0 0 6px;font-size:13px;color:#888;">Fragen zu deiner Bestellung?</p>
-  <a href="mailto:info@note-fragrances.de" style="font-size:14px;color:#000;font-weight:700;text-decoration:none;">info@note-fragrances.de</a>
-</td></tr>`
-                    })
+                    subject: pickupOrderMail.subject,
+                    html: pickupOrderMail.html
                 });
                 console.log('[Email] Pickup-Bestellbestaetigung gesendet an:', normalizedCustomerEmail);
             } catch (emailErr) {
