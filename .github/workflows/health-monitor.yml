@@ -1,0 +1,43 @@
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check backend health endpoint
+        env:
+          BACKEND_HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+
+          URL="${BACKEND_HEALTH_URL:-https://note-backend-5gy0.onrender.com/health}"
+          echo "Checking backend: $URL"
+
+          HTTP_CODE="$(curl -sS --max-time 20 --retry 2 --retry-delay 2 -o backend-health.json -w "%{http_code}" "$URL")"
+          echo "Backend HTTP status: $HTTP_CODE"
+          test "$HTTP_CODE" -ge 200 -a "$HTTP_CODE" -lt 400
+
+          if ! grep -q '"status":"ok"' backend-health.json; then
+            echo "Backend health payload did not report status=ok"
+            cat backend-health.json
+            exit 1
+          fi
+
+      - name: Check frontend availability
+        env:
+          FRONTEND_HEALTH_URL: ${{ vars.FRONTEND_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+
+          URL="${FRONTEND_HEALTH_URL:-https://note-fragrances.de/}"
+          echo "Checking frontend: $URL"
+
+          HTTP_CODE="$(curl -sS --max-time 20 --retry 2 --retry-delay 2 -o /dev/null -w "%{http_code}" "$URL")"
+          echo "Frontend HTTP status: $HTTP_CODE"
+          test "$HTTP_CODE" -ge 200 -a "$HTTP_CODE" -lt 400
