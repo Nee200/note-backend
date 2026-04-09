@@ -895,7 +895,9 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                             const safeDescription = escapeHtml(i.description || '');
                             const safeImageUrl = sanitizeTrackingUrl(i.imageUrl);
                             const imgTag = safeImageUrl
-                                ? `<img src="${safeImageUrl}" width="60" height="60" alt="${safeDescription}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
+                                ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:60px;height:60px;border:1px solid #e6e6e6;border-radius:4px;background:#ffffff;"><tr><td align="center" valign="middle" style="width:60px;height:60px;padding:0;">
+<img src="${safeImageUrl}" alt="${safeDescription}" style="display:block;border:0;outline:none;text-decoration:none;width:auto;height:auto;max-width:60px;max-height:60px;">
+</td></tr></table>`
                                 : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
                             return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
                               <tr>
