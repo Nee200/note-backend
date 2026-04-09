@@ -429,6 +429,10 @@ function buildFrontendPageUrl(pagePath) {
     return new URL(pagePath, base).toString();
 }
 
+const EMAIL_WAVE_TOP_IMAGE_URL = buildFrontendPageUrl('email-wave-top.png');
+const EMAIL_WAVE_BOTTOM_IMAGE_URL = buildFrontendPageUrl('email-wave-bottom.png');
+const EMAIL_ICON_CHECK_IMAGE_URL = buildFrontendPageUrl('email-icon-check-gold.png');
+
 function getMongoStateLabel(readyState) {
     switch (readyState) {
         case 0: return 'disconnected';
@@ -439,7 +443,16 @@ function getMongoStateLabel(readyState) {
     }
 }
 
-function renderBrandEmail({ badge, title, introHtml, iconHtml = '', bodyHtml = '', ctaHtml = '', afterBodyHtml = '' }) {
+function renderBrandEmail({ badge, title, introHtml, iconHtml = '', iconImageUrl = '', bodyHtml = '', ctaHtml = '', afterBodyHtml = '' }) {
+    const safeTopWaveUrl = sanitizeTrackingUrl(EMAIL_WAVE_TOP_IMAGE_URL);
+    const safeBottomWaveUrl = sanitizeTrackingUrl(EMAIL_WAVE_BOTTOM_IMAGE_URL);
+    const safeIconImageUrl = sanitizeTrackingUrl(iconImageUrl);
+    const iconMarkup = safeIconImageUrl
+        ? `<img src="${safeIconImageUrl}" width="62" height="62" alt="" style="display:block;width:62px;height:62px;border:0;outline:none;text-decoration:none;margin:0 auto 22px;">`
+        : (iconHtml
+            ? `<div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">${iconHtml}</div>`
+            : '');
+
     return `<!DOCTYPE html>
 <html lang="de">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -448,11 +461,7 @@ function renderBrandEmail({ badge, title, introHtml, iconHtml = '', bodyHtml = '
   <tr><td align="center">
     <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
       <tr><td style="background:#f5f3ee;padding:0;line-height:0;font-size:0;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="560" height="46" viewBox="0 0 560 46" style="display:block;width:100%;height:auto;">
-          <path fill="#e4d8ab" d="M0,0 L560,0 L560,32 C528,38 492,38 432,28 C358,14 290,14 222,26 C150,38 86,42 0,30 Z"></path>
-          <path fill="#d4b64f" d="M0,0 L560,0 L560,24 C532,30 496,30 434,20 C360,8 294,8 222,18 C150,28 82,34 0,22 Z"></path>
-          <path fill="#111111" d="M0,0 L560,0 L560,18 C534,22 500,22 436,14 C362,2 296,2 224,12 C150,22 82,26 0,16 Z"></path>
-        </svg>
+        <img src="${safeTopWaveUrl}" width="560" height="46" alt="" style="display:block;border:0;outline:none;text-decoration:none;width:100%;max-width:560px;height:auto;">
       </td></tr>
       <tr><td style="background:#f5f3ee;padding:18px 48px 14px;text-align:center;">
         <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N&Oslash;TE.</p>
@@ -466,7 +475,7 @@ function renderBrandEmail({ badge, title, introHtml, iconHtml = '', bodyHtml = '
       </td></tr>
       <tr><td style="height:2px;background:#d4af37;"></td></tr>
       <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
-        ${iconHtml ? `<div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">${iconHtml}</div>` : ''}
+        ${iconMarkup}
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">${badge}</p>
         <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">${title}</h1>
         <div style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:400px;">${introHtml}</div>
@@ -475,11 +484,7 @@ function renderBrandEmail({ badge, title, introHtml, iconHtml = '', bodyHtml = '
       ${ctaHtml ? `<tr><td style="background:#f5f3ee;padding:0 48px 34px;text-align:center;">${ctaHtml}</td></tr>` : ''}
       ${afterBodyHtml}
       <tr><td style="background:#f5f3ee;padding:0;line-height:0;font-size:0;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="560" height="104" viewBox="0 0 560 104" style="display:block;width:100%;height:auto;">
-          <path fill="#e1d4a0" d="M0,40 C70,22 130,18 200,40 C260,58 320,58 380,36 C440,14 500,16 560,38 L560,92 L0,92 Z"></path>
-          <path fill="#d4b64f" d="M0,52 C80,30 150,34 220,50 C290,66 360,66 430,46 C485,30 525,28 560,42 L560,92 L0,92 Z"></path>
-          <path fill="#0f0f0f" d="M0,62 C78,42 148,46 220,62 C292,78 360,78 432,60 C488,46 528,44 560,56 L560,104 L0,104 Z"></path>
-        </svg>
+        <img src="${safeBottomWaveUrl}" width="560" height="104" alt="" style="display:block;border:0;outline:none;text-decoration:none;width:100%;max-width:560px;height:auto;">
       </td></tr>
       <tr><td style="background:#0f0f0f;border-bottom:1px solid #d4af37;padding:22px 36px 24px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
@@ -618,7 +623,7 @@ function buildOrderConfirmationEmailPayload({
             badge: 'Bestellbestaetigung',
             title: `Vielen Dank, ${safeCustomerName}!`,
             introHtml: 'Deine Bestellung ist bei uns eingegangen und wird schnellstmoeglich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.',
-            iconHtml: '&#10003;',
+            iconImageUrl: EMAIL_ICON_CHECK_IMAGE_URL,
             bodyHtml: `<tr><td style="background:#f5f3ee;padding:26px 40px 0;">
   <div style="border-top:1px solid #dfd8ca;padding-top:18px;">
     <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#9d9688;font-weight:700;">Deine Bestellung</p>
@@ -681,7 +686,7 @@ function buildPickupOrderConfirmationEmailPayload({
             badge: 'Bestellbestaetigung',
             title: `Vielen Dank, ${safeCustomerName}!`,
             introHtml: 'Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird fuer dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.',
-            iconHtml: '&#10003;',
+            iconImageUrl: EMAIL_ICON_CHECK_IMAGE_URL,
             bodyHtml: `<tr><td style="background:#f5f3ee;padding:26px 40px 0;">
   <div style="border-top:1px solid #dfd8ca;padding-top:18px;">
     <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#9d9688;font-weight:700;">Deine Bestellung</p>
@@ -749,7 +754,7 @@ function buildPickupReadyEmailPayload({ customerName = 'du', amountCents = 0 }) 
             badge: 'Abholbereit',
             title: `Hallo ${safeCustomerName}!`,
             introHtml: `Deine Bestellung ist nun fertig gepackt und liegt zur Abholung fuer dich bereit. Hier findest du uns:<br><span style="color:#333;">Warnitzer Str. 20, 13057 Berlin</span><br><br>Bitte bringe den Zahlbetrag von <strong style="color:#000; font-weight:700;">${formatEuroFromCents(amountCents)} &euro;</strong> moeglichst passend in Bar mit. Wir freuen uns auf deinen Besuch!`,
-            iconHtml: '&#10003;'
+            iconImageUrl: EMAIL_ICON_CHECK_IMAGE_URL
         })
     };
 }
