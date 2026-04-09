@@ -2908,6 +2908,27 @@ ${trackingBlock}`
     }
 });
 
+app.delete('/api/admin/orders/:id', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    try {
+        const deletedOrder = await Order.findByIdAndDelete(req.params.id);
+        if (!deletedOrder) {
+            return res.status(404).json({ error: 'Order nicht gefunden' });
+        }
+
+        res.json({
+            success: true,
+            deletedId: String(deletedOrder._id || req.params.id)
+        });
+    } catch (err) {
+        console.error('Fehler beim Loeschen der Bestellung:', err);
+        res.status(500).json({ error: 'Server Fehler' });
+    }
+});
+
 app.post('/api/admin/orders/:id/notify-pickup', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
