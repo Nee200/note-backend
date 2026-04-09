@@ -14,7 +14,7 @@ const OrderSchema = new mongoose.Schema({
     amount: Number,
     discountAmount: { type: Number, default: 0 },
     couponCode: { type: String, default: '' },
-    stripeSessionId: { type: String, index: true },
+    stripeSessionId: { type: String },
     stripeEventId: { type: String, default: '' },
     address: mongoose.Schema.Types.Mixed,
     items: [OrderItemSchema],
