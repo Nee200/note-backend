@@ -1831,36 +1831,55 @@ async function runDependencyAuditForPath(targetPath) {
     }
 }
 
+function resolveDependencyScanTargets() {
+    const candidates = [
+        { id: 'backend', path: __dirname },
+        { id: 'cwd', path: process.cwd() },
+        { id: 'root', path: path.join(__dirname, '..') },
+        { id: 'frontend', path: path.join(__dirname, '..', 'frontend') }
+    ];
+
+    const seen = new Set();
+    const targets = [];
+
+    for (const candidate of candidates) {
+        const resolvedPath = path.resolve(candidate.path);
+        if (seen.has(resolvedPath)) continue;
+        seen.add(resolvedPath);
+
+        const packageLock = path.join(resolvedPath, 'package-lock.json');
+        if (fs.existsSync(packageLock)) {
+            targets.push({ id: candidate.id, path: resolvedPath });
+        }
+    }
+
+    return targets;
+}
+
 async function runDependencyScan() {
     if (dependencyMonitorState.running) return dependencyMonitorState.latest;
     dependencyMonitorState.running = true;
 
     try {
-        const targets = [
-            { id: 'root', path: path.join(__dirname, '..') },
-            { id: 'backend', path: __dirname }
-        ];
-
+        const targets = resolveDependencyScanTargets();
         const scans = [];
-        for (const target of targets) {
-            const packageLock = path.join(target.path, 'package-lock.json');
-            if (!fs.existsSync(packageLock)) {
-                scans.push({
-                    id: target.id,
-                    ok: false,
-                    npmOk: false,
-                    osvOk: false,
-                    summary: { total: 0, low: 0, moderate: 0, high: 0, critical: 0 },
-                    osvSummary: { packagesScanned: 0, affectedPackages: 0, totalVulns: 0 },
-                    durationMs: 0,
-                    sampleIds: [],
-                    npmError: 'Kein package-lock.json gefunden.',
-                    osvError: 'Kein package-lock.json gefunden.',
-                    error: 'Kein package-lock.json gefunden.'
-                });
-                continue;
-            }
+        if (targets.length === 0) {
+            scans.push({
+                id: 'auto-detect',
+                ok: false,
+                npmOk: false,
+                osvOk: false,
+                summary: { total: 0, low: 0, moderate: 0, high: 0, critical: 0 },
+                osvSummary: { packagesScanned: 0, affectedPackages: 0, totalVulns: 0 },
+                durationMs: 0,
+                sampleIds: [],
+                npmError: 'Kein package-lock.json im Projektpfad gefunden.',
+                osvError: 'Kein package-lock.json im Projektpfad gefunden.',
+                error: 'Kein package-lock.json im Projektpfad gefunden.'
+            });
+        }
 
+        for (const target of targets) {
             const auditResult = await runDependencyAuditForPath(target.path);
             const osvResult = await runOsvScanForPath(target.path);
             scans.push({
@@ -2169,7 +2188,24 @@ async function runSecuritySelfTest() {
 
         const probeTests = await runActiveSecurityProbes();
         const staticTests = runStaticSecurityHeuristics();
+        const dependencyRunAgeMs = dependencyRun && dependencyRun.runAt
+            ? (Date.now() - new Date(dependencyRun.runAt).getTime())
+            : Number.POSITIVE_INFINITY;
+        const dependencyFreshThresholdMs = Math.max(
+            Number(dependencyMonitorState.intervalMs) * 1.5,
+            15 * 60 * 1000
+        );
+
         const dependencyTests = dependencyRun ? [
+            {
+                id: 'deps-recency',
+                label: 'Dependency-Scan zeitnah',
+                ok: dependencyRunAgeMs <= dependencyFreshThresholdMs,
+                severity: 'warning',
+                detail: dependencyRun && dependencyRun.runAt
+                    ? `Letzter Lauf vor ${Math.max(0, Math.round(dependencyRunAgeMs / 60000))} min.`
+                    : 'Kein letzter Laufzeitpunkt vorhanden.'
+            },
             {
                 id: 'deps-audit-critical-high',
                 label: 'Dependency-Scan: Keine High/Critical CVEs',
@@ -2358,6 +2394,12 @@ app.get('/api/admin/security-status', async (req, res) => {
         return res.status(401).json({ error: 'Not authorized' });
     }
 
+    const forceRefresh = String(req.query.refresh || '').toLowerCase() === '1'
+        || String(req.query.refresh || '').toLowerCase() === 'true';
+    if (forceRefresh) {
+        await runDependencyScan();
+    }
+
     const runtimeRun = await runSecuritySelfTest();
 
     const staticChecks = [
@@ -2430,8 +2472,20 @@ app.get('/api/admin/security-status', async (req, res) => {
         : [];
 
     const checks = [...staticChecks, ...runtimeChecks];
+    const staticPassed = staticChecks.filter(check => check.ok).length;
+    const staticTotal = staticChecks.length;
     const passed = checks.filter(check => check.ok).length;
     const score = Math.round((passed / checks.length) * 100);
+    const dependencyAgeMs = dependencyMonitorState.lastRunAt
+        ? (Date.now() - new Date(dependencyMonitorState.lastRunAt).getTime())
+        : null;
+    const dependencyStaleThresholdMs = Math.max(
+        Number(dependencyMonitorState.intervalMs) * 1.5,
+        15 * 60 * 1000
+    );
+    const dependencyIsStale = Number.isFinite(dependencyAgeMs)
+        ? dependencyAgeMs > dependencyStaleThresholdMs
+        : true;
 
     res.json({
         score,
@@ -2448,11 +2502,22 @@ app.get('/api/admin/security-status', async (req, res) => {
             latestScore: runtimeRun ? runtimeRun.score : null,
             alerts: runtimeRun && Array.isArray(runtimeRun.alerts) ? runtimeRun.alerts : [],
             history: securityMonitorState.history.slice(0, 8).map(item => ({
+                ...(function buildHistorySnapshot() {
+                    const runtimeTotal = Array.isArray(item.tests) ? item.tests.length : 0;
+                    const runtimeFailed = Array.isArray(item.tests) ? item.tests.filter(test => !test.ok).length : 0;
+                    const runtimePassed = Math.max(0, runtimeTotal - runtimeFailed);
+                    const combinedTotal = staticTotal + runtimeTotal;
+                    const combinedPassed = staticPassed + runtimePassed;
+                    return {
+                        score: combinedTotal > 0 ? Math.round((combinedPassed / combinedTotal) * 100) : 0,
+                        failedCount: Math.max(0, combinedTotal - combinedPassed),
+                        runtimeScore: Number(item.score) || 0,
+                        runtimeFailedCount: runtimeFailed
+                    };
+                })(),
                 startedAt: item.startedAt,
                 finishedAt: item.finishedAt,
-                durationMs: item.durationMs,
-                score: item.score,
-                failedCount: item.tests.filter(test => !test.ok).length
+                durationMs: item.durationMs
             }))
         },
         dependencyMonitor: {
@@ -2460,6 +2525,9 @@ app.get('/api/admin/security-status', async (req, res) => {
             running: dependencyMonitorState.running,
             lastRunAt: dependencyMonitorState.lastRunAt,
             nextRunAt: dependencyMonitorState.nextRunAt,
+            ageMs: dependencyAgeMs,
+            staleThresholdMs: dependencyStaleThresholdMs,
+            isStale: dependencyIsStale,
             latest: dependencyMonitorState.latest ? {
                 runAt: dependencyMonitorState.latest.runAt,
                 totals: dependencyMonitorState.latest.totals,
@@ -2469,6 +2537,7 @@ app.get('/api/admin/security-status', async (req, res) => {
                 hasOsvFindings: dependencyMonitorState.latest.hasOsvFindings,
                 npmFailures: dependencyMonitorState.latest.npmFailures || [],
                 osvFailures: dependencyMonitorState.latest.osvFailures || [],
+                scanCount: Array.isArray(dependencyMonitorState.latest.scans) ? dependencyMonitorState.latest.scans.length : 0,
                 scans: Array.isArray(dependencyMonitorState.latest.scans)
                     ? dependencyMonitorState.latest.scans.map(scan => ({
                         id: scan.id,
