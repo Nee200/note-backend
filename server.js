@@ -185,7 +185,38 @@ const DEPENDENCY_SCAN_TIMEOUT_MS = Number(process.env.DEPENDENCY_SCAN_TIMEOUT_MS
 const OSV_BATCH_URL = process.env.OSV_BATCH_URL || 'https://api.osv.dev/v1/querybatch';
 const OSV_BATCH_SIZE = Number(process.env.OSV_BATCH_SIZE || 100);
 const OSV_SCAN_TIMEOUT_MS = Number(process.env.OSV_SCAN_TIMEOUT_MS || 120000);
+const CSRF_TOKEN_MEMORY_TTL_MS = Number(process.env.CSRF_TOKEN_MEMORY_TTL_MS || 2 * 60 * 60 * 1000);
 const recentJsonParseErrorTimestamps = [];
+const issuedCsrfTokens = new Map();
+
+function pruneIssuedCsrfTokens(now = Date.now()) {
+    for (const [token, expiresAt] of issuedCsrfTokens.entries()) {
+        if (!expiresAt || expiresAt <= now) {
+            issuedCsrfTokens.delete(token);
+        }
+    }
+}
+
+function rememberCsrfToken(token) {
+    const normalized = String(token || '').trim();
+    if (!normalized) return;
+    const now = Date.now();
+    pruneIssuedCsrfTokens(now);
+    issuedCsrfTokens.set(normalized, now + CSRF_TOKEN_MEMORY_TTL_MS);
+}
+
+function hasRememberedCsrfToken(token) {
+    const normalized = String(token || '').trim();
+    if (!normalized) return false;
+    const now = Date.now();
+    const expiresAt = issuedCsrfTokens.get(normalized);
+    if (!expiresAt) return false;
+    if (expiresAt <= now) {
+        issuedCsrfTokens.delete(normalized);
+        return false;
+    }
+    return true;
+}
 
 function getRequestOrigin(req) {
     const origin = req.headers.origin;
@@ -682,20 +713,34 @@ function ensureCsrfCookie(req, res, next) {
         res.cookie(CSRF_TOKEN_COOKIE, csrfToken, getCsrfCookieOptions());
     }
 
+    rememberCsrfToken(csrfToken);
     req.csrfToken = csrfToken;
     next();
 }
 
 function requireCsrfToken(req, res, next) {
     const cookies = parseCookies(req);
-    const cookieToken = cookies[CSRF_TOKEN_COOKIE];
-    const headerToken = req.headers['x-csrf-token'];
+    const cookieToken = String(cookies[CSRF_TOKEN_COOKIE] || '').trim();
+    const headerToken = String(req.headers['x-csrf-token'] || '').trim();
 
-    if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    if (!headerToken) {
         return res.status(403).json({ error: 'CSRF-Token ungültig.' });
     }
 
-    next();
+    // Standardfall: Double-Submit-Cookie
+    if (cookieToken && cookieToken === headerToken) {
+        rememberCsrfToken(headerToken);
+        return next();
+    }
+
+    // Mobile/Safari-Fallback: Drittanbieter-Cookie ggf. blockiert.
+    // Dann akzeptieren wir ein zuvor vom Server ausgegebenes Header-Token.
+    if (!cookieToken && hasRememberedCsrfToken(headerToken)) {
+        rememberCsrfToken(headerToken);
+        return next();
+    }
+
+    return res.status(403).json({ error: 'CSRF-Token ungültig.' });
 }
 
 
@@ -1020,6 +1065,7 @@ app.get('/ready', async (req, res) => {
 });
 
 app.get('/api/csrf-token', (req, res) => {
+    rememberCsrfToken(req.csrfToken);
     res.json({ csrfToken: req.csrfToken });
 });
 
