@@ -1552,16 +1552,6 @@ app.post('/api/products/:productId/reviews', reviewLimiter, requireTrustedOrigin
 });
 
 
-// Produkte laden
-const productsFilePath = path.join(__dirname, 'products.json');
-let products = [];
-try {
-    const data = fs.readFileSync(productsFilePath, 'utf8');
-    products = JSON.parse(data);
-} catch (err) {
-    console.error('Fehler beim Laden von products.json:', err);
-}
-
 // --- Live Viewer Tracking ---
 const productViewers = {}; // {productId: [ {ip, timestamp} ] }
 
