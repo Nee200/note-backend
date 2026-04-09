@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const subscriberSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    code: { type: String, required: true, unique: true },
+    status: { type: String, enum: ['pending', 'active'], default: 'pending' },
+    code: { type: String, unique: true, sparse: true, trim: true },
     discount: { type: Number, default: 5 }, // percent
     used: { type: Boolean, default: false },
-    subscribedAt: { type: Date, default: Date.now }
+    confirmToken: { type: String, index: true },
+    confirmTokenExpiresAt: { type: Date },
+    subscribedAt: { type: Date, default: Date.now },
+    confirmedAt: { type: Date }
 });
 
 module.exports = mongoose.model('Subscriber', subscriberSchema);

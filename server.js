@@ -1,14 +1,32 @@
 ﻿require('dotenv').config();
 const express = require('express');
+const path = require('path');
+require('dotenv').config({
+    path: process.env.DOTENV_CONFIG_PATH || path.join(__dirname, '.env'),
+    // Hosting-Umgebungsvariablen dürfen nicht von lokaler .env überschrieben werden.
+    override: false
+});
 const mongoose = require('mongoose');
 const User = require('./models/User');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
+const Review = require('./models/Review');
 const Subscriber = require('./models/Subscriber');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
+const LOCAL_DEV_SAFE_MODE = process.env.LOCAL_DEV_SAFE_MODE === 'true';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+if (LOCAL_DEV_SAFE_MODE) {
+    const mongoUri = process.env.MONGO_URI || '';
+    const isLocalMongoUri = /^mongodb(?:\+srv)?:\/\/(127\.0\.0\.1|localhost)(?::\d+)?\//i.test(mongoUri);
+
+    if (!isLocalMongoUri) {
+        throw new Error('LOCAL_DEV_SAFE_MODE darf nur mit einer lokalen MongoDB verwendet werden. Bitte nutze z. B. mongodb://127.0.0.1:27017/note-localtest');
+    }
+}
 
 mongoose.connect(process.env.MONGO_URI, {
 }).then(() => {
@@ -16,20 +34,586 @@ mongoose.connect(process.env.MONGO_URI, {
     refreshProductCache(); // Initial cache load
 }).catch(err => console.log('MongoDB connection error:', err));
 
-const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
+const { execFile } = require('child_process');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_TOKEN_COOKIE = 'admin_token';
+const USER_TOKEN_COOKIE = 'auth_token';
+const CSRF_TOKEN_COOKIE = 'csrf_token';
+const PORT = Number(process.env.PORT || 4242);
+const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-backend-5gy0.onrender.com' : 'http://localhost:4242');
+const FRONTEND_PUBLIC_URL = process.env.FRONTEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-fragrances.de' : 'http://localhost:5500');
+const EXPECTS_LIVE_STRIPE_MODE = String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live_');
+const APP_STARTED_AT = Date.now();
+const TRUSTED_BROWSER_ORIGINS = Array.from(new Set([
+    ...(IS_PRODUCTION ? [] : [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5500',
+        'http://127.0.0.1:5500'
+    ]),
+    'https://keen-mooncake-5c73e2.netlify.app',
+    'https://note-fragrances.de',
+    'https://www.note-fragrances.de',
+    ...String(process.env.TRUSTED_BROWSER_ORIGINS || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean),
+    FRONTEND_PUBLIC_URL,
+    BACKEND_PUBLIC_URL
+].filter(Boolean).map(value => {
+    try {
+        return new URL(value).origin;
+    } catch (err) {
+        return null;
+    }
+}).filter(Boolean)));
+
+function looksLikePlaceholder(value) {
+    const normalized = String(value || '').toLowerCase();
+    if (!normalized) return true;
+    return normalized.includes('placeholder')
+        || normalized.includes('change-me')
+        || normalized.includes('example')
+        || normalized.includes('test');
+}
+
+if (IS_PRODUCTION) {
+    const requiredProdEnv = [
+        ['MONGO_URI', process.env.MONGO_URI],
+        ['JWT_SECRET', process.env.JWT_SECRET],
+        ['ADMIN_PASSWORD', process.env.ADMIN_PASSWORD],
+        ['STRIPE_SECRET_KEY', process.env.STRIPE_SECRET_KEY],
+        ['STRIPE_WEBHOOK_SECRET', process.env.STRIPE_WEBHOOK_SECRET],
+        ['RESEND_API_KEY', process.env.RESEND_API_KEY],
+        ['FRONTEND_PUBLIC_URL', process.env.FRONTEND_PUBLIC_URL],
+        ['BACKEND_PUBLIC_URL', process.env.BACKEND_PUBLIC_URL]
+    ];
+
+    const missing = requiredProdEnv.filter(([, value]) => !String(value || '').trim()).map(([name]) => name);
+    const weak = requiredProdEnv
+        .filter(([, value]) => String(value || '').trim() && looksLikePlaceholder(value))
+        .map(([name]) => name);
+
+    if (missing.length || weak.length) {
+        throw new Error(
+            `Production ENV invalid. Missing: [${missing.join(', ')}], Placeholder-like: [${weak.join(', ')}]`
+        );
+    }
+}
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Anfragen. Bitte versuche es in ein paar Minuten erneut.' }
+});
+
+const adminAuthLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Admin-Anfragen. Bitte versuche es später erneut.' }
+});
+
+const formLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Formularanfragen. Bitte versuche es später erneut.' }
+});
+
+const newsletterLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Newsletter-Anmeldungen. Bitte versuche es später erneut.' }
+});
+
+const couponLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 25,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Gutschein-Prüfungen. Bitte versuche es später erneut.' }
+});
+
+const reviewLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 12,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Bewertungsanfragen. Bitte später erneut versuchen.' }
+});
+
+const viewLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 180,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Live-View-Anfragen. Bitte kurz warten.' }
+});
+
+const adminWriteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 240,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Admin-Schreibanfragen. Bitte kurz warten.' }
+});
+
+const SECURITY_MONITOR_INTERVAL_MS = Number(process.env.SECURITY_MONITOR_INTERVAL_MS || 300000);
+const SECURITY_MONITOR_HISTORY_LIMIT = 25;
+const JSON_PARSE_ERROR_WINDOW_MS = 10 * 60 * 1000;
+const DEPENDENCY_SCAN_INTERVAL_MS = Number(process.env.DEPENDENCY_SCAN_INTERVAL_MS || 24 * 60 * 60 * 1000);
+const DEPENDENCY_SCAN_TIMEOUT_MS = Number(process.env.DEPENDENCY_SCAN_TIMEOUT_MS || 120000);
+const OSV_BATCH_URL = process.env.OSV_BATCH_URL || 'https://api.osv.dev/v1/querybatch';
+const OSV_BATCH_SIZE = Number(process.env.OSV_BATCH_SIZE || 100);
+const OSV_SCAN_TIMEOUT_MS = Number(process.env.OSV_SCAN_TIMEOUT_MS || 120000);
+const recentJsonParseErrorTimestamps = [];
+
+function getRequestOrigin(req) {
+    const origin = req.headers.origin;
+    if (origin) {
+        try {
+            return new URL(origin).origin;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    const referer = req.headers.referer;
+    if (referer) {
+        try {
+            return new URL(referer).origin;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    return null;
+}
+
+function requireTrustedOrigin(req, res, next) {
+    const requestOrigin = getRequestOrigin(req);
+    if (!requestOrigin || !TRUSTED_BROWSER_ORIGINS.includes(requestOrigin)) {
+        return res.status(403).json({ error: 'Origin nicht erlaubt.' });
+    }
+    next();
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function sanitizeEmail(value) {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+        return '';
+    }
+    return normalized;
+}
+
+function sanitizeHeaderText(value) {
+    return String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
+}
+
+function sanitizeText(value, maxLength = 200) {
+    if (typeof value !== 'string') return '';
+    return value
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/javascript:/gi, ' ')
+        .replace(/on\w+\s*=/gi, ' ')
+        .replace(/[\u0000-\u001F\u007F]/g, ' ')
+        .replace(/[<>`]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, maxLength);
+}
+
+function sanitizeCategory(value) {
+    const normalized = sanitizeText(value, 20).toLowerCase();
+    if (!normalized) return '';
+    if (!['women', 'men', 'unisex'].includes(normalized)) return '';
+    return normalized;
+}
+
+function sanitizeProductId(value) {
+    const normalized = sanitizeText(value, 40).toUpperCase();
+    if (!/^[A-Z0-9_-]{1,40}$/.test(normalized)) return '';
+    return normalized;
+}
+
+function sanitizeAssetPath(value) {
+    const normalized = sanitizeText(value, 300);
+    if (!normalized) return '';
+    const lowered = normalized.toLowerCase();
+    if (lowered.startsWith('javascript:') || lowered.startsWith('data:')) return '';
+    return normalized;
+}
+
+function parseMoneyValue(value, { allowNull = false } = {}) {
+    if (allowNull && (value === null || value === undefined || value === '')) {
+        return null;
+    }
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10000) {
+        return undefined;
+    }
+    return parsed;
+}
+
+function sanitizeTrackingUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) {
+        return '';
+    }
+
+    try {
+        const parsed = new URL(value.trim());
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return '';
+        }
+        return parsed.toString();
+    } catch (err) {
+        return '';
+    }
+}
+
+function sanitizeQuantity(value) {
+    const quantity = Number(value);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
+        return null;
+    }
+    return quantity;
+}
+
+function generateCsrfToken() {
+    return crypto.randomBytes(24).toString('hex');
+}
+
+function getAdminCookieOptions() {
+    return {
+        httpOnly: true,
+        secure: IS_PRODUCTION,
+        sameSite: IS_PRODUCTION ? 'None' : 'Lax',
+        maxAge: 3600 * 1000,
+        path: '/'
+    };
+}
+
+function getUserCookieOptions() {
+    return {
+        httpOnly: true,
+        secure: IS_PRODUCTION,
+        sameSite: IS_PRODUCTION ? 'None' : 'Lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/'
+    };
+}
+
+function getCsrfCookieOptions() {
+    return {
+        httpOnly: false,
+        secure: IS_PRODUCTION,
+        sameSite: IS_PRODUCTION ? 'None' : 'Lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/'
+    };
+}
+
+async function findValidCoupon(code) {
+    if (!code) return null;
+
+    const normalizedCode = code.trim().toUpperCase();
+    if (!normalizedCode) return null;
+
+    const subscriber = await Subscriber.findOne({
+        code: normalizedCode,
+        used: false,
+        $or: [
+            { status: 'active' },
+            { status: { $exists: false } }
+        ]
+    });
+    if (!subscriber) {
+        return null;
+    }
+
+    return subscriber;
+}
+
+function generateConfirmationToken() {
+    return crypto.randomBytes(24).toString('hex');
+}
+
+async function generateNewsletterCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code;
+    do {
+        code = 'NOTE-' + Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    } while (await Subscriber.findOne({ code }));
+
+    return code;
+}
+
+function buildBackendPublicUrl(req) {
+    if (req && req.headers && req.headers.host && !IS_PRODUCTION) {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        return `${protocol}://${req.headers.host}`;
+    }
+
+    return BACKEND_PUBLIC_URL;
+}
+
+function buildFrontendPublicUrl(req) {
+    if (req && req.headers && req.headers.origin && /localhost|127\.0\.0\.1/i.test(req.headers.origin)) {
+        return req.headers.origin;
+    }
+
+    return FRONTEND_PUBLIC_URL;
+}
+
+function buildFrontendPageUrl(pagePath) {
+    const base = FRONTEND_PUBLIC_URL.endsWith('/') ? FRONTEND_PUBLIC_URL : `${FRONTEND_PUBLIC_URL}/`;
+    return new URL(pagePath, base).toString();
+}
+
+function getMongoStateLabel(readyState) {
+    switch (readyState) {
+        case 0: return 'disconnected';
+        case 1: return 'connected';
+        case 2: return 'connecting';
+        case 3: return 'disconnecting';
+        default: return 'unknown';
+    }
+}
+
+async function sendNewsletterConfirmationEmail({ email, confirmUrl }) {
+    await resend.emails.send({
+        from: 'NOTE. fragrances <info@note-fragrances.de>',
+        to: email,
+        subject: 'Bitte bestätige deine Newsletter-Anmeldung',
+        html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">NØTE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 32px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Ein letzter Schritt</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Bestätige deine Anmeldung</h1>
+        <p style="margin:0 auto 28px;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Bitte bestätige mit einem Klick deine Newsletter-Anmeldung. Erst danach senden wir dir deinen persönlichen Rabattcode zu.</p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 22px;">
+          <tr><td style="background:#1a1a1a;padding:14px 36px;">
+            <a href="${confirmUrl}" style="font-family:Arial,sans-serif;font-size:11px;color:#d4af37;text-decoration:none;letter-spacing:0.18em;text-transform:uppercase;">Anmeldung bestätigen</a>
+          </td></tr>
+        </table>
+        <p style="margin:0 auto;font-size:12px;color:#999;max-width:360px;line-height:1.7;">Falls du dich nicht selbst eingetragen hast, kannst du diese E-Mail einfach ignorieren.</p>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">NØTE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 · 13057 Berlin · Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;·&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;·&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
+    });
+}
+
+async function sendNewsletterDiscountEmail({ email, code, discount }) {
+    await resend.emails.send({
+        from: 'NOTE. fragrances <info@note-fragrances.de>',
+        to: email,
+        subject: `Dein persönlicher Rabattcode – ${discount}% auf deine erste Bestellung`,
+        html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tr><td style="height:8px;background:#000000;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
+        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">NØTE.</p>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
+          <tr>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
+            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#f5f3ee;padding:48px 48px 32px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Willkommen</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Schön, dass du dabei bist!</h1>
+        <p style="margin:0 auto 32px;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Danke für deine Bestätigung. Als Dankeschön erhältst du exklusiv <strong style="color:#1a1a1a;">${discount}&nbsp;% Rabatt</strong> auf deine erste Bestellung.</p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px;">
+          <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.2em;color:#d4af37;text-transform:uppercase;">Dein persönlicher Code</p>
+            <p style="margin:0;font-family:Georgia,serif;font-size:28px;color:#ffffff;letter-spacing:0.2em;">${code}</p>
+          </td></tr>
+        </table>
+        <p style="margin:0 auto;font-size:12px;color:#999;max-width:360px;line-height:1.7;">Gib diesen Code im Warenkorb unter „Gutscheincode“ ein.<br>Gültig für eine Bestellung · Nicht kombinierbar mit anderen Aktionen.</p>
+      </td></tr>
+      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+      <tr><td style="background:#f5f3ee;padding:28px 48px;text-align:center;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr><td style="background:#1a1a1a;padding:14px 36px;">
+            <a href="https://note-fragrances.de/suche" style="font-family:Arial,sans-serif;font-size:11px;color:#d4af37;text-decoration:none;letter-spacing:0.18em;text-transform:uppercase;">Zur Kollektion &rarr;</a>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:2px;background:#d4af37;"></td></tr>
+      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">NØTE. fragrances</p>
+        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 · 13057 Berlin · Deutschland</p>
+        <p style="margin:0;font-size:11px;">
+          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
+          <span style="color:#333;">&nbsp;·&nbsp;</span>
+          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
+          <span style="color:#333;">&nbsp;·&nbsp;</span>
+          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
+    });
+}
+
+function getUserDisplayName(user) {
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    if (fullName) return fullName;
+    if (user.name && user.name.trim()) return user.name.trim();
+    if (user.email) return user.email.split('@')[0];
+    return 'Anonymer Kunde';
+}
+
+async function getAuthenticatedUser(req) {
+    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    if (!token) {
+        const error = new Error('Nicht eingeloggt');
+        error.status = 401;
+        throw error;
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await User.findOne({ id: decoded.userId });
+        if (!user) {
+            const error = new Error('User nicht gefunden');
+            error.status = 404;
+            throw error;
+        }
+        return user;
+    } catch (err) {
+        if (err.status) throw err;
+        const error = new Error('Ungültiger Token');
+        error.status = 401;
+        throw error;
+    }
+}
+
+async function buildReviewPayload(productId, userId = null) {
+    const reviews = await Review.find({ productId })
+        .sort({ updatedAt: -1 })
+        .lean();
+
+    const count = reviews.length;
+    const average = count
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) / count
+        : 0;
+
+    return {
+        summary: {
+            average,
+            count
+        },
+        reviews: reviews.map(review => ({
+            id: String(review._id),
+            authorName: review.authorName,
+            rating: review.rating,
+            title: review.title || '',
+            comment: review.comment || '',
+            verifiedPurchase: !!review.verifiedPurchase,
+            createdAt: review.createdAt,
+            updatedAt: review.updatedAt,
+            isOwnReview: !!userId && review.userId === userId
+        }))
+    };
+}
+
+async function buildReviewSummaryMap(productIds) {
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+        return {};
+    }
+
+    const summaries = await Review.aggregate([
+        { $match: { productId: { $in: productIds } } },
+        {
+            $group: {
+                _id: '$productId',
+                average: { $avg: '$rating' },
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    return summaries.reduce((acc, item) => {
+        acc[item._id] = {
+            average: item.average || 0,
+            count: item.count || 0
+        };
+        return acc;
+    }, {});
+}
 
 // --- SERVER-SIDE CACHE ---
 let productCache = null;
 async function refreshProductCache() {
     try {
-        productCache = await Product.find({}, '-_id -__v');
+        productCache = await Product.find({}, '-_id -__v').lean();
         console.log('[Cache] Produkt-Cache aktualisiert.');
     } catch (e) {
         console.error('[Cache] Fehler beim Cache-Update:', e);
@@ -38,7 +622,15 @@ async function refreshProductCache() {
 
 function isAdmin(req) {
     const cookies = parseCookies(req);
-    return cookies.api_admin_auth === 'true' || req.headers.authorization === 'Bearer true';
+    const token = cookies[ADMIN_TOKEN_COOKIE];
+    if (!token) return false;
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return decoded && decoded.role === 'admin';
+    } catch (err) {
+        return false;
+    }
 }
 
 // Helper to parse cookies
@@ -54,14 +646,58 @@ const parseCookies = (request) => {
     return list;
 }
 
+function ensureCsrfCookie(req, res, next) {
+    const cookies = parseCookies(req);
+    let csrfToken = cookies[CSRF_TOKEN_COOKIE];
+
+    if (!csrfToken) {
+        csrfToken = generateCsrfToken();
+        res.cookie(CSRF_TOKEN_COOKIE, csrfToken, getCsrfCookieOptions());
+    }
+
+    req.csrfToken = csrfToken;
+    next();
+}
+
+function requireCsrfToken(req, res, next) {
+    const cookies = parseCookies(req);
+    const cookieToken = cookies[CSRF_TOKEN_COOKIE];
+    const headerToken = req.headers['x-csrf-token'];
+
+    if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+        return res.status(403).json({ error: 'CSRF-Token ungültig.' });
+    }
+
+    next();
+}
+
 
 const cors = require('cors');
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+app.use(helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+            defaultSrc: ["'self'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'none'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: IS_PRODUCTION ? [] : null
+        }
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
 
 // Enable CORS for frontend
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'https://keen-mooncake-5c73e2.netlify.app', 'https://note-fragrances.de', 'https://www.note-fragrances.de'], // Allow common local UI ports, netlify and custom domain
+    origin: TRUSTED_BROWSER_ORIGINS, // Allow local UI ports and trusted frontend domains
     credentials: true
 }));
+app.use(ensureCsrfCookie);
 // Webhook-Route MUSS vor app.use(express.json()) definiert werden
 app.post('/webhook', express.raw({ type: 'application/json' }), async (request, response) => {
     const sig = request.headers['stripe-signature'];
@@ -84,11 +720,23 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
         return;
     }
 
+    if (typeof event.livemode === 'boolean' && event.livemode !== EXPECTS_LIVE_STRIPE_MODE) {
+        console.error('[Webhook] Livemode-Mismatch. Event passt nicht zum aktiven Stripe-Key.');
+        return response.status(400).send('Webhook livemode mismatch');
+    }
+
     // Handle the event
     switch (event.type) {
         case 'checkout.session.completed':
             const session = event.data.object;
             console.log('Zahlung erfolgreich!');
+
+            // Idempotenz: Stripe kann Webhooks mehrfach zustellen.
+            const existingOrder = await Order.findOne({ stripeSessionId: session.id }).lean();
+            if (existingOrder) {
+                console.log('[Webhook] Session bereits verarbeitet:', session.id);
+                return response.json({ received: true, duplicate: true });
+            }
 
             // Line Items von Stripe abrufen + Produktbilder aus MongoDB
             let items = [];
@@ -123,52 +771,65 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                 console.error('Fehler beim Abrufen der Line Items:', err);
             }
 
-            console.log('Versanddetails:', session.shipping_details);
-            console.log('Kundendetails:', session.customer_details);
-
             const addressData = session.customer_details ? session.customer_details.address : null;
+            const couponCode = session.metadata && session.metadata.couponCode ? session.metadata.couponCode : '';
+            const discountAmount = session.total_details && typeof session.total_details.amount_discount === 'number'
+                ? session.total_details.amount_discount
+                : (session.metadata && session.metadata.discountAmountCents ? parseInt(session.metadata.discountAmountCents, 10) || 0 : 0);
 
             const newOrder = {
                 date: new Date().toISOString(),
                 email: session.customer_details && session.customer_details.email,
                 name: session.customer_details && session.customer_details.name,
                 amount: session.amount_total,  // kept in cents; admin UI divides by 100
+                discountAmount,
+                couponCode,
                 address: addressData,
-                items: items
+                items: items,
+                stripeSessionId: session.id,
+                stripeEventId: event.id
             };
 
             // Save to MongoDB (primary)
             try {
                 const order = new Order(newOrder);
                 await order.save();
+                if (couponCode) {
+                    await Subscriber.updateOne({ code: couponCode, used: false }, { $set: { used: true } });
+                }
                 console.log('Bestellung in MongoDB gespeichert:', order._id);
             } catch (dbErr) {
-                console.error('MongoDB Fehler, Fallback auf orders.json:', dbErr);
-                // Fallback: write to orders.json
-                const ordersFilePath = path.join(__dirname, 'orders.json');
-                let orders = [];
-                if (fs.existsSync(ordersFilePath)) {
-                    try { orders = JSON.parse(fs.readFileSync(ordersFilePath, 'utf8')); } catch (e) { }
+                console.error('MongoDB Fehler beim Speichern der Webhook-Order:', dbErr);
+                if (!IS_PRODUCTION) {
+                    // Nur lokal als Fallback speichern, nie in Produktion.
+                    const ordersFilePath = path.join(__dirname, 'orders.json');
+                    let orders = [];
+                    if (fs.existsSync(ordersFilePath)) {
+                        try { orders = JSON.parse(fs.readFileSync(ordersFilePath, 'utf8')); } catch (e) { }
+                    }
+                    orders.push(newOrder);
+                    try { fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), 'utf8'); } catch (e) { }
                 }
-                orders.push(newOrder);
-                try { fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), 'utf8'); } catch (e) { }
             }
 
             // Send order confirmation email to customer
             const customerEmail = session.customer_details && session.customer_details.email;
             const customerName = session.customer_details && session.customer_details.name || 'Kunde';
+            const safeCustomerName = escapeHtml(customerName);
             if (customerEmail) {
                 try {
                     const itemsHtml = items.length > 0
                         ? items.map(i => {
-                            const imgTag = i.imageUrl
-                                ? `<img src="${i.imageUrl}" width="60" height="60" alt="${i.description}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
+                            const safeDescription = escapeHtml(i.description || '');
+                            const safeImageUrl = sanitizeTrackingUrl(i.imageUrl);
+                            const imgTag = safeImageUrl
+                                ? `<img src="${safeImageUrl}" width="60" height="60" alt="${safeDescription}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
                                 : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
                             return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
                               <tr>
                                 <td style="width:70px;vertical-align:middle;">${imgTag}</td>
                                 <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
-                                  <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${i.description}</p>
+                                  <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${safeDescription}</p>
                                   <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${i.quantity}</p>
                                 </td>
                                 <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${i.amount_total.toFixed(2).replace('.', ',')} €</td>
@@ -178,6 +839,12 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                         : '<p style="color:#999;font-size:13px;">–</p>';
 
                     const totalFormatted = (newOrder.amount / 100).toFixed(2).replace('.', ',');
+                    const discountHtml = discountAmount > 0
+                        ? `<tr>
+            <td style="font-size:13px;color:#999;padding-top:8px;">Rabatt (${couponCode})</td>
+            <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">-${(discountAmount / 100).toFixed(2).replace('.', ',')} €</td>
+          </tr>`
+                        : '';
 
                     // Lieferadresse des Kunden aufbereiten
                     const addr = session.shipping_details && session.shipping_details.address
@@ -216,7 +883,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
       <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
         <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Bestellbest\u00e4tigung</p>
-        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Vielen Dank, ${customerName}!</h1>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Vielen Dank, ${safeCustomerName}!</h1>
         <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Deine Bestellung ist bei uns eingegangen und wird schnellstm\u00f6glich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.</p>
       </td></tr>
 
@@ -233,6 +900,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
             <td style="font-size:13px;color:#999;">Versand</td>
             <td style="text-align:right;font-size:13px;color:#999;">${session.shipping_cost ? (session.shipping_cost.amount_total / 100).toFixed(2).replace('.', ',') + ' \u20ac' : 'Kostenlos'}</td>
           </tr>
+          ${discountHtml}
         </table>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:4px;">
           <tr>
@@ -283,23 +951,110 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 });
 
 // Middleware for parsing JSON and URL-encoded data
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Einheitliche Antwort bei kaputtem JSON-Body statt HTML-Stacktrace
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && Object.prototype.hasOwnProperty.call(err, 'body')) {
+        recentJsonParseErrorTimestamps.push(Date.now());
+        return res.status(400).json({ error: 'Ungültiges JSON-Format.' });
+    }
+    return next(err);
+});
+
+app.get('/health', (req, res) => {
+    const mongoReadyState = mongoose.connection ? mongoose.connection.readyState : 0;
+    const dbConnected = mongoReadyState === 1;
+
+    return res.status(200).json({
+        status: 'ok',
+        service: 'onlineshop-backend',
+        now: new Date().toISOString(),
+        uptimeSeconds: Math.floor(process.uptime()),
+        startedAt: new Date(APP_STARTED_AT).toISOString(),
+        env: IS_PRODUCTION ? 'production' : 'non-production',
+        version: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown',
+        checks: {
+            db: {
+                ok: dbConnected,
+                state: getMongoStateLabel(mongoReadyState)
+            }
+        }
+    });
+});
+
+app.get('/ready', async (req, res) => {
+    const mongoReadyState = mongoose.connection ? mongoose.connection.readyState : 0;
+    const dbConnected = mongoReadyState === 1;
+
+    if (!dbConnected || !mongoose.connection.db) {
+        return res.status(503).json({
+            status: 'not_ready',
+            reason: 'database_not_connected',
+            checks: {
+                db: {
+                    ok: false,
+                    state: getMongoStateLabel(mongoReadyState)
+                }
+            }
+        });
+    }
+
+    try {
+        await mongoose.connection.db.admin().ping();
+        return res.status(200).json({
+            status: 'ready',
+            now: new Date().toISOString(),
+            checks: {
+                db: {
+                    ok: true,
+                    state: getMongoStateLabel(mongoReadyState)
+                }
+            }
+        });
+    } catch (err) {
+        return res.status(503).json({
+            status: 'not_ready',
+            reason: 'database_ping_failed',
+            checks: {
+                db: {
+                    ok: false,
+                    state: getMongoStateLabel(mongoReadyState)
+                }
+            }
+        });
+    }
+});
+
+app.get('/api/csrf-token', (req, res) => {
+    res.json({ csrfToken: req.csrfToken });
+});
 
 // --- Contact Form ---
-app.post('/api/contact', async (req, res) => {
+app.post('/api/contact', formLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     const { name, email, subject, message } = req.body;
     if (!name || !email || !subject || !message) {
         return res.status(400).json({ error: 'Alle Felder sind erforderlich.' });
     }
 
     try {
+        const safeName = escapeHtml(name.trim());
+        const safeEmail = sanitizeEmail(email);
+        const safeSubject = escapeHtml(subject.trim());
+        const safeSubjectHeader = sanitizeHeaderText(subject);
+        const safeMessage = escapeHtml(message.trim());
+
+        if (!safeEmail) {
+            return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
+        }
+
         // 1. Nachricht an info@note-fragrances.de
         await resend.emails.send({
             from: 'NØTE. Kontakt <noreply@note-fragrances.de>',
             to: 'info@note-fragrances.de',
-            replyTo: email,
-            subject: `Kontaktanfrage: ${subject}`,
+            replyTo: safeEmail,
+            subject: `Kontaktanfrage: ${safeSubjectHeader}`,
             html: `
                 <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f9f9f9;border-radius:8px;">
                     <h2 style="font-size:20px;margin-bottom:8px;color:#1a1a1a;">Neue Kontaktanfrage</h2>
@@ -307,12 +1062,12 @@ app.post('/api/contact', async (req, res) => {
                         Eingegangen am ${new Date().toLocaleString('de-DE')}
                     </p>
                     <table style="width:100%;font-size:14px;color:#333;">
-                        <tr><td style="padding:6px 0;font-weight:600;width:100px;">Name</td><td>${name}</td></tr>
-                        <tr><td style="padding:6px 0;font-weight:600;">E-Mail</td><td><a href="mailto:${email}">${email}</a></td></tr>
-                        <tr><td style="padding:6px 0;font-weight:600;">Betreff</td><td>${subject}</td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;width:100px;">Name</td><td>${safeName}</td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;">E-Mail</td><td><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>
+                        <tr><td style="padding:6px 0;font-weight:600;">Betreff</td><td>${safeSubject}</td></tr>
                     </table>
                     <div style="margin-top:20px;padding:16px;background:#fff;border-radius:6px;border:1px solid #eee;">
-                        <p style="margin:0;font-size:14px;line-height:1.7;color:#444;white-space:pre-wrap;">${message}</p>
+                        <p style="margin:0;font-size:14px;line-height:1.7;color:#444;white-space:pre-wrap;">${safeMessage}</p>
                     </div>
                 </div>
             `
@@ -321,7 +1076,7 @@ app.post('/api/contact', async (req, res) => {
         // 2. Bestätigung an den Absender
         await resend.emails.send({
             from: 'NOTE. fragrances <info@note-fragrances.de>',
-            to: email,
+            to: safeEmail,
             subject: `Wir haben Ihre Nachricht erhalten \u2713`,
             html: `<!DOCTYPE html>
 <html lang="de">
@@ -345,8 +1100,8 @@ app.post('/api/contact', async (req, res) => {
       <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
         <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2709</div>
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Nachricht erhalten</p>
-        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Danke, ${name}!</h1>
-        <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:400px;">Wir haben Ihre Nachricht zum Thema <strong style="color:#1a1a1a;">${subject}</strong> erhalten und melden uns schnellstm\u00f6glich bei Ihnen zur\u00fcck.</p>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Danke, ${safeName}!</h1>
+        <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:400px;">Wir haben Ihre Nachricht zum Thema <strong style="color:#1a1a1a;">${safeSubject}</strong> erhalten und melden uns schnellstm\u00f6glich bei Ihnen zur\u00fcck.</p>
       </td></tr>
       <tr><td style="height:2px;background:#d4af37;"></td></tr>
       <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
@@ -374,161 +1129,209 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // --- Newsletter Anmeldung ---
-app.post('/api/newsletter', async (req, res) => {
+app.post('/api/newsletter', newsletterLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     const { email } = req.body;
-    if (!email || !email.includes('@')) {
+    const normalizedEmail = email ? email.toLowerCase().trim() : '';
+
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
         return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
     }
+
     try {
-        const existing = await Subscriber.findOne({ email: email.toLowerCase().trim() });
-        if (existing) {
+        const existing = await Subscriber.findOne({ email: normalizedEmail });
+        const confirmToken = generateConfirmationToken();
+        const confirmTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const confirmationUrl = `${buildBackendPublicUrl(req)}/api/newsletter/confirm?token=${confirmToken}`;
+
+        if (existing && (existing.status === 'active' || (existing.code && !existing.status))) {
             return res.status(409).json({ error: 'Diese E-Mail ist bereits angemeldet.', alreadySubscribed: true });
         }
 
-        // Personalisierten Code generieren: NOTE- + 5 zufällige Zeichen
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code;
-        do {
-            code = 'NOTE-' + Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-        } while (await Subscriber.findOne({ code }));
+        let subscriber = existing;
 
-        await new Subscriber({ email: email.toLowerCase().trim(), code }).save();
+        if (subscriber) {
+            subscriber.confirmToken = confirmToken;
+            subscriber.confirmTokenExpiresAt = confirmTokenExpiresAt;
+            subscriber.status = 'pending';
+            subscriber.confirmedAt = undefined;
+            await subscriber.save();
+        } else {
+            subscriber = await new Subscriber({
+                email: normalizedEmail,
+                status: 'pending',
+                confirmToken,
+                confirmTokenExpiresAt
+            }).save();
+        }
 
-        await resend.emails.send({
-            from: 'NOTE. fragrances <info@note-fragrances.de>',
-            to: email,
-            subject: 'Dein pers\u00f6nlicher Rabattcode \u2013 5% auf deine erste Bestellung',
-            html: `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#e2dfd8;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2dfd8;padding:40px 0;">
-  <tr><td align="center">
-    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
-      <tr><td style="height:8px;background:#000000;"></td></tr>
-      <tr><td style="background:#f5f3ee;padding:26px 48px 18px;text-align:center;">
-        <p style="margin:0 0 5px;font-family:Georgia,serif;color:#000000;font-size:30px;letter-spacing:0.12em;font-weight:400;">N\u00d8TE.</p>
-        <table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
-          <tr>
-            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
-            <td style="font-family:Arial,sans-serif;font-size:9px;color:#333333;letter-spacing:0.28em;text-transform:uppercase;padding:0 8px;">fragrances</td>
-            <td style="width:32px;font-size:0;line-height:0;overflow:hidden;border-top:1px solid #333333;">&nbsp;</td>
-          </tr>
-        </table>
-      </td></tr>
-      <tr><td style="height:2px;background:#d4af37;"></td></tr>
-      <tr><td style="background:#f5f3ee;padding:48px 48px 32px;text-align:center;">
-        <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Willkommen</p>
-        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Sch\u00f6n, dass du dabei bist!</h1>
-        <p style="margin:0 auto 32px;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Danke f\u00fcr deine Anmeldung. Als Danksch\u00f6n erh\u00e4ltst du exklusiv <strong style="color:#1a1a1a;">5&nbsp;% Rabatt</strong> auf deine erste Bestellung.</p>
-        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px;">
-          <tr><td style="background:#1a1a1a;padding:20px 40px;text-align:center;">
-            <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.2em;color:#d4af37;text-transform:uppercase;">Dein pers\u00f6nlicher Code</p>
-            <p style="margin:0;font-family:Georgia,serif;font-size:28px;color:#ffffff;letter-spacing:0.2em;">${code}</p>
-          </td></tr>
-        </table>
-        <p style="margin:0 auto;font-size:12px;color:#999;max-width:360px;line-height:1.7;">Gib diesen Code im Warenkorb unter &bdquo;Gutscheincode&ldquo; ein.<br>G\u00fcltig f\u00fcr eine Bestellung &middot; Nicht kombinierbar mit anderen Aktionen.</p>
-      </td></tr>
-      <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
-      <tr><td style="background:#f5f3ee;padding:28px 48px;text-align:center;">
-        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-          <tr><td style="background:#1a1a1a;padding:14px 36px;">
-            <a href="https://note-fragrances.de/suche" style="font-family:Arial,sans-serif;font-size:11px;color:#d4af37;text-decoration:none;letter-spacing:0.18em;text-transform:uppercase;">Zur Kollektion &rarr;</a>
-          </td></tr>
-        </table>
-      </td></tr>
-      <tr><td style="height:2px;background:#d4af37;"></td></tr>
-      <tr><td style="background:#000;padding:28px 48px 24px;text-align:center;">
-        <p style="margin:0 0 6px;font-family:Georgia,serif;color:#fff;font-size:17px;letter-spacing:0.22em;">N\u00d8TE. fragrances</p>
-        <p style="margin:0 0 16px;font-size:11px;color:#555;">Warnitzer Str. 20 \u00b7 13057 Berlin \u00b7 Deutschland</p>
-        <p style="margin:0;font-size:11px;">
-          <a href="https://note-fragrances.de/datenschutz.html" style="color:#555;text-decoration:none;">Datenschutz</a>
-          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
-          <a href="https://note-fragrances.de/impressum.html" style="color:#555;text-decoration:none;">Impressum</a>
-          <span style="color:#333;">&nbsp;\u00b7&nbsp;</span>
-          <a href="https://note-fragrances.de/widerrufsrecht.html" style="color:#555;text-decoration:none;">Widerruf</a>
-        </p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`
+        if (LOCAL_DEV_SAFE_MODE) {
+            return res.json({
+                success: true,
+                safeMode: true,
+                confirmUrl: confirmationUrl,
+                message: 'Lokaler Testmodus: Kein E-Mail-Versand. Öffne den Bestätigungslink, um den Testcode zu erzeugen.'
+            });
+        }
+
+        await sendNewsletterConfirmationEmail({
+            email: normalizedEmail,
+            confirmUrl: confirmationUrl
         });
 
-        res.json({ success: true });
+        res.json({
+            success: true,
+            requiresConfirmation: true,
+            message: 'Bitte bestätige deine Anmeldung über die E-Mail, die wir dir gerade gesendet haben.'
+        });
     } catch (err) {
         console.error('Newsletter Fehler:', err);
         res.status(500).json({ error: 'Anmeldung fehlgeschlagen.' });
     }
 });
 
-// --- Coupon validieren ---
-app.post('/api/validate-coupon', async (req, res) => {
-    const { code } = req.body;
-    if (!code) return res.status(400).json({ valid: false });
-    const upper = code.trim().toUpperCase();
+app.get('/api/newsletter/confirm', async (req, res) => {
+    const { token } = req.query;
 
-    // Nur Newsletter-Codes aus der Datenbank
-    const sub = await Subscriber.findOne({ code: upper });
-    if (sub) {
-        return res.json({
-            valid: true,
-            discount: sub.discount,
-            label: `-${sub.discount}% Newsletter-Rabatt`
-        });
+    if (!token || typeof token !== 'string') {
+        return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=invalid`);
     }
-    res.json({ valid: false });
+
+    try {
+        const subscriber = await Subscriber.findOne({ confirmToken: token.trim() });
+
+        if (!subscriber) {
+            return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=invalid`);
+        }
+
+        if (subscriber.status === 'active' && subscriber.confirmedAt) {
+            return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=already-confirmed`);
+        }
+
+        if (!subscriber.confirmTokenExpiresAt || subscriber.confirmTokenExpiresAt.getTime() < Date.now()) {
+            subscriber.confirmToken = undefined;
+            subscriber.confirmTokenExpiresAt = undefined;
+            await subscriber.save();
+            return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=expired`);
+        }
+
+        subscriber.status = 'active';
+        subscriber.confirmedAt = new Date();
+        subscriber.confirmToken = undefined;
+        subscriber.confirmTokenExpiresAt = undefined;
+
+        if (!subscriber.code) {
+            subscriber.code = await generateNewsletterCode();
+        }
+
+        await subscriber.save();
+
+        if (LOCAL_DEV_SAFE_MODE) {
+            return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=success&code=${encodeURIComponent(subscriber.code)}`);
+        }
+
+        await sendNewsletterDiscountEmail({
+            email: subscriber.email,
+            code: subscriber.code,
+            discount: subscriber.discount || 5
+        });
+
+        return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=success`);
+    } catch (err) {
+        console.error('Newsletter Bestaetigung Fehler:', err);
+        return res.redirect(`${buildFrontendPublicUrl(req)}/newsletter-confirmation.html?status=error`);
+    }
+});
+
+// --- Coupon validieren ---
+app.post('/api/validate-coupon', couponLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ valid: false });
+
+        const sub = await findValidCoupon(code);
+        if (sub) {
+            return res.json({
+                valid: true,
+                code: sub.code,
+                discount: sub.discount,
+                label: `-${sub.discount}% Newsletter-Rabatt`
+            });
+        }
+        res.json({ valid: false });
+    } catch (err) {
+        console.error('Coupon validation error:', err);
+        res.status(503).json({ error: 'Gutschein-Prüfung aktuell nicht verfügbar.' });
+    }
 });
 
 // --- User Auth Routes ---
 
-app.post('/api/register', async (req, res) => {
-    const { email, password, name } = req.body;
+app.post('/api/register', authLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    try {
+        const { email, password, name } = req.body;
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        const safeName = sanitizeText(name, 120);
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email und Passwort erforderlich' });
+        if (!normalizedEmail || !password) {
+            return res.status(400).json({ error: 'Email und Passwort erforderlich' });
+        }
+
+        if (!JWT_SECRET) {
+            return res.status(500).json({ error: 'Server-Konfiguration unvollständig' });
+        }
+
+        if (await User.findOne({ email: normalizedEmail })) {
+            return res.status(400).json({ error: 'Email bereits registriert' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = new User({ email: normalizedEmail, password: hashedPassword, name: safeName });
+        await user.save();
+
+        const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+        res.cookie(USER_TOKEN_COOKIE, token, getUserCookieOptions());
+
+        res.json({ success: true, message: 'Registrierung erfolgreich', user: { name: user.name, email: user.email } });
+    } catch (err) {
+        console.error('Register error:', err);
+        res.status(503).json({ error: 'Registrierung aktuell nicht verfügbar.' });
     }
-
-    if (await User.findOne({ email })) {
-        return res.status(400).json({ error: 'Email bereits registriert' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({ email, password: hashedPassword, name: name || '' });
-    await user.save();
-
-
-    res.json({ success: true, message: 'Registrierung erfolgreich' });
 });
 
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
+app.post('/api/login', authLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(401).json({ error: 'Ungültige Email oder Passwort' });
+        if (!JWT_SECRET) {
+            return res.status(500).json({ error: 'Server-Konfiguration unvollständig' });
+        }
+
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ error: 'Ungültige Email oder Passwort' });
+        }
+
+        const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+
+        res.cookie(USER_TOKEN_COOKIE, token, getUserCookieOptions());
+
+        res.json({ success: true, user: { name: user.name, email: user.email } });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(503).json({ error: 'Login aktuell nicht verfügbar.' });
     }
-
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
-
-    // Set HTTP-only cookie
-    res.cookie('auth_token', token, {
-        httpOnly: true,
-        secure: false, // Set to true in production with HTTPS
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
-
-    res.json({ success: true, user: { name: user.name, email: user.email } });
 });
 
-app.post('/api/logout', (req, res) => {
-    res.clearCookie('auth_token');
+app.post('/api/logout', requireTrustedOrigin, requireCsrfToken, (req, res) => {
+    res.clearCookie(USER_TOKEN_COOKIE, getUserCookieOptions());
     res.json({ success: true });
 });
 
 app.get('/api/user', async (req, res) => {
-    const token = parseCookies(req).auth_token;
+    const token = parseCookies(req)[USER_TOKEN_COOKIE];
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -550,8 +1353,8 @@ app.get('/api/user', async (req, res) => {
     }
 });
 
-app.put('/api/user/profile', async (req, res) => {
-    const token = parseCookies(req).auth_token;
+app.put('/api/user/profile', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    const token = parseCookies(req)[USER_TOKEN_COOKIE];
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -560,9 +1363,11 @@ app.put('/api/user/profile', async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User nicht gefunden' });
 
         const { firstName, lastName } = req.body;
+        const safeFirstName = sanitizeText(firstName, 80);
+        const safeLastName = sanitizeText(lastName, 80);
 
-        if (firstName !== undefined) user.firstName = firstName;
-        if (lastName !== undefined) user.lastName = lastName;
+        if (firstName !== undefined) user.firstName = safeFirstName;
+        if (lastName !== undefined) user.lastName = safeLastName;
 
         await user.save();
 
@@ -572,8 +1377,8 @@ app.put('/api/user/profile', async (req, res) => {
     }
 });
 
-app.post('/api/user/address', async (req, res) => {
-    const token = parseCookies(req).auth_token;
+app.post('/api/user/address', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    const token = parseCookies(req)[USER_TOKEN_COOKIE];
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -587,13 +1392,13 @@ app.post('/api/user/address', async (req, res) => {
 
         const newAddress = {
             id: uuidv4(),
-            firstName,
-            lastName,
-            label,
-            street,
-            city,
-            zip,
-            country
+            firstName: sanitizeText(firstName, 80),
+            lastName: sanitizeText(lastName, 80),
+            label: sanitizeText(label, 80),
+            street: sanitizeText(street, 120),
+            city: sanitizeText(city, 80),
+            zip: sanitizeText(zip, 20),
+            country: sanitizeText(country, 80)
         };
 
         user.addresses.push(newAddress);
@@ -605,8 +1410,8 @@ app.post('/api/user/address', async (req, res) => {
     }
 });
 
-app.delete('/api/user/address/:id', async (req, res) => {
-    const token = parseCookies(req).auth_token;
+app.delete('/api/user/address/:id', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    const token = parseCookies(req)[USER_TOKEN_COOKIE];
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -627,7 +1432,7 @@ app.delete('/api/user/address/:id', async (req, res) => {
 });
 
 app.get('/api/user/orders', async (req, res) => {
-    const token = parseCookies(req).auth_token;
+    const token = parseCookies(req)[USER_TOKEN_COOKIE];
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -641,6 +1446,105 @@ app.get('/api/user/orders', async (req, res) => {
 
     } catch (err) {
         res.status(401).json({ error: 'Ungültiger Token' });
+    }
+});
+
+app.get('/api/products/:productId/reviews', async (req, res) => {
+    try {
+        const productId = (req.params.productId || '').trim();
+        if (!productId) {
+            return res.status(400).json({ error: 'Produkt-ID fehlt' });
+        }
+
+        let userId = null;
+        try {
+            const token = parseCookies(req)[USER_TOKEN_COOKIE];
+            if (token) {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                userId = decoded.userId || null;
+            }
+        } catch (err) {
+            userId = null;
+        }
+
+        const payload = await buildReviewPayload(productId, userId);
+        res.json(payload);
+    } catch (err) {
+        console.error('Fehler beim Laden der Bewertungen:', err);
+        res.status(500).json({ error: 'Bewertungen konnten nicht geladen werden.' });
+    }
+});
+
+app.post('/api/products/:productId/reviews', reviewLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    try {
+        const productId = (req.params.productId || '').trim();
+        if (!productId) {
+            return res.status(400).json({ error: 'Produkt-ID fehlt' });
+        }
+
+        const product = await Product.findOne({ id: productId }, 'id name');
+        if (!product) {
+            return res.status(404).json({ error: 'Produkt nicht gefunden' });
+        }
+
+        const user = await getAuthenticatedUser(req);
+        const rawRating = Number(req.body.rating);
+        const rating = Number.isFinite(rawRating) ? Math.round(rawRating) : NaN;
+        const title = sanitizeText(req.body.title, 120);
+        const comment = sanitizeText(req.body.comment, 1200);
+
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+            return res.status(400).json({ error: 'Bitte gib eine Bewertung zwischen 1 und 5 Sternen ab.' });
+        }
+
+        if (!comment || comment.length < 10) {
+            return res.status(400).json({ error: 'Bitte schreibe mindestens 10 Zeichen zu deiner Bewertung.' });
+        }
+
+        const verifiedPurchase = await Order.exists({
+            email: user.email,
+            items: {
+                $elemMatch: {
+                    description: new RegExp(product.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+                }
+            }
+        });
+
+        const review = await Review.findOneAndUpdate(
+            { productId, userId: user.id },
+            {
+                productId,
+                userId: user.id,
+                userEmail: user.email,
+                authorName: getUserDisplayName(user),
+                rating,
+                title,
+                comment,
+                verifiedPurchase: !!verifiedPurchase,
+                updatedAt: new Date()
+            },
+            {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true,
+                runValidators: true
+            }
+        );
+
+        const payload = await buildReviewPayload(productId, user.id);
+        res.status(201).json({
+            success: true,
+            message: review.createdAt && review.updatedAt && review.createdAt.getTime() === review.updatedAt.getTime()
+                ? 'Bewertung gespeichert.'
+                : 'Bewertung aktualisiert.',
+            ...payload
+        });
+    } catch (err) {
+        if (err.status) {
+            return res.status(err.status).json({ error: err.message });
+        }
+        console.error('Fehler beim Speichern der Bewertung:', err);
+        res.status(500).json({ error: 'Bewertung konnte nicht gespeichert werden.' });
     }
 });
 
@@ -668,7 +1572,7 @@ function cleanupViewers(productId) {
     }
 }
 
-app.post('/api/view-product', (req, res) => {
+app.post('/api/view-product', viewLimiter, (req, res) => {
     const { productId } = req.body;
     if (!productId) {
         return res.status(400).json({ error: 'Missing productId' });
@@ -706,15 +1610,7 @@ app.post('/api/view-product', (req, res) => {
 // ----------------------------
 
 app.post('/admin/login', (req, res) => {
-    const { password } = req.body;
-    if (password === ADMIN_PASSWORD) {
-        res.setHeader('Set-Cookie', 'admin_auth=true; HttpOnly; Path=/; Max-Age=3600');
-        res.redirect('/admin');
-    } else {
-        res.send(`
-    < script > alert('Falsches Passwort'); window.location.href = '/admin';</script >
-        `);
-    }
+    res.status(410).send('Legacy admin login disabled. Use /frontend/admin.html with the API login.');
 });
 
 // --- Brute-force protection for admin login ---
@@ -726,8 +1622,725 @@ function getClientIp(req) {
     return (req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown').split(',')[0].trim();
 }
 
+const securityMonitorState = {
+    intervalMs: SECURITY_MONITOR_INTERVAL_MS,
+    running: false,
+    lastRunAt: null,
+    nextRunAt: null,
+    latest: null,
+    history: []
+};
+
+const dependencyMonitorState = {
+    intervalMs: DEPENDENCY_SCAN_INTERVAL_MS,
+    running: false,
+    lastRunAt: null,
+    nextRunAt: null,
+    latest: null,
+    history: []
+};
+
+function pruneTimestamps(timestamps, windowMs) {
+    const threshold = Date.now() - windowMs;
+    while (timestamps.length > 0 && timestamps[0] < threshold) {
+        timestamps.shift();
+    }
+}
+
+function runExecFile(command, args, options = {}) {
+    return new Promise((resolve, reject) => {
+        execFile(command, args, options, (error, stdout, stderr) => {
+            if (error) {
+                error.stdout = stdout;
+                error.stderr = stderr;
+                reject(error);
+                return;
+            }
+            resolve({ stdout, stderr });
+        });
+    });
+}
+
+function parseAuditSummary(output) {
+    try {
+        const parsed = JSON.parse(output || '{}');
+        const viaMetadata = parsed && parsed.metadata && parsed.metadata.vulnerabilities;
+        if (viaMetadata) {
+            return {
+                total: Number(viaMetadata.total) || 0,
+                low: Number(viaMetadata.low) || 0,
+                moderate: Number(viaMetadata.moderate) || 0,
+                high: Number(viaMetadata.high) || 0,
+                critical: Number(viaMetadata.critical) || 0
+            };
+        }
+    } catch (err) {
+        // fall through to default
+    }
+
+    return { total: 0, low: 0, moderate: 0, high: 0, critical: 0 };
+}
+
+function parseLockfilePackages(lockfilePath) {
+    try {
+        const raw = fs.readFileSync(lockfilePath, 'utf8');
+        const lock = JSON.parse(raw);
+        const seen = new Set();
+        const packages = [];
+
+        const addPackage = (name, version) => {
+            if (!name || !version) return;
+            const key = `${name}@${version}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            packages.push({ name, version });
+        };
+
+        if (lock && lock.packages && typeof lock.packages === 'object') {
+            for (const [pkgPath, meta] of Object.entries(lock.packages)) {
+                if (!pkgPath || !meta || !meta.version) continue;
+                let name = meta.name;
+                if (!name) {
+                    const segments = pkgPath.split('node_modules/').filter(Boolean);
+                    name = segments.length ? segments[segments.length - 1] : '';
+                }
+                addPackage(name, String(meta.version));
+            }
+        }
+
+        const walkDependencies = (deps) => {
+            if (!deps || typeof deps !== 'object') return;
+            for (const [depName, depMeta] of Object.entries(deps)) {
+                if (!depMeta || typeof depMeta !== 'object') continue;
+                if (depMeta.version) {
+                    addPackage(depName, String(depMeta.version));
+                }
+                if (depMeta.dependencies) {
+                    walkDependencies(depMeta.dependencies);
+                }
+            }
+        };
+
+        if (lock && lock.dependencies) {
+            walkDependencies(lock.dependencies);
+        }
+
+        return packages;
+    } catch (error) {
+        return [];
+    }
+}
+
+async function queryOsvBatch(packages) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), OSV_SCAN_TIMEOUT_MS);
+    try {
+        const response = await fetch(OSV_BATCH_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                queries: packages.map(item => ({
+                    package: { name: item.name, ecosystem: 'npm' },
+                    version: item.version
+                }))
+            }),
+            signal: controller.signal
+        });
+
+        if (!response.ok) {
+            throw new Error(`OSV API HTTP ${response.status}`);
+        }
+
+        return await response.json();
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function runOsvScanForPath(targetPath) {
+    const start = Date.now();
+    const lockPath = path.join(targetPath, 'package-lock.json');
+
+    if (!fs.existsSync(lockPath)) {
+        return {
+            ok: false,
+            durationMs: Date.now() - start,
+            summary: {
+                packagesScanned: 0,
+                affectedPackages: 0,
+                totalVulns: 0
+            },
+            sampleIds: [],
+            error: 'Kein package-lock.json gefunden.'
+        };
+    }
+
+    const packages = parseLockfilePackages(lockPath);
+    if (!packages.length) {
+        return {
+            ok: true,
+            durationMs: Date.now() - start,
+            summary: {
+                packagesScanned: 0,
+                affectedPackages: 0,
+                totalVulns: 0
+            },
+            sampleIds: [],
+            error: ''
+        };
+    }
+
+    let totalVulns = 0;
+    let affectedPackages = 0;
+    const sampleIds = [];
+    const seenIds = new Set();
+
+    try {
+        for (let index = 0; index < packages.length; index += OSV_BATCH_SIZE) {
+            const chunk = packages.slice(index, index + OSV_BATCH_SIZE);
+            const payload = await queryOsvBatch(chunk);
+            const results = Array.isArray(payload && payload.results) ? payload.results : [];
+
+            for (let i = 0; i < results.length; i += 1) {
+                const vulnerabilities = Array.isArray(results[i] && results[i].vulns) ? results[i].vulns : [];
+                if (vulnerabilities.length) {
+                    affectedPackages += 1;
+                    totalVulns += vulnerabilities.length;
+                    for (const vuln of vulnerabilities) {
+                        if (vuln && vuln.id && !seenIds.has(vuln.id) && sampleIds.length < 12) {
+                            seenIds.add(vuln.id);
+                            sampleIds.push(vuln.id);
+                        }
+                    }
+                }
+            }
+        }
+
+        return {
+            ok: true,
+            durationMs: Date.now() - start,
+            summary: {
+                packagesScanned: packages.length,
+                affectedPackages,
+                totalVulns
+            },
+            sampleIds,
+            error: ''
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            durationMs: Date.now() - start,
+            summary: {
+                packagesScanned: packages.length,
+                affectedPackages: 0,
+                totalVulns: 0
+            },
+            sampleIds: [],
+            error: error && error.message ? error.message : 'OSV-Scan fehlgeschlagen'
+        };
+    }
+}
+
+async function runDependencyAuditForPath(targetPath) {
+    const start = Date.now();
+    try {
+        const command = process.platform === 'win32' ? 'cmd.exe' : 'npm';
+        const args = process.platform === 'win32'
+            ? ['/d', '/s', '/c', 'npm audit --omit=dev --json']
+            : ['audit', '--omit=dev', '--json'];
+        const { stdout } = await runExecFile(command, args, {
+            cwd: targetPath,
+            timeout: DEPENDENCY_SCAN_TIMEOUT_MS,
+            windowsHide: true,
+            maxBuffer: 1024 * 1024 * 10
+        });
+        return {
+            ok: true,
+            durationMs: Date.now() - start,
+            summary: parseAuditSummary(stdout),
+            error: ''
+        };
+    } catch (error) {
+        const output = (error && error.stdout) ? error.stdout : '';
+        const summary = parseAuditSummary(output);
+        const hasAuditData = summary.total > 0 || summary.high > 0 || summary.critical > 0 || summary.moderate > 0 || summary.low > 0;
+
+        if (hasAuditData) {
+            return {
+                ok: true,
+                durationMs: Date.now() - start,
+                summary,
+                error: ''
+            };
+        }
+
+        return {
+            ok: false,
+            durationMs: Date.now() - start,
+            summary: { total: 0, low: 0, moderate: 0, high: 0, critical: 0 },
+            error: error && error.message ? error.message : 'npm audit fehlgeschlagen'
+        };
+    }
+}
+
+async function runDependencyScan() {
+    if (dependencyMonitorState.running) return dependencyMonitorState.latest;
+    dependencyMonitorState.running = true;
+
+    try {
+        const targets = [
+            { id: 'root', path: path.join(__dirname, '..') },
+            { id: 'backend', path: __dirname }
+        ];
+
+        const scans = [];
+        for (const target of targets) {
+            const packageLock = path.join(target.path, 'package-lock.json');
+            if (!fs.existsSync(packageLock)) {
+                scans.push({
+                    id: target.id,
+                    ok: false,
+                    npmOk: false,
+                    osvOk: false,
+                    summary: { total: 0, low: 0, moderate: 0, high: 0, critical: 0 },
+                    osvSummary: { packagesScanned: 0, affectedPackages: 0, totalVulns: 0 },
+                    durationMs: 0,
+                    sampleIds: [],
+                    npmError: 'Kein package-lock.json gefunden.',
+                    osvError: 'Kein package-lock.json gefunden.',
+                    error: 'Kein package-lock.json gefunden.'
+                });
+                continue;
+            }
+
+            const auditResult = await runDependencyAuditForPath(target.path);
+            const osvResult = await runOsvScanForPath(target.path);
+            scans.push({
+                id: target.id,
+                ok: auditResult.ok && osvResult.ok,
+                npmOk: auditResult.ok,
+                osvOk: osvResult.ok,
+                summary: auditResult.summary,
+                osvSummary: osvResult.summary,
+                durationMs: auditResult.durationMs + osvResult.durationMs,
+                sampleIds: osvResult.sampleIds,
+                npmError: auditResult.error || '',
+                osvError: osvResult.error || '',
+                error: [auditResult.error, osvResult.error].filter(Boolean).join(' | ')
+            });
+        }
+
+        const totals = scans.reduce((acc, scan) => {
+            acc.total += scan.summary.total;
+            acc.low += scan.summary.low;
+            acc.moderate += scan.summary.moderate;
+            acc.high += scan.summary.high;
+            acc.critical += scan.summary.critical;
+            acc.osvVulns += Number(scan.osvSummary && scan.osvSummary.totalVulns) || 0;
+            acc.osvAffectedPackages += Number(scan.osvSummary && scan.osvSummary.affectedPackages) || 0;
+            acc.osvPackagesScanned += Number(scan.osvSummary && scan.osvSummary.packagesScanned) || 0;
+            return acc;
+        }, { total: 0, low: 0, moderate: 0, high: 0, critical: 0, osvVulns: 0, osvAffectedPackages: 0, osvPackagesScanned: 0 });
+
+        const nowIso = new Date().toISOString();
+        const npmFailures = scans
+            .filter(scan => !scan.npmOk)
+            .map(scan => `${scan.id}: ${scan.npmError || 'Audit-Lauf fehlgeschlagen'}`);
+        const osvFailures = scans
+            .filter(scan => !scan.osvOk)
+            .map(scan => `${scan.id}: ${scan.osvError || 'OSV-Lauf fehlgeschlagen'}`);
+        const payload = {
+            runAt: nowIso,
+            scans,
+            totals,
+            ok: scans.every(scan => scan.ok),
+            npmOk: scans.every(scan => scan.npmOk),
+            osvOk: scans.every(scan => scan.osvOk),
+            hasCritical: totals.critical > 0,
+            hasHigh: totals.high > 0,
+            hasModerate: totals.moderate > 0,
+            hasOsvFindings: totals.osvVulns > 0,
+            npmFailures,
+            osvFailures
+        };
+
+        dependencyMonitorState.lastRunAt = nowIso;
+        dependencyMonitorState.nextRunAt = new Date(Date.now() + dependencyMonitorState.intervalMs).toISOString();
+        dependencyMonitorState.latest = payload;
+        dependencyMonitorState.history.unshift({
+            runAt: payload.runAt,
+            totals: payload.totals,
+            ok: payload.ok
+        });
+        if (dependencyMonitorState.history.length > SECURITY_MONITOR_HISTORY_LIMIT) {
+            dependencyMonitorState.history.length = SECURITY_MONITOR_HISTORY_LIMIT;
+        }
+
+        return payload;
+    } finally {
+        dependencyMonitorState.running = false;
+    }
+}
+
+function countActiveAdminLockouts() {
+    const now = Date.now();
+    return Object.values(loginAttempts).filter(record => record && record.lockedUntil > now).length;
+}
+
+function buildLocalProbeUrl(pathname) {
+    return `http://127.0.0.1:${PORT}${pathname}`;
+}
+
+async function runHttpProbe({ id, label, severity = 'warning', method = 'GET', pathname, headers = {}, body = null, expectedStatuses = [200], timeoutMs = 5000 }) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let status = null;
+    let ok = false;
+    let errorMessage = '';
+
+    try {
+        const response = await fetch(buildLocalProbeUrl(pathname), {
+            method,
+            headers,
+            body,
+            signal: controller.signal
+        });
+        status = response.status;
+        ok = expectedStatuses.includes(status);
+    } catch (err) {
+        errorMessage = err && err.message ? err.message : 'Probe fehlgeschlagen';
+        ok = false;
+    } finally {
+        clearTimeout(timer);
+    }
+
+    const expectedLabel = expectedStatuses.join('/');
+    const detail = errorMessage
+        ? `Fehler: ${errorMessage}`
+        : `HTTP ${status} (erwartet ${expectedLabel})`;
+
+    return {
+        id,
+        label,
+        ok,
+        severity,
+        detail
+    };
+}
+
+async function runActiveSecurityProbes() {
+    const jsonBody = JSON.stringify({ code: 'NOTE-HEALTH-CHECK' });
+    const jsonHeaders = { 'Content-Type': 'application/json' };
+
+    const probes = await Promise.all([
+        runHttpProbe({
+            id: 'probe-csrf-endpoint',
+            label: 'Probe: CSRF-Token Endpoint erreichbar',
+            severity: 'critical',
+            method: 'GET',
+            pathname: '/api/csrf-token',
+            expectedStatuses: [200]
+        }),
+        runHttpProbe({
+            id: 'probe-csrf-enforced',
+            label: 'Probe: CSRF ohne Token blockiert',
+            severity: 'critical',
+            method: 'POST',
+            pathname: '/api/validate-coupon',
+            headers: { ...jsonHeaders, Origin: 'http://localhost:5500' },
+            body: jsonBody,
+            expectedStatuses: [403, 429]
+        }),
+        runHttpProbe({
+            id: 'probe-origin-enforced',
+            label: 'Probe: Fremde Origin blockiert',
+            severity: 'critical',
+            method: 'POST',
+            pathname: '/api/validate-coupon',
+            headers: { ...jsonHeaders, Origin: 'https://evil.example' },
+            body: jsonBody,
+            expectedStatuses: [403, 429]
+        }),
+        runHttpProbe({
+            id: 'probe-admin-auth-gate',
+            label: 'Probe: Admin-Endpoint ohne Login blockiert',
+            severity: 'warning',
+            method: 'GET',
+            pathname: '/api/admin/check',
+            expectedStatuses: [401]
+        })
+    ]);
+
+    return probes;
+}
+
+function collectFilesRecursive(baseDir, extensions) {
+    const results = [];
+    const stack = [baseDir];
+
+    while (stack.length > 0) {
+        const current = stack.pop();
+        let entries = [];
+        try {
+            entries = fs.readdirSync(current, { withFileTypes: true });
+        } catch (err) {
+            continue;
+        }
+
+        for (const entry of entries) {
+            const fullPath = path.join(current, entry.name);
+            if (entry.isDirectory()) {
+                if (entry.name === 'node_modules' || entry.name === '.git') continue;
+                stack.push(fullPath);
+                continue;
+            }
+            if (entry.isFile() && extensions.includes(path.extname(entry.name).toLowerCase())) {
+                results.push(fullPath);
+            }
+        }
+    }
+
+    return results;
+}
+
+function runStaticSecurityHeuristics() {
+    const files = [
+        ...collectFilesRecursive(path.join(__dirname), ['.js']),
+        ...collectFilesRecursive(path.join(__dirname, '..', 'frontend'), ['.js', '.html'])
+    ].filter(filePath => path.resolve(filePath) !== path.resolve(__filename));
+
+    const patterns = [
+        { id: 'static-no-eval', label: 'Heuristik: Kein eval(', regex: /\beval\s*\(/g, severity: 'critical' },
+        { id: 'static-no-new-function', label: 'Heuristik: Kein new Function(', regex: /\bnew\s+Function\s*\(/g, severity: 'critical' },
+        { id: 'static-no-document-write', label: 'Heuristik: Kein document.write(', regex: /\bdocument\.write\s*\(/g, severity: 'warning' },
+        { id: 'static-no-dangerouslysetinnerhtml', label: 'Heuristik: Kein dangerouslySetInnerHTML', regex: /\bdangerouslySetInnerHTML\b/g, severity: 'critical' },
+        { id: 'static-no-child-process-exec', label: 'Heuristik: Kein child_process.exec(', regex: /\bchild_process\.(exec|execSync)\s*\(/g, severity: 'critical' }
+    ];
+
+    const counts = Object.fromEntries(patterns.map(pattern => [pattern.id, 0]));
+    for (const filePath of files) {
+        let content = '';
+        try {
+            content = fs.readFileSync(filePath, 'utf8');
+        } catch (err) {
+            continue;
+        }
+        for (const pattern of patterns) {
+            const matches = content.match(pattern.regex);
+            if (matches) counts[pattern.id] += matches.length;
+        }
+    }
+
+    return patterns.map(pattern => {
+        const count = counts[pattern.id] || 0;
+        return {
+            id: pattern.id,
+            label: pattern.label,
+            ok: count === 0,
+            severity: pattern.severity,
+            detail: count === 0 ? 'Keine Treffer gefunden.' : `${count} Treffer gefunden.`
+        };
+    });
+}
+
+async function runSecuritySelfTest() {
+    if (securityMonitorState.running) return securityMonitorState.latest;
+
+    securityMonitorState.running = true;
+    const started = Date.now();
+
+    try {
+        pruneTimestamps(recentJsonParseErrorTimestamps, JSON_PARSE_ERROR_WINDOW_MS);
+        const dependencyAgeMs = dependencyMonitorState.lastRunAt
+            ? (Date.now() - new Date(dependencyMonitorState.lastRunAt).getTime())
+            : Number.POSITIVE_INFINITY;
+        let dependencyRun = dependencyMonitorState.latest;
+        if (!dependencyRun || dependencyAgeMs > dependencyMonitorState.intervalMs) {
+            dependencyRun = await runDependencyScan();
+        }
+
+        const dbConnected = mongoose.connection && mongoose.connection.readyState === 1;
+        let dbPingMs = null;
+        let dbPingOk = false;
+
+        if (dbConnected && mongoose.connection.db) {
+            const pingStart = Date.now();
+            try {
+                await mongoose.connection.db.admin().ping();
+                dbPingMs = Date.now() - pingStart;
+                dbPingOk = true;
+            } catch (err) {
+                dbPingMs = Date.now() - pingStart;
+                dbPingOk = false;
+            }
+        }
+
+        const parseErrors10m = recentJsonParseErrorTimestamps.length;
+        const activeLockouts = countActiveAdminLockouts();
+        const cacheReady = Array.isArray(productCache) && productCache.length > 0;
+
+        const runtimeTests = [
+            {
+                id: 'runtime-db-connected',
+                label: 'DB verbunden',
+                ok: dbConnected,
+                severity: 'critical',
+                detail: dbConnected ? 'MongoDB-Verbindung ist aktiv.' : 'MongoDB-Verbindung fehlt.'
+            },
+            {
+                id: 'runtime-db-ping',
+                label: 'DB Ping',
+                ok: dbConnected ? dbPingOk : false,
+                severity: 'critical',
+                detail: dbConnected
+                    ? (dbPingOk ? `Ping erfolgreich (${dbPingMs} ms).` : 'Ping fehlgeschlagen.')
+                    : 'Kein Ping ohne aktive DB-Verbindung.'
+            },
+            {
+                id: 'runtime-json-parse-errors',
+                label: 'JSON-Fehlerlast',
+                ok: parseErrors10m <= 5,
+                severity: parseErrors10m > 15 ? 'critical' : 'warning',
+                detail: `${parseErrors10m} ungültige JSON-Requests in den letzten 10 Minuten.`
+            },
+            {
+                id: 'runtime-admin-lockouts',
+                label: 'Aktive Admin-Sperren',
+                ok: activeLockouts <= 5,
+                severity: activeLockouts > 20 ? 'critical' : 'warning',
+                detail: `${activeLockouts} aktive Lockout(s) im Admin-Login.`
+            },
+            {
+                id: 'runtime-product-cache',
+                label: 'Produkt-Cache warm',
+                ok: cacheReady,
+                severity: 'warning',
+                detail: cacheReady ? `Cache bereit (${productCache.length} Produkte).` : 'Produkt-Cache aktuell leer.'
+            }
+        ];
+
+        const probeTests = await runActiveSecurityProbes();
+        const staticTests = runStaticSecurityHeuristics();
+        const dependencyTests = dependencyRun ? [
+            {
+                id: 'deps-audit-critical-high',
+                label: 'Dependency-Scan: Keine High/Critical CVEs',
+                ok: !dependencyRun.hasCritical && !dependencyRun.hasHigh,
+                severity: 'critical',
+                detail: `Critical: ${dependencyRun.totals.critical}, High: ${dependencyRun.totals.high}`
+            },
+            {
+                id: 'deps-audit-moderate',
+                label: 'Dependency-Scan: Moderate CVEs unter Kontrolle',
+                ok: !dependencyRun.hasModerate,
+                severity: 'warning',
+                detail: `Moderate: ${dependencyRun.totals.moderate}, Low: ${dependencyRun.totals.low}`
+            },
+            {
+                id: 'deps-audit-run-health',
+                label: 'Dependency-Scan erfolgreich ausgeführt',
+                ok: Boolean(dependencyRun.npmOk),
+                severity: 'warning',
+                detail: dependencyRun.npmOk
+                    ? `Letzter Lauf: ${dependencyRun.runAt}`
+                    : (Array.isArray(dependencyRun.npmFailures) && dependencyRun.npmFailures.length
+                        ? dependencyRun.npmFailures.join(' | ')
+                        : 'Mindestens ein Audit-Lauf konnte nicht ausgeführt werden.')
+            },
+            {
+                id: 'deps-osv-findings',
+                label: 'OSV-Scan: Keine weiteren Vulnerability-Hits',
+                ok: !dependencyRun.hasOsvFindings,
+                severity: 'warning',
+                detail: `OSV Hits: ${Number(dependencyRun.totals && dependencyRun.totals.osvVulns) || 0}, betroffene Pakete: ${Number(dependencyRun.totals && dependencyRun.totals.osvAffectedPackages) || 0}`
+            },
+            {
+                id: 'deps-osv-run-health',
+                label: 'OSV-Scan erfolgreich ausgeführt',
+                ok: Boolean(dependencyRun.osvOk),
+                severity: 'warning',
+                detail: dependencyRun.osvOk
+                    ? `Pakete gescannt: ${Number(dependencyRun.totals && dependencyRun.totals.osvPackagesScanned) || 0}`
+                    : (Array.isArray(dependencyRun.osvFailures) && dependencyRun.osvFailures.length
+                        ? dependencyRun.osvFailures.join(' | ')
+                        : 'Mindestens ein OSV-Scan konnte nicht ausgeführt werden.')
+            }
+        ] : [
+            {
+                id: 'deps-audit-run-health',
+                label: 'Dependency-Scan erfolgreich ausgeführt',
+                ok: false,
+                severity: 'warning',
+                detail: 'Noch kein Dependency-Scan vorhanden.'
+            },
+            {
+                id: 'deps-osv-run-health',
+                label: 'OSV-Scan erfolgreich ausgeführt',
+                ok: false,
+                severity: 'warning',
+                detail: 'Noch kein OSV-Scan vorhanden.'
+            }
+        ];
+
+        const tests = [...runtimeTests, ...probeTests, ...staticTests, ...dependencyTests];
+
+        const failedTests = tests.filter(test => !test.ok);
+        const score = Math.round((tests.filter(test => test.ok).length / tests.length) * 100);
+        const nowIso = new Date().toISOString();
+
+        const run = {
+            startedAt: new Date(started).toISOString(),
+            finishedAt: nowIso,
+            durationMs: Date.now() - started,
+            score,
+            tests,
+            dependency: dependencyRun || null,
+            alerts: failedTests.map(test => ({
+                id: test.id,
+                severity: test.severity,
+                message: `${test.label}: ${test.detail}`
+            }))
+        };
+
+        securityMonitorState.lastRunAt = nowIso;
+        securityMonitorState.nextRunAt = new Date(Date.now() + securityMonitorState.intervalMs).toISOString();
+        securityMonitorState.latest = run;
+        securityMonitorState.history.unshift(run);
+        if (securityMonitorState.history.length > SECURITY_MONITOR_HISTORY_LIMIT) {
+            securityMonitorState.history.length = SECURITY_MONITOR_HISTORY_LIMIT;
+        }
+
+        return run;
+    } finally {
+        securityMonitorState.running = false;
+    }
+}
+
+function startSecurityMonitorLoop() {
+    runDependencyScan().catch((err) => {
+        console.error('Initial dependency scan failed:', err);
+    });
+
+    runSecuritySelfTest().catch((err) => {
+        console.error('Initial security self-test failed:', err);
+    });
+
+    setInterval(() => {
+        runSecuritySelfTest().catch((err) => {
+            console.error('Scheduled security self-test failed:', err);
+        });
+    }, securityMonitorState.intervalMs);
+
+    setInterval(() => {
+        runDependencyScan().catch((err) => {
+            console.error('Scheduled dependency scan failed:', err);
+        });
+    }, dependencyMonitorState.intervalMs);
+}
+
 // --- NEW API-based Admin Routes ---
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrfToken, (req, res) => {
     const ip = getClientIp(req);
     const now = Date.now();
     const record = loginAttempts[ip] || { count: 0, lockedUntil: 0 };
@@ -742,16 +2355,20 @@ app.post('/api/admin/login', (req, res) => {
     }
 
     const { password } = req.body;
+    if (!JWT_SECRET || !ADMIN_PASSWORD) {
+        return res.status(500).json({ error: 'Admin login is not configured correctly.' });
+    }
+
     if (password === ADMIN_PASSWORD) {
         // Success – clear attempts
         delete loginAttempts[ip];
-        res.cookie('api_admin_auth', 'true', {
-            httpOnly: false,
-            secure: true,        // Required for SameSite=None
-            sameSite: 'None',    // Allow cross-origin requests to send this cookie
-            maxAge: 3600 * 1000  // 1 hour
-        });
-        res.json({ success: true, token: 'true' });
+        const adminToken = jwt.sign(
+            { role: 'admin' },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+        res.cookie(ADMIN_TOKEN_COOKIE, adminToken, getAdminCookieOptions());
+        res.json({ success: true });
     } else {
         // Wrong password – increment counter
         record.count = (record.count || 0) + 1;
@@ -776,13 +2393,8 @@ app.post('/api/admin/login', (req, res) => {
     }
 });
 
-app.post('/api/admin/logout', (req, res) => {
-    res.clearCookie('api_admin_auth', {
-        httpOnly: false,
-        secure: true,
-        sameSite: 'None',
-        path: '/'
-    });
+app.post('/api/admin/logout', requireTrustedOrigin, requireCsrfToken, (req, res) => {
+    res.clearCookie(ADMIN_TOKEN_COOKIE, getAdminCookieOptions());
     res.json({ success: true });
 });
 
@@ -794,7 +2406,138 @@ app.get('/api/admin/check', (req, res) => {
     }
 });
 
-app.delete('/api/admin/products/:id', async (req, res) => {
+app.get('/api/admin/security-status', async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    const runtimeRun = await runSecuritySelfTest();
+
+    const staticChecks = [
+        {
+            id: 'helmet',
+            label: 'Sicherheits-Header aktiv (Helmet)',
+            ok: true,
+            detail: 'HTTP Security Header werden global gesetzt.'
+        },
+        {
+            id: 'trusted-origins',
+            label: 'Trusted Origins konfiguriert',
+            ok: TRUSTED_BROWSER_ORIGINS.length > 0,
+            detail: `${TRUSTED_BROWSER_ORIGINS.length} erlaubte Origin(s).`
+        },
+        {
+            id: 'csrf',
+            label: 'CSRF Schutz aktiv',
+            ok: true,
+            detail: 'Mutierende API-Routen erwarten Cookie + X-CSRF-Token.'
+        },
+        {
+            id: 'rate-auth',
+            label: 'Rate Limit für Auth aktiv',
+            ok: true,
+            detail: 'Login/Register und Admin-Login sind limitiert.'
+        },
+        {
+            id: 'rate-coupon-review-view',
+            label: 'Rate Limits für Coupon/Reviews/Views aktiv',
+            ok: true,
+            detail: 'Coupon, Reviews und Live-View Endpoint sind limitiert.'
+        },
+        {
+            id: 'rate-admin-write',
+            label: 'Rate Limit für Admin-Schreibaktionen aktiv',
+            ok: true,
+            detail: 'Produkt- und Bestellmutationen im Admin sind limitiert.'
+        },
+        {
+            id: 'secrets',
+            label: 'Kritische Secrets gesetzt',
+            ok: Boolean(JWT_SECRET && ADMIN_PASSWORD && process.env.STRIPE_WEBHOOK_SECRET),
+            detail: `JWT:${Boolean(JWT_SECRET)} ADMIN:${Boolean(ADMIN_PASSWORD)} WEBHOOK:${Boolean(process.env.STRIPE_WEBHOOK_SECRET)}`
+        },
+        {
+            id: 'cookie-security',
+            label: 'Cookie Sicherheitsmodus stimmig',
+            ok: !IS_PRODUCTION || (getUserCookieOptions().secure && getAdminCookieOptions().secure),
+            detail: IS_PRODUCTION
+                ? 'In Produktion sind Secure-Cookies aktiv.'
+                : 'Development-Modus: Secure-Cookies sind lokal deaktiviert.'
+        },
+        {
+            id: 'input-validation',
+            label: 'Serverseitige Input-Validierung aktiv',
+            ok: true,
+            detail: 'Sanitizer/Validatoren für User-, Coupon-, Review- und Produktdaten.'
+        }
+    ];
+
+    const runtimeChecks = Array.isArray(runtimeRun && runtimeRun.tests)
+        ? runtimeRun.tests.map(test => ({
+            id: test.id,
+            label: `${test.label} (Laufzeit-Test)`,
+            ok: !!test.ok,
+            detail: test.detail,
+            severity: test.severity || 'warning'
+        }))
+        : [];
+
+    const checks = [...staticChecks, ...runtimeChecks];
+    const passed = checks.filter(check => check.ok).length;
+    const score = Math.round((passed / checks.length) * 100);
+
+    res.json({
+        score,
+        passed,
+        total: checks.length,
+        environment: IS_PRODUCTION ? 'production' : 'development',
+        updatedAt: new Date().toISOString(),
+        checks,
+        monitor: {
+            intervalMs: securityMonitorState.intervalMs,
+            running: securityMonitorState.running,
+            lastRunAt: securityMonitorState.lastRunAt,
+            nextRunAt: securityMonitorState.nextRunAt,
+            latestScore: runtimeRun ? runtimeRun.score : null,
+            alerts: runtimeRun && Array.isArray(runtimeRun.alerts) ? runtimeRun.alerts : [],
+            history: securityMonitorState.history.slice(0, 8).map(item => ({
+                startedAt: item.startedAt,
+                finishedAt: item.finishedAt,
+                durationMs: item.durationMs,
+                score: item.score,
+                failedCount: item.tests.filter(test => !test.ok).length
+            }))
+        },
+        dependencyMonitor: {
+            intervalMs: dependencyMonitorState.intervalMs,
+            running: dependencyMonitorState.running,
+            lastRunAt: dependencyMonitorState.lastRunAt,
+            nextRunAt: dependencyMonitorState.nextRunAt,
+            latest: dependencyMonitorState.latest ? {
+                runAt: dependencyMonitorState.latest.runAt,
+                totals: dependencyMonitorState.latest.totals,
+                ok: dependencyMonitorState.latest.ok,
+                npmOk: dependencyMonitorState.latest.npmOk,
+                osvOk: dependencyMonitorState.latest.osvOk,
+                hasOsvFindings: dependencyMonitorState.latest.hasOsvFindings,
+                npmFailures: dependencyMonitorState.latest.npmFailures || [],
+                osvFailures: dependencyMonitorState.latest.osvFailures || [],
+                scans: Array.isArray(dependencyMonitorState.latest.scans)
+                    ? dependencyMonitorState.latest.scans.map(scan => ({
+                        id: scan.id,
+                        npmOk: scan.npmOk,
+                        osvOk: scan.osvOk,
+                        npmError: scan.npmError || '',
+                        osvError: scan.osvError || ''
+                    }))
+                    : []
+            } : null,
+            history: dependencyMonitorState.history.slice(0, 8)
+        }
+    });
+});
+
+app.delete('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
@@ -812,7 +2555,7 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
-app.put('/api/admin/products/:id', async (req, res) => {
+app.put('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
@@ -821,17 +2564,41 @@ app.put('/api/admin/products/:id', async (req, res) => {
         const { name, inspiredBy, description, category, price30, price50, originalPrice30, originalPrice50 } = req.body;
 
         const updateData = {};
-        if (name !== undefined) updateData.name = name;
-        if (inspiredBy !== undefined) updateData.inspiredBy = inspiredBy;
-        if (description !== undefined) updateData.description = description;
-        if (category !== undefined) updateData.category = category;
+        if (name !== undefined) {
+            const safeName = sanitizeText(name, 120);
+            if (!safeName) return res.status(400).json({ error: 'Name ist ungültig.' });
+            updateData.name = safeName;
+        }
+        if (inspiredBy !== undefined) updateData.inspiredBy = sanitizeText(inspiredBy, 160);
+        if (description !== undefined) updateData.description = sanitizeText(description, 1200);
+        if (category !== undefined) {
+            const safeCategory = sanitizeCategory(category);
+            if (!safeCategory) return res.status(400).json({ error: 'Kategorie ist ungültig.' });
+            updateData.category = safeCategory;
+        }
         if (req.body.bestseller !== undefined) updateData.bestseller = req.body.bestseller;
 
         // Variants
-        if (price30 !== undefined) updateData['variants.30.price'] = parseFloat(price30);
-        if (price50 !== undefined) updateData['variants.50.price'] = parseFloat(price50);
-        if (originalPrice30 !== undefined) updateData['variants.30.originalPrice'] = parseFloat(originalPrice30) || null;
-        if (originalPrice50 !== undefined) updateData['variants.50.originalPrice'] = parseFloat(originalPrice50) || null;
+        if (price30 !== undefined) {
+            const parsed = parseMoneyValue(price30);
+            if (parsed === undefined) return res.status(400).json({ error: 'Preis 30ml ist ungültig.' });
+            updateData['variants.30.price'] = parsed;
+        }
+        if (price50 !== undefined) {
+            const parsed = parseMoneyValue(price50);
+            if (parsed === undefined) return res.status(400).json({ error: 'Preis 50ml ist ungültig.' });
+            updateData['variants.50.price'] = parsed;
+        }
+        if (originalPrice30 !== undefined) {
+            const parsed = parseMoneyValue(originalPrice30, { allowNull: true });
+            if (parsed === undefined) return res.status(400).json({ error: 'Originalpreis 30ml ist ungültig.' });
+            updateData['variants.30.originalPrice'] = parsed;
+        }
+        if (originalPrice50 !== undefined) {
+            const parsed = parseMoneyValue(originalPrice50, { allowNull: true });
+            if (parsed === undefined) return res.status(400).json({ error: 'Originalpreis 50ml ist ungültig.' });
+            updateData['variants.50.originalPrice'] = parsed;
+        }
 
         const updated = await Product.findOneAndUpdate(
             { id: req.params.id },
@@ -851,7 +2618,7 @@ app.put('/api/admin/products/:id', async (req, res) => {
 });
 
 // Bulk price update – updates any subset of products (or ALL if ids array is empty/missing)
-app.put('/api/admin/products-bulk', async (req, res) => {
+app.put('/api/admin/products-bulk', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
@@ -860,17 +2627,36 @@ app.put('/api/admin/products-bulk', async (req, res) => {
         const { ids, price30, price50, originalPrice30, originalPrice50 } = req.body;
 
         const updateData = {};
-        if (price30 !== undefined && price30 !== '') updateData['variants.30.price'] = parseFloat(price30);
-        if (price50 !== undefined && price50 !== '') updateData['variants.50.price'] = parseFloat(price50);
-        if (originalPrice30 !== undefined) updateData['variants.30.originalPrice'] = originalPrice30 !== '' ? parseFloat(originalPrice30) : null;
-        if (originalPrice50 !== undefined) updateData['variants.50.originalPrice'] = originalPrice50 !== '' ? parseFloat(originalPrice50) : null;
+        if (price30 !== undefined && price30 !== '') {
+            const parsed = parseMoneyValue(price30);
+            if (parsed === undefined) return res.status(400).json({ error: 'Preis 30ml ist ungültig.' });
+            updateData['variants.30.price'] = parsed;
+        }
+        if (price50 !== undefined && price50 !== '') {
+            const parsed = parseMoneyValue(price50);
+            if (parsed === undefined) return res.status(400).json({ error: 'Preis 50ml ist ungültig.' });
+            updateData['variants.50.price'] = parsed;
+        }
+        if (originalPrice30 !== undefined) {
+            const parsed = parseMoneyValue(originalPrice30, { allowNull: true });
+            if (parsed === undefined) return res.status(400).json({ error: 'Originalpreis 30ml ist ungültig.' });
+            updateData['variants.30.originalPrice'] = parsed;
+        }
+        if (originalPrice50 !== undefined) {
+            const parsed = parseMoneyValue(originalPrice50, { allowNull: true });
+            if (parsed === undefined) return res.status(400).json({ error: 'Originalpreis 50ml ist ungültig.' });
+            updateData['variants.50.originalPrice'] = parsed;
+        }
 
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: 'Keine Preisfelder angegeben' });
         }
 
         // If ids provided → only update those, else update ALL
-        const filter = (ids && ids.length > 0) ? { id: { $in: ids } } : {};
+        const safeIds = Array.isArray(ids)
+            ? ids.map(id => sanitizeProductId(id)).filter(Boolean)
+            : [];
+        const filter = (safeIds.length > 0) ? { id: { $in: safeIds } } : {};
 
         const result = await Product.updateMany(filter, { $set: updateData });
         productCache = null; // Invalidate cache
@@ -882,9 +2668,8 @@ app.put('/api/admin/products-bulk', async (req, res) => {
 });
 
 // Bulk bestseller update – set/unset bestseller for a list of product IDs
-app.put('/api/admin/products-bestseller', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.api_admin_auth !== 'true') {
+app.put('/api/admin/products-bestseller', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
     try {
@@ -892,8 +2677,12 @@ app.put('/api/admin/products-bestseller', async (req, res) => {
         if (!ids || !Array.isArray(ids)) {
             return res.status(400).json({ error: 'ids array required' });
         }
+        const safeIds = ids.map(id => sanitizeProductId(id)).filter(Boolean);
+        if (safeIds.length === 0) {
+            return res.status(400).json({ error: 'Keine gültigen Produkt-IDs angegeben.' });
+        }
         const result = await Product.updateMany(
-            { id: { $in: ids } },
+            { id: { $in: safeIds } },
             { $set: { bestseller: !!bestseller } }
         );
         productCache = null; // Invalidate cache
@@ -905,7 +2694,7 @@ app.put('/api/admin/products-bestseller', async (req, res) => {
 });
 
 // Create new product
-app.post('/api/admin/products', async (req, res) => {
+app.post('/api/admin/products', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
@@ -913,25 +2702,52 @@ app.post('/api/admin/products', async (req, res) => {
     try {
         const { id, name, category, inspiredBy, description, images, notes, variants } = req.body;
 
-        if (!id || !name) {
+        const safeId = sanitizeProductId(id);
+        const safeName = sanitizeText(name, 120);
+        if (!safeId || !safeName) {
             return res.status(400).json({ error: 'ID und Name sind Pflichtfelder' });
         }
 
+        const safeCategory = category !== undefined ? sanitizeCategory(category) : 'unisex';
+        if (!safeCategory) {
+            return res.status(400).json({ error: 'Kategorie ist ungültig.' });
+        }
+
+        const safeImages = Array.isArray(images)
+            ? images.map(image => sanitizeAssetPath(image)).filter(Boolean)
+            : [];
+        const safeNotes = {
+            head: sanitizeText(notes && notes.head, 120),
+            heart: sanitizeText(notes && notes.heart, 120),
+            base: sanitizeText(notes && notes.base, 120)
+        };
+        const safeVariants = {};
+        [30, 50, 100].forEach((size) => {
+            if (!variants || !variants[size]) return;
+            const parsedPrice = parseMoneyValue(variants[size].price);
+            const parsedOriginal = parseMoneyValue(variants[size].originalPrice, { allowNull: true });
+            if (parsedPrice === undefined || parsedOriginal === undefined) return;
+            safeVariants[size] = {
+                price: parsedPrice,
+                originalPrice: parsedOriginal
+            };
+        });
+
         // Check for duplicate ID
-        const existing = await Product.findOne({ id: id.toUpperCase() });
+        const existing = await Product.findOne({ id: safeId });
         if (existing) {
-            return res.status(409).json({ error: 'Produkt-ID existiert bereits: ' + id });
+            return res.status(409).json({ error: 'Produkt-ID existiert bereits: ' + safeId });
         }
 
         const newProduct = new Product({
-            id: id.toUpperCase(),
-            name,
-            category: category || 'unisex',
-            inspiredBy: inspiredBy || '',
-            description: description || '',
-            images: images || [],
-            notes: notes || {},
-            variants: variants || {}
+            id: safeId,
+            name: safeName,
+            category: safeCategory,
+            inspiredBy: sanitizeText(inspiredBy, 160),
+            description: sanitizeText(description, 1200),
+            images: safeImages,
+            notes: safeNotes,
+            variants: safeVariants
         });
 
         await newProduct.save();
@@ -964,12 +2780,13 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-app.put('/api/admin/orders/:id/status', async (req, res) => {
+app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
     try {
         const { status, trackingUrl } = req.body;
+        const safeTrackingUrl = sanitizeTrackingUrl(trackingUrl);
         if (!['neu', 'in_bearbeitung', 'abgeschlossen', 'archiv'].includes(status)) {
             return res.status(400).json({ error: 'Ungültiger Status' });
         }
@@ -990,9 +2807,10 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
 
                 if (!isPickup) {
                     // Optional gold tracking button
-                    const trackingBlock = trackingUrl
-                        ? `<table border="0" cellpadding="0" cellspacing="0" style="margin:12px auto 0;border-collapse:collapse;"><tr><td style="background:#d4af37;border-radius:2px;padding:14px 32px;"><a href="${trackingUrl}" style="font-family:Arial,sans-serif;font-size:12px;color:#000;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">&#128269;&nbsp;Sendung verfolgen</a></td></tr></table>`
+                    const trackingBlock = safeTrackingUrl
+                        ? `<table border="0" cellpadding="0" cellspacing="0" style="margin:12px auto 0;border-collapse:collapse;"><tr><td style="background:#d4af37;border-radius:2px;padding:14px 32px;"><a href="${safeTrackingUrl}" style="font-family:Arial,sans-serif;font-size:12px;color:#000;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">&#128269;&nbsp;Sendung verfolgen</a></td></tr></table>`
                         : '';
+                    const safeOrderName = escapeHtml(order.name || 'du');
 
                     await resend.emails.send({
                         from: 'NOTE. fragrances <info@note-fragrances.de>',
@@ -1020,7 +2838,7 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
       <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
         <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:28px;color:#d4af37;margin-bottom:22px;">&#128230;</div>
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Auf dem Weg zu dir</p>
-        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${order.name}!</h1>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${safeOrderName}!</h1>
         <p style="margin:0 auto;font-size:14px;color:#666;line-height:1.8;max-width:380px;">
           Gute Neuigkeiten &ndash; deine Bestellung ist soeben auf dem Weg zu dir!
           <br><br>
@@ -1070,7 +2888,7 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
     }
 });
 
-app.post('/api/admin/orders/:id/notify-pickup', async (req, res) => {
+app.post('/api/admin/orders/:id/notify-pickup', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
     }
@@ -1109,7 +2927,7 @@ app.post('/api/admin/orders/:id/notify-pickup', async (req, res) => {
       <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
         <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Abholbereit</p>
-        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${order.name}!</h1>
+        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Hallo ${escapeHtml(order.name || 'du')}!</h1>
         <p style="margin:0 auto;font-size:14px;color:#666;line-height:1.8;max-width:380px;">
           Deine Bestellung ist nun fertig gepackt und liegt zur Abholung f&uuml;r dich bereit. Hier findest du uns:
           <br>
@@ -1148,42 +2966,12 @@ app.post('/api/admin/orders/:id/notify-pickup', async (req, res) => {
 });
 
 app.post('/admin/logout', (req, res) => {
-    res.setHeader('Set-Cookie', 'admin_auth=; HttpOnly; Path=/; Max-Age=0');
-    res.redirect('/admin');
+    res.clearCookie(ADMIN_TOKEN_COOKIE, getAdminCookieOptions());
+    res.status(410).send('Legacy admin route disabled.');
 });
 
 app.get('/admin', async (req, res) => {
-    const cookies = parseCookies(req);
-    if (cookies.admin_auth !== 'true') {
-        res.send(`
-    < !DOCTYPE html >
-        <html lang="de">
-            <head>
-                <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>Admin Login</title>
-                        <style>
-                            body {font - family: sans-serif; background-color: #f9f8f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #1a1a1a; }
-                            .login-container {background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 400px; }
-                            input {padding: 0.8rem; margin-bottom: 1.5rem; border: 1px solid #e6e6e6; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 1rem; }
-                            button {background - color: #000; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: 500; transition: background 0.3s; }
-                            button:hover {background - color: #333; }
-                            h1 {margin - top: 0; margin-bottom: 1.5rem; font-weight: 600; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="login-container">
-                            <h1>Admin Login</h1>
-                            <form action="/admin/login" method="POST">
-                                <input type="password" name="password" placeholder="Passwort eingeben" required>
-                                    <button type="submit">Anmelden</button>
-                            </form>
-                        </div>
-                    </body>
-                </html>
-                `);
-        return;
-    }
+    res.status(410).send('Legacy admin route disabled. Use /frontend/admin.html with the API login.');
 
     const ordersFilePath = path.join(__dirname, 'orders.json');
 
@@ -1347,12 +3135,17 @@ app.get('/admin', async (req, res) => {
     res.send(html);
 });
 
-app.post('/create-checkout-session', async (req, res) => {
+app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
-        const { items, customerEmail } = req.body; // Expecting {items: [{id: "1-50", quantity: 2 }, ...], customerEmail: "..." }
+        const { items, customerEmail, couponCode } = req.body; // Expecting {items: [{id: "1-50", quantity: 2 }, ...], customerEmail: "...", couponCode: "NOTE-XXXXX" }
+        const normalizedCustomerEmail = customerEmail ? sanitizeEmail(customerEmail) : '';
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'Warenkorb ist leer oder ungültig' });
+        }
+
+        if (customerEmail && !normalizedCustomerEmail) {
+            return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
         }
 
         const line_items = [];
@@ -1360,6 +3153,11 @@ app.post('/create-checkout-session', async (req, res) => {
         let subtotal = 0;
 
         for (const item of items) {
+            const quantity = sanitizeQuantity(item.quantity);
+            if (!quantity) {
+                return res.status(400).json({ error: 'Ungültige Menge im Warenkorb.' });
+            }
+
             // "G1-50" -> baseId "G1", size "50"
             const match = item.id.match(/^(.+?)-(\d+)$/);
             if (!match) return res.status(400).json({ error: 'Ungültige Produkt-ID: ' + item.id });
@@ -1382,10 +3180,21 @@ app.post('/create-checkout-session', async (req, res) => {
                     },
                     unit_amount: priceInCents,
                 },
-                quantity: item.quantity,
+                quantity,
             });
 
-            subtotal += priceInCents * item.quantity;
+            subtotal += priceInCents * quantity;
+        }
+
+        let appliedCoupon = null;
+        let discountAmountCents = 0;
+        if (couponCode) {
+            appliedCoupon = await findValidCoupon(couponCode);
+            if (!appliedCoupon) {
+                return res.status(400).json({ error: 'Gutscheincode ist ungültig oder bereits verbraucht.' });
+            }
+
+            discountAmountCents = Math.round(subtotal * (appliedCoupon.discount / 100));
         }
 
         // Kostenloser Versand ab 60€ (6000 Cents)
@@ -1418,22 +3227,50 @@ app.post('/create-checkout-session', async (req, res) => {
                         delivery_estimate: {
                             minimum: {
                                 unit: 'business_day',
-                                value: 3,
+                                value: 1,
                             },
                             maximum: {
                                 unit: 'business_day',
-                                value: 5,
+                                value: 3,
                             },
                         },
                     },
                 },
             ],
-            success_url: 'https://note-fragrances.de/success.html',
-            cancel_url: 'https://note-fragrances.de/cancel.html',
+            cancel_url: buildFrontendPageUrl('cancel.html'),
+            success_url: buildFrontendPageUrl('success.html'),
+            metadata: {
+                couponCode: appliedCoupon ? appliedCoupon.code : '',
+                discountAmountCents: String(discountAmountCents),
+                discountPercent: appliedCoupon ? String(appliedCoupon.discount) : '0'
+            }
         };
 
-        if (customerEmail) {
-            sessionConfig.customer_email = customerEmail;
+        if (normalizedCustomerEmail) {
+            sessionConfig.customer_email = normalizedCustomerEmail;
+        }
+
+        if (appliedCoupon && discountAmountCents > 0) {
+            const stripeCoupon = await stripe.coupons.create({
+                amount_off: discountAmountCents,
+                currency: 'eur',
+                duration: 'once',
+                name: `${appliedCoupon.code} (${appliedCoupon.discount}% Rabatt)`
+            });
+            sessionConfig.discounts = [{ coupon: stripeCoupon.id }];
+        }
+
+        if (LOCAL_DEV_SAFE_MODE) {
+            return res.json({
+                safeMode: true,
+                couponApplied: !!appliedCoupon,
+                couponCode: appliedCoupon ? appliedCoupon.code : '',
+                subtotalCents: subtotal,
+                discountAmountCents,
+                shippingRateCents: shippingRate,
+                totalCents: Math.max(0, subtotal - discountAmountCents + shippingRate),
+                message: 'Lokaler Testmodus: Keine echte Stripe-Session erzeugt.'
+            });
         }
 
         const session = await stripe.checkout.sessions.create(sessionConfig);
@@ -1445,55 +3282,93 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
-app.post('/create-pickup-order', async (req, res) => {
+app.post('/create-pickup-order', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
-        const { items, customerName, customerEmail } = req.body;
+        const { items, customerName, customerEmail, couponCode } = req.body;
         if (!items || !items.length) return res.status(400).json({ error: 'Warenkorb leer' });
+
+        const safeCustomerName = sanitizeText(customerName, 120);
+        const normalizedCustomerEmail = sanitizeEmail(customerEmail);
+        if (!safeCustomerName || !normalizedCustomerEmail) {
+            return res.status(400).json({ error: 'Name und gültige E-Mail sind erforderlich.' });
+        }
 
         const line_items = [];
         let totalCents = 0;
 
         for (const item of items) {
+            const quantity = sanitizeQuantity(item.quantity);
+            if (!quantity) {
+                return res.status(400).json({ error: 'Ungültige Menge im Warenkorb.' });
+            }
+
             const match = item.id.match(/^(.+?)-(\d+)$/);
-            if (!match) continue;
+            if (!match) return res.status(400).json({ error: 'Ungültige Produkt-ID: ' + item.id });
             const [, baseId, sizeStr] = match;
             const size = parseInt(sizeStr, 10);
             const product = await Product.findOne({ id: baseId });
-            if (!product || !product.variants[size]) continue;
+            if (!product || !product.variants[size]) {
+                return res.status(404).json({ error: `Produkt mit ID ${item.id} nicht gefunden` });
+            }
 
             const priceCents = Math.round(product.variants[size].price * 100);
-            totalCents += priceCents * item.quantity;
+            totalCents += priceCents * quantity;
 
             line_items.push({
-                quantity: item.quantity,
+                quantity,
                 description: product.name + ' (' + size + 'ml) [BARZAHLUNG]',
-                amount_total: priceCents * item.quantity,
+                amount_total: priceCents * quantity,
                 imageUrl: product.images && product.images.length > 0 ? product.images[0] : ''
             });
         }
 
+        if (!line_items.length || totalCents <= 0) {
+            return res.status(400).json({ error: 'Warenkorb ist leer oder ungültig.' });
+        }
+
+        let appliedCoupon = null;
+        let discountAmountCents = 0;
+        if (couponCode) {
+            appliedCoupon = await findValidCoupon(couponCode);
+            if (!appliedCoupon) {
+                return res.status(400).json({ error: 'Gutscheincode ist ungültig oder bereits verbraucht.' });
+            }
+
+            discountAmountCents = Math.round(totalCents * (appliedCoupon.discount / 100));
+            totalCents = Math.max(0, totalCents - discountAmountCents);
+        }
+
         const newOrder = new Order({
             date: new Date().toISOString(),
-            email: customerEmail,
-            name: customerName,
+            email: normalizedCustomerEmail,
+            name: safeCustomerName,
             amount: totalCents,
+            discountAmount: discountAmountCents,
+            couponCode: appliedCoupon ? appliedCoupon.code : '',
             address: { line1: 'Selbstabholung (Zahlung vor Ort)', city: '', postal_code: '', country: '' },
             items: line_items
         });
         await newOrder.save();
 
-        if (customerEmail) {
+        if (appliedCoupon) {
+            appliedCoupon.used = true;
+            await appliedCoupon.save();
+        }
+
+        if (normalizedCustomerEmail && !LOCAL_DEV_SAFE_MODE) {
             try {
                 const itemsHtml = line_items.length > 0
                     ? line_items.map(i => {
-                        const imgTag = i.imageUrl
-                            ? `<img src="${i.imageUrl}" width="60" height="60" alt="${i.description}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
+                        const safeDescription = escapeHtml(i.description || '');
+                        const safeImageUrl = sanitizeTrackingUrl(i.imageUrl);
+                        const imgTag = safeImageUrl
+                            ? `<img src="${safeImageUrl}" width="60" height="60" alt="${safeDescription}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #e6e6e6;background:#fff;display:block;">`
                             : `<div style="width:60px;height:60px;background:#f0ede8;border-radius:4px;border:1px solid #e6e6e6;display:inline-block;"></div>`;
                         return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e6e6e6;">
                           <tr>
                             <td style="width:70px;vertical-align:middle;">${imgTag}</td>
                             <td style="padding-left:14px;vertical-align:middle;font-family:'Inter',Arial,sans-serif;">
-                              <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${i.description}</p>
+                              <p style="margin:0;font-size:14px;color:#1a1a1a;font-weight:500;">${safeDescription}</p>
                               <p style="margin:3px 0 0;font-size:12px;color:#999999;">Menge: ${i.quantity}</p>
                             </td>
                             <td style="text-align:right;vertical-align:middle;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#1a1a1a;font-weight:500;white-space:nowrap;">${(i.amount_total / 100).toFixed(2).replace('.', ',')} €</td>
@@ -1503,10 +3378,16 @@ app.post('/create-pickup-order', async (req, res) => {
                     : '<p style="color:#999;font-size:13px;">–</p>';
 
                 const totalFormatted = (totalCents / 100).toFixed(2).replace('.', ',');
+                const discountHtml = discountAmountCents > 0
+                    ? `<tr>
+            <td style="font-size:13px;color:#999;padding-top:8px;">Rabatt (${appliedCoupon.code})</td>
+            <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">-${(discountAmountCents / 100).toFixed(2).replace('.', ',')} €</td>
+          </tr>`
+                    : '';
 
                 await resend.emails.send({
                     from: 'NOTE. fragrances <info@note-fragrances.de>',
-                    to: customerEmail,
+                    to: normalizedCustomerEmail,
                     subject: `Deine Abhol-Bestellung bei NOTE. fragrances \u2713`,
                     html: `<!DOCTYPE html>
 <html lang="de">
@@ -1530,7 +3411,7 @@ app.post('/create-pickup-order', async (req, res) => {
       <tr><td style="background:#f5f3ee;padding:48px 48px 40px;text-align:center;">
         <div style="display:inline-block;width:62px;height:62px;border-radius:50%;border:1.5px solid #d4af37;line-height:60px;font-size:22px;color:#d4af37;margin-bottom:22px;">\u2713</div>
         <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:#d4af37;font-weight:700;">Bestellbest\u00e4tigung</p>
-        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Vielen Dank, ${customerName}!</h1>
+                        <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:28px;color:#1a1a1a;font-weight:400;">Vielen Dank, ${escapeHtml(safeCustomerName)}!</h1>
         <p style="margin:0 auto;font-size:13px;color:#666;line-height:1.8;max-width:380px;">Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird für dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.</p>
       </td></tr>
       <tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
@@ -1548,6 +3429,7 @@ app.post('/create-pickup-order', async (req, res) => {
             <td style="font-size:13px;color:#999;padding-top:8px;">Zahlungsart</td>
             <td style="text-align:right;font-size:13px;color:#999;padding-top:8px;">Bar bei Abholung</td>
           </tr>
+          ${discountHtml}
         </table>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:14px;margin-top:4px;">
           <tr>
@@ -1582,6 +3464,8 @@ app.post('/create-pickup-order', async (req, res) => {
             } catch (emailErr) {
                 console.error('[Email] Fehler beim Senden Pickup-Bestellbestätigung:', emailErr);
             }
+        } else if (LOCAL_DEV_SAFE_MODE) {
+            console.log('[Safe Mode] Pickup-Bestellbestätigung wurde nicht versendet.');
         }
 
         res.json({ success: true, orderId: newOrder._id });
@@ -1591,9 +3475,9 @@ app.post('/create-pickup-order', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 4242;
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
+    startSecurityMonitorLoop();
 });
 
 app.get('/api/products', async (req, res) => {
@@ -1602,11 +3486,25 @@ app.get('/api/products', async (req, res) => {
             console.log('[Cache] Cache leer, lade aus Datenbank...');
             await refreshProductCache();
         }
-        res.json(productCache);
+        const products = Array.isArray(productCache) ? productCache : [];
+        const reviewSummaryMap = await buildReviewSummaryMap(products.map(product => product.id));
+        const enrichedProducts = products.map(product => {
+            const plainProduct = typeof product.toObject === 'function' ? product.toObject() : product;
+            return {
+                ...plainProduct,
+                reviewSummary: reviewSummaryMap[plainProduct.id] || { average: 0, count: 0 }
+            };
+        });
+        res.json(enrichedProducts);
     } catch (e) {
         console.error("Products error:", e);
         res.status(500).json({ error: e.message || 'Server error' });
     }
 });
 
-
+// Fallback Error-Handler: keine internen Details an den Client leaken
+app.use((err, req, res, next) => {
+    console.error('Unhandled server error:', err);
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: 'Interner Serverfehler.' });
+});
