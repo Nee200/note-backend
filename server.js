@@ -80,10 +80,13 @@ const TRUSTED_BROWSER_ORIGINS = Array.from(new Set([
 function looksLikePlaceholder(value) {
     const normalized = String(value || '').toLowerCase();
     if (!normalized) return true;
+    if (normalized.startsWith('sk_test_') || normalized.startsWith('sk_live_')) return false;
+    if (normalized.startsWith('pk_test_') || normalized.startsWith('pk_live_')) return false;
+    if (normalized.startsWith('whsec_')) return false;
+    if (normalized.startsWith('re_')) return false;
     return normalized.includes('placeholder')
         || normalized.includes('change-me')
-        || normalized.includes('example')
-        || normalized.includes('test');
+        || normalized.includes('example');
 }
 
 if (IS_PRODUCTION) {
