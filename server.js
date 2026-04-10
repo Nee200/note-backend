@@ -965,7 +965,7 @@ function getUserDisplayName(user) {
 }
 
 async function getAuthenticatedUser(req) {
-    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    const token = getUserTokenFromRequest(req);
     if (!token) {
         const error = new Error('Nicht eingeloggt');
         error.status = 401;
@@ -1078,6 +1078,19 @@ const parseCookies = (request) => {
     });
 
     return list;
+}
+
+function getBearerToken(req) {
+    const raw = String((req && req.headers && req.headers.authorization) || '').trim();
+    if (!raw) return '';
+    const match = raw.match(/^Bearer\s+(.+)$/i);
+    return match ? String(match[1] || '').trim() : '';
+}
+
+function getUserTokenFromRequest(req) {
+    const cookieToken = String(parseCookies(req)[USER_TOKEN_COOKIE] || '').trim();
+    if (cookieToken) return cookieToken;
+    return getBearerToken(req);
 }
 
 function ensureCsrfCookie(req, res, next) {
@@ -1611,7 +1624,7 @@ app.post('/api/register', authLimiter, requireTrustedOrigin, requireCsrfToken, a
         const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
         res.cookie(USER_TOKEN_COOKIE, token, getUserCookieOptions());
 
-        res.json({ success: true, message: 'Registrierung erfolgreich', user: { name: user.name, email: user.email } });
+        res.json({ success: true, message: 'Registrierung erfolgreich', authToken: token, user: { name: user.name, email: user.email } });
     } catch (err) {
         console.error('Register error:', err);
         res.status(503).json({ error: 'Registrierung aktuell nicht verfügbar.' });
@@ -1637,7 +1650,7 @@ app.post('/api/login', authLimiter, requireTrustedOrigin, requireCsrfToken, asyn
 
         res.cookie(USER_TOKEN_COOKIE, token, getUserCookieOptions());
 
-        res.json({ success: true, user: { name: user.name, email: user.email } });
+        res.json({ success: true, authToken: token, user: { name: user.name, email: user.email } });
     } catch (err) {
         console.error('Login error:', err);
         res.status(503).json({ error: 'Login aktuell nicht verfügbar.' });
@@ -1650,7 +1663,7 @@ app.post('/api/logout', requireTrustedOrigin, requireCsrfToken, (req, res) => {
 });
 
 app.get('/api/user', async (req, res) => {
-    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    const token = getUserTokenFromRequest(req);
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -1673,7 +1686,7 @@ app.get('/api/user', async (req, res) => {
 });
 
 app.put('/api/user/profile', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
-    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    const token = getUserTokenFromRequest(req);
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -1697,7 +1710,7 @@ app.put('/api/user/profile', requireTrustedOrigin, requireCsrfToken, async (req,
 });
 
 app.post('/api/user/address', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
-    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    const token = getUserTokenFromRequest(req);
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -1730,7 +1743,7 @@ app.post('/api/user/address', requireTrustedOrigin, requireCsrfToken, async (req
 });
 
 app.delete('/api/user/address/:id', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
-    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    const token = getUserTokenFromRequest(req);
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -1751,7 +1764,7 @@ app.delete('/api/user/address/:id', requireTrustedOrigin, requireCsrfToken, asyn
 });
 
 app.get('/api/user/orders', async (req, res) => {
-    const token = parseCookies(req)[USER_TOKEN_COOKIE];
+    const token = getUserTokenFromRequest(req);
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
@@ -1777,7 +1790,7 @@ app.get('/api/products/:productId/reviews', async (req, res) => {
 
         let userId = null;
         try {
-            const token = parseCookies(req)[USER_TOKEN_COOKIE];
+            const token = getUserTokenFromRequest(req);
             if (token) {
                 const decoded = jwt.verify(token, JWT_SECRET);
                 userId = decoded.userId || null;
