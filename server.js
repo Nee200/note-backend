@@ -42,6 +42,11 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const { execFile } = require('child_process');
+const {
+    supplierEntries,
+    findSupplierEntryById,
+    findBestSupplierMatchByInspiredBy
+} = require('./supplierCatalogMap');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -51,6 +56,7 @@ const CSRF_TOKEN_COOKIE = 'csrf_token';
 const PORT = Number(process.env.PORT || 4242);
 const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-backend-5gy0.onrender.com' : 'http://localhost:4242');
 const FRONTEND_PUBLIC_URL = process.env.FRONTEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-fragrances.de' : 'http://localhost:5500');
+const INTERNAL_ORDER_NOTIFICATION_EMAIL = String(process.env.INTERNAL_ORDER_NOTIFICATION_EMAIL || 'info@note-fragrances.de').trim();
 const EXPECTS_LIVE_STRIPE_MODE = String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live_');
 const APP_STARTED_AT = Date.now();
 const TRUSTED_BROWSER_ORIGINS = Array.from(new Set([
@@ -845,6 +851,82 @@ function buildContactInternalEmailHtml({ name, email, subjectText, message, rece
             `;
 }
 
+function buildPickupOrderInternalEmailPayload({
+    customerName = '',
+    customerEmail = '',
+    items = [],
+    totalAmountCents = 0,
+    discountAmountCents = 0,
+    couponCode = '',
+    receivedAtText = ''
+}) {
+    const safeCustomerName = escapeHtml(customerName || 'Kunde');
+    const safeCustomerEmail = escapeHtml(customerEmail || '');
+    const safeDate = escapeHtml(receivedAtText || '');
+    const safeCouponCode = escapeHtml(couponCode || '');
+    const listHtml = Array.isArray(items) && items.length
+        ? items.map((item) => {
+            const desc = escapeHtml(item.description || '');
+            const supplierId = escapeHtml(item.supplierId || '');
+            const descWithSupplier = supplierId
+                ? `${desc} <span style="color:#b8860b;font-weight:700;">(${supplierId})</span>`
+                : desc;
+            const qty = Number(item.quantity) || 0;
+            const amountText = Number.isFinite(Number(item.amount_total))
+                ? `${formatEuroFromCents(item.amount_total)} €`
+                : '0,00 €';
+            return `<tr>
+                <td style="padding:8px 0;border-bottom:1px solid #eee;color:#333;">${descWithSupplier}</td>
+                <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:center;color:#333;">${qty}</td>
+                <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;color:#333;">${amountText}</td>
+            </tr>`;
+        }).join('')
+        : '<tr><td colspan="3" style="padding:10px 0;color:#888;">Keine Artikel.</td></tr>';
+
+    const discountLine = Number(discountAmountCents) > 0
+        ? `<tr><td style="padding:6px 0;color:#666;">Rabatt${safeCouponCode ? ` (${safeCouponCode})` : ''}</td><td></td><td style="padding:6px 0;text-align:right;color:#666;">-${formatEuroFromCents(discountAmountCents)} €</td></tr>`
+        : '';
+
+    const bodyHtml = `<tr><td style="background:#f5f3ee;padding:0 40px;"><div style="border-top:1px solid #dedad3;"></div></td></tr>
+<tr><td style="background:#f5f3ee;padding:28px 40px 0;">
+  <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#aaa;font-weight:600;">Bestelldetails (Intern)</p>
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+    <tr><td style="font-size:13px;color:#666;padding:0 0 6px;">Kunde</td><td style="font-size:13px;color:#1a1a1a;text-align:right;">${safeCustomerName}</td></tr>
+    <tr><td style="font-size:13px;color:#666;padding:0 0 6px;">E-Mail</td><td style="font-size:13px;color:#1a1a1a;text-align:right;"><a href="mailto:${safeCustomerEmail}" style="color:#1a1a1a;text-decoration:none;">${safeCustomerEmail}</a></td></tr>
+    <tr><td style="font-size:13px;color:#666;padding:0 0 6px;">Bestelltyp</td><td style="font-size:13px;color:#1a1a1a;text-align:right;">Selbstabholung</td></tr>
+    <tr><td style="font-size:13px;color:#666;">Eingang</td><td style="font-size:13px;color:#1a1a1a;text-align:right;">${safeDate}</td></tr>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e6e2da;border-radius:4px;padding:12px 14px;background:#fff;margin:0 0 14px;">
+    <tr>
+      <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.12em;padding-bottom:8px;">Produkt</td>
+      <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.12em;padding-bottom:8px;text-align:center;">Menge</td>
+      <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.12em;padding-bottom:8px;text-align:right;">Summe</td>
+    </tr>
+    ${listHtml}
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+    ${discountLine}
+  </table>
+</td></tr>
+<tr><td style="background:#f5f3ee;padding:16px 40px 40px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #d4af37;padding-top:12px;margin-top:12px;"><tr>
+    <td style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.15em;">Gesamtbetrag</td>
+    <td style="text-align:right;font-family:Georgia,serif;font-size:26px;color:#1a1a1a;">${formatEuroFromCents(totalAmountCents)} €</td>
+  </tr></table>
+</td></tr>`;
+
+    return {
+        subject: `Neue Selbstabholung-Bestellung (${safeCustomerName})`,
+        html: renderBrandEmail({
+            badge: 'Interne Bestellung',
+            title: 'Neue Selbstabholung',
+            introHtml: 'Eine neue Selbstabholung-Bestellung wurde erfasst. Alle Details findest du unten.',
+            iconHtml: '&#128230;',
+            bodyHtml
+        })
+    };
+}
+
 function buildAdminEmailTemplatePreviews() {
     const sampleItems = [
         {
@@ -882,6 +964,18 @@ function buildAdminEmailTemplatePreviews() {
     const newsletterConfirmMail = buildNewsletterConfirmationEmailPayload({ confirmUrl: 'https://note-fragrances.de/newsletter-confirmation.html' });
     const newsletterMail = buildNewsletterDiscountEmailPayload({ code: 'NOTE-M7K2X', discount: 5 });
     const contactConfirmMail = buildContactConfirmationEmailPayload({ name: 'Maria', subjectText: 'Frage zur Bestellung' });
+    const pickupOrderInternalPreviewMail = buildPickupOrderInternalEmailPayload({
+        customerName: 'Max Mustermann',
+        customerEmail: 'max@beispiel.de',
+        items: [
+            { description: 'No. L3 (50ml) [BARZAHLUNG]', quantity: 2, amount_total: 4998, supplierId: 'W3' },
+            { description: 'No. G12 (30ml) [BARZAHLUNG]', quantity: 1, amount_total: 1799, supplierId: 'M66' }
+        ],
+        totalAmountCents: 6797,
+        discountAmountCents: 0,
+        couponCode: '',
+        receivedAtText: new Date().toLocaleString('de-DE')
+    });
 
     return {
         order: {
@@ -903,6 +997,11 @@ function buildAdminEmailTemplatePreviews() {
             subject: pickupOrderMail.subject,
             from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: Kunde (Abhol-Kauf)',
             html: pickupOrderMail.html
+        },
+        'pickup-order-internal': {
+            subject: pickupOrderInternalPreviewMail.subject,
+            from: 'Von: NOTE. fragrances <info@note-fragrances.de>  \u2022  An: info@note-fragrances.de',
+            html: pickupOrderInternalPreviewMail.html
         },
         'newsletter-confirm': {
             subject: newsletterConfirmMail.subject,
@@ -1065,6 +1164,72 @@ function isAdmin(req) {
     } catch (err) {
         return false;
     }
+}
+
+function normalizeInternalExternalProductId(rawValue) {
+    return String(rawValue || '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '')
+        .replace(/[^A-Z0-9]/g, '');
+}
+
+function parseInternalOrSupplierId(rawValue) {
+    const normalized = normalizeInternalExternalProductId(rawValue);
+    const match = normalized.match(/^([GLMW])(\d{1,4})$/);
+    if (!match) return null;
+
+    const prefix = match[1];
+    const number = parseInt(match[2], 10);
+    if (!Number.isFinite(number) || number <= 0) return null;
+
+    return {
+        normalized,
+        prefix,
+        number,
+        internalId: (prefix === 'G' || prefix === 'L') ? `${prefix}${number}` : `${prefix === 'M' ? 'G' : 'L'}${number}`,
+        supplierId: (prefix === 'M' || prefix === 'W') ? `${prefix}${number}` : null,
+        direction: (prefix === 'G' || prefix === 'L') ? 'internal-to-supplier' : 'supplier-to-internal'
+    };
+}
+
+function extractInternalIdFromOrderItemDescription(description) {
+    const raw = String(description || '').toUpperCase();
+    if (!raw) return '';
+
+    const compact = raw
+        .replace(/NØTE\./g, ' ')
+        .replace(/NO\./g, ' ')
+        .replace(/[^A-Z0-9]+/g, ' ')
+        .trim();
+
+    const match = compact.match(/\b([GL])\s*([0-9]{1,4})\b/);
+    if (!match) return '';
+    return `${match[1]}${parseInt(match[2], 10)}`;
+}
+
+function buildSupplierMappingForInternalId(internalId, productMapById) {
+    const parsed = parseInternalOrSupplierId(internalId);
+    if (!parsed || parsed.direction !== 'internal-to-supplier') {
+        return null;
+    }
+
+    const expectedSupplierPrefix = parsed.prefix === 'G' ? 'M' : 'W';
+    const product = productMapById.get(parsed.internalId) || null;
+    if (!product || !String(product.inspiredBy || '').trim()) {
+        return null;
+    }
+
+    const best = findBestSupplierMatchByInspiredBy(product.inspiredBy, expectedSupplierPrefix);
+    if (!best || !best.supplierId) {
+        return null;
+    }
+
+    return {
+        supplierId: best.supplierId,
+        confidence: Number(best.confidence) || 0,
+        matchedBy: best.matchedBy || 'fuzzy'
+    };
 }
 
 // Helper to parse cookies
@@ -2941,6 +3106,147 @@ app.get('/api/admin/security-status', async (req, res) => {
     });
 });
 
+app.get('/api/admin/id-mapping', async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    const inputId = normalizeInternalExternalProductId(req.query.id || '');
+    if (!inputId) {
+        return res.status(400).json({ error: 'Bitte eine Produkt-ID uebergeben (z.B. G122 oder M122).' });
+    }
+
+    const parsed = parseInternalOrSupplierId(inputId);
+    if (!parsed) {
+        return res.status(400).json({ error: 'Ungueltiges ID-Format. Erlaubt: G/L/M/W + Zahl (z.B. G122).' });
+    }
+
+    try {
+        if (!Array.isArray(productCache)) {
+            await refreshProductCache();
+        }
+    } catch (error) {
+        // keep response resilient even if cache refresh fails
+    }
+
+    const products = Array.isArray(productCache) ? productCache : [];
+    const warnings = [];
+
+    if (parsed.direction === 'internal-to-supplier') {
+        const product = products.find(p => String(p.id || '').toUpperCase() === parsed.internalId) || null;
+        const expectedSupplierPrefix = parsed.prefix === 'G' ? 'M' : 'W';
+        let supplierMatch = null;
+
+        if (product && product.inspiredBy) {
+            supplierMatch = findBestSupplierMatchByInspiredBy(product.inspiredBy, expectedSupplierPrefix);
+        }
+
+        if (!product) {
+            warnings.push(`Interne Produkt-ID ${parsed.internalId} wurde im aktuellen Katalog nicht gefunden.`);
+        }
+        if (product && !supplierMatch) {
+            warnings.push(`Kein sicherer Match in der Referenzliste fuer "${product.inspiredBy || '-'}" gefunden.`);
+        }
+
+        return res.json({
+            query: inputId,
+            direction: parsed.direction,
+            internalId: parsed.internalId,
+            supplierId: supplierMatch ? supplierMatch.supplierId : null,
+            supplierLine: supplierMatch ? supplierMatch.supplierId : null,
+            number: parsed.number,
+            matchedBy: supplierMatch ? supplierMatch.matchedBy : null,
+            confidence: supplierMatch ? supplierMatch.confidence : null,
+            alternatives: supplierMatch && Array.isArray(supplierMatch.alternatives) ? supplierMatch.alternatives : [],
+            product: product ? {
+                id: product.id,
+                name: product.name,
+                inspiredBy: product.inspiredBy || '',
+                category: product.category || ''
+            } : null,
+            supplierReference: supplierMatch ? {
+                inspiredBy: supplierMatch.inspiredBy
+            } : null,
+            warnings
+        });
+    }
+
+    const supplierEntry = findSupplierEntryById(parsed.supplierId);
+    if (!supplierEntry) {
+        warnings.push(`Listen-ID ${parsed.supplierId} wurde in der Referenzliste nicht gefunden.`);
+    }
+
+    const expectedInternalPrefix = parsed.prefix === 'M' ? 'G' : 'L';
+    const candidateProducts = products
+        .filter(p => String(p.id || '').toUpperCase().startsWith(expectedInternalPrefix))
+        .map((product) => {
+            const match = findBestSupplierMatchByInspiredBy(product.inspiredBy || '', parsed.prefix);
+            return {
+                product,
+                match
+            };
+        })
+        .filter(item => item.match && item.match.supplierId === parsed.supplierId)
+        .sort((a, b) => (Number(b.match.confidence) || 0) - (Number(a.match.confidence) || 0))
+        .slice(0, 5)
+        .map(item => ({
+            id: item.product.id,
+            name: item.product.name,
+            inspiredBy: item.product.inspiredBy || '',
+            confidence: item.match.confidence,
+            matchedBy: item.match.matchedBy
+        }));
+
+    if (!candidateProducts.length) {
+        warnings.push(`Kein internes Produkt mit passender inspiredBy-Zuordnung fuer ${parsed.supplierId} gefunden.`);
+    }
+
+    return res.json({
+        query: inputId,
+        direction: parsed.direction,
+        internalId: parsed.internalId,
+        supplierId: parsed.supplierId,
+        supplierLine: parsed.supplierId,
+        number: parsed.number,
+        matchedBy: null,
+        confidence: null,
+        product: candidateProducts[0] || null,
+        candidates: candidateProducts,
+        supplierReference: supplierEntry ? {
+            supplierId: supplierEntry.supplierId,
+            inspiredBy: supplierEntry.inspiredBy
+        } : null,
+        warnings
+    });
+});
+
+app.get('/api/admin/id-mapping/catalog', (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+
+    const men = [];
+    const women = [];
+
+    const source = Array.isArray(supplierEntries) ? supplierEntries : [];
+    source.forEach((entry) => {
+        const payload = {
+            supplierId: entry.supplierId,
+            inspiredBy: entry.inspiredBy || ''
+        };
+        if (entry.prefix === 'M') {
+            men.push(payload);
+        } else if (entry.prefix === 'W') {
+            women.push(payload);
+        }
+    });
+
+    men.sort((a, b) => Number(a.supplierId.slice(1)) - Number(b.supplierId.slice(1)));
+    women.sort((a, b) => Number(a.supplierId.slice(1)) - Number(b.supplierId.slice(1)));
+
+    return res.json({ men, women });
+});
+
 app.delete('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
@@ -3176,8 +3482,37 @@ app.get('/api/admin/orders', async (req, res) => {
             { $set: { status: 'archiv', statusUpdatedAt: new Date() } }
         );
 
-        const orders = await Order.find({}).sort({ date: -1 });
-        res.json({ orders });
+        if (!Array.isArray(productCache)) {
+            await refreshProductCache();
+        }
+        const products = Array.isArray(productCache) ? productCache : [];
+        const productMapById = new Map(
+            products.map(product => [String(product.id || '').toUpperCase(), product])
+        );
+
+        const orders = await Order.find({}).sort({ date: -1 }).lean();
+        const enrichedOrders = orders.map((order) => {
+            const items = Array.isArray(order.items) ? order.items : [];
+            const mappedItems = items.map((item) => {
+                const internalId = extractInternalIdFromOrderItemDescription(item.description || '');
+                const mapping = internalId
+                    ? buildSupplierMappingForInternalId(internalId, productMapById)
+                    : null;
+                return {
+                    ...item,
+                    internalId: internalId || '',
+                    supplierId: mapping ? mapping.supplierId : '',
+                    mappingConfidence: mapping ? mapping.confidence : 0,
+                    mappingMatchedBy: mapping ? mapping.matchedBy : ''
+                };
+            });
+            return {
+                ...order,
+                items: mappedItems
+            };
+        });
+
+        res.json({ orders: enrichedOrders });
     } catch (err) {
         console.error('Fehler beim Laden der Bestellungen:', err);
         res.status(500).json({ error: 'Server Fehler' });
@@ -3644,11 +3979,25 @@ app.post('/create-pickup-order', requireTrustedOrigin, requireCsrfToken, async (
             const priceCents = Math.round(product.variants[size].price * 100);
             totalCents += priceCents * quantity;
 
+            let supplierId = '';
+            const internalId = String(baseId || '').toUpperCase();
+            const expectedSupplierPrefix = internalId.startsWith('G')
+                ? 'M'
+                : (internalId.startsWith('L') ? 'W' : '');
+            if (expectedSupplierPrefix && product.inspiredBy) {
+                const mapped = findBestSupplierMatchByInspiredBy(product.inspiredBy, expectedSupplierPrefix);
+                if (mapped && mapped.supplierId) {
+                    supplierId = mapped.supplierId;
+                }
+            }
+
             line_items.push({
                 quantity,
                 description: product.name + ' (' + size + 'ml) [BARZAHLUNG]',
                 amount_total: priceCents * quantity,
-                imageUrl: product.images && product.images.length > 0 ? product.images[0] : ''
+                imageUrl: product.images && product.images.length > 0 ? product.images[0] : '',
+                internalId,
+                supplierId
             });
         }
 
@@ -3712,6 +4061,28 @@ app.post('/create-pickup-order', requireTrustedOrigin, requireCsrfToken, async (
                 console.log('[Email] Pickup-Bestellbestaetigung gesendet an:', normalizedCustomerEmail);
             } catch (emailErr) {
                 console.error('[Email] Fehler beim Senden Pickup-Bestellbestätigung:', emailErr);
+            }
+
+            try {
+                const internalPickupMail = buildPickupOrderInternalEmailPayload({
+                    customerName: safeCustomerName,
+                    customerEmail: normalizedCustomerEmail,
+                    items: line_items,
+                    totalAmountCents: totalCents,
+                    discountAmountCents,
+                    couponCode: appliedCoupon ? appliedCoupon.code : '',
+                    receivedAtText: new Date().toLocaleString('de-DE')
+                });
+
+                await resend.emails.send({
+                    from: 'NOTE. fragrances <info@note-fragrances.de>',
+                    to: INTERNAL_ORDER_NOTIFICATION_EMAIL,
+                    subject: internalPickupMail.subject,
+                    html: internalPickupMail.html
+                });
+                console.log('[Email] Interne Pickup-Bestellung gesendet an:', INTERNAL_ORDER_NOTIFICATION_EMAIL);
+            } catch (internalErr) {
+                console.error('[Email] Fehler beim Senden interner Pickup-Bestellung:', internalErr);
             }
         } else if (LOCAL_DEV_SAFE_MODE) {
             console.log('[Safe Mode] Pickup-Bestellbestätigung wurde nicht versendet.');
