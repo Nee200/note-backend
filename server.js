@@ -1155,7 +1155,9 @@ async function refreshProductCache() {
 
 function isAdmin(req) {
     const cookies = parseCookies(req);
-    const token = cookies[ADMIN_TOKEN_COOKIE];
+    const cookieToken = String(cookies[ADMIN_TOKEN_COOKIE] || '').trim();
+    const bearerToken = getBearerToken(req);
+    const token = cookieToken || bearerToken;
     if (!token) return false;
 
     try {
@@ -2891,7 +2893,7 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
             { expiresIn: '1h' }
         );
         res.cookie(ADMIN_TOKEN_COOKIE, adminToken, getAdminCookieOptions());
-        res.json({ success: true });
+        res.json({ success: true, adminAuthToken: adminToken });
     } else {
         // Wrong password – increment counter
         record.count = (record.count || 0) + 1;
