@@ -6,3 +6,13 @@ node_modules/
 products.json
 orders.json
 users.json
+
+# Local smoke-test/request artifacts
+tmp_*.json
+tmp_*.txt
+*cookie*.txt
+*cookies*.txt
+live-smoke-cookies*.txt
+smoke-cookies.txt
+sanitize-check-cookies.txt
+admin-health-cookies.txt

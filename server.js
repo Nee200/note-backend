@@ -40,7 +40,6 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { v4: uuidv4 } = require('uuid');
 const { execFile } = require('child_process');
 const {
     supplierEntries,
@@ -1261,6 +1260,10 @@ function getUserTokenFromRequest(req) {
 }
 
 function ensureCsrfCookie(req, res, next) {
+    if (req.path === '/health' || req.path === '/ready') {
+        return next();
+    }
+
     const cookies = parseCookies(req);
     let csrfToken = cookies[CSRF_TOKEN_COOKIE];
 
@@ -1890,7 +1893,7 @@ app.post('/api/user/address', requireTrustedOrigin, requireCsrfToken, async (req
         if (!user.addresses) user.addresses = [];
 
         const newAddress = {
-            id: uuidv4(),
+            id: crypto.randomUUID(),
             firstName: sanitizeText(firstName, 80),
             lastName: sanitizeText(lastName, 80),
             label: sanitizeText(label, 80),
@@ -2542,6 +2545,30 @@ async function runActiveSecurityProbes() {
     const jsonHeaders = { 'Content-Type': 'application/json' };
 
     const probes = await Promise.all([
+        runHttpProbe({
+            id: 'probe-health-endpoint',
+            label: 'Probe: Backend Health erreichbar',
+            severity: 'critical',
+            method: 'GET',
+            pathname: '/health',
+            expectedStatuses: [200]
+        }),
+        runHttpProbe({
+            id: 'probe-ready-endpoint',
+            label: 'Probe: Backend Ready erreichbar',
+            severity: 'critical',
+            method: 'GET',
+            pathname: '/ready',
+            expectedStatuses: [200]
+        }),
+        runHttpProbe({
+            id: 'probe-products-endpoint',
+            label: 'Probe: Produkte laden',
+            severity: 'critical',
+            method: 'GET',
+            pathname: '/api/products',
+            expectedStatuses: [200]
+        }),
         runHttpProbe({
             id: 'probe-csrf-endpoint',
             label: 'Probe: CSRF-Token Endpoint erreichbar',

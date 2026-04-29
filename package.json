@@ -4,7 +4,11 @@
   "description": "Simple Online Shop with Stripe Integration",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:syntax": "node --check server.js && node --check models/User.js && node --check models/Product.js && node --check models/Order.js && node --check models/Review.js && node --check models/Subscriber.js",
+    "test:audit": "npm audit --omit=dev",
+    "smoke": "node scripts/smoke-backend.js",
+    "smoke:checkout:safe": "node scripts/smoke-checkout-safe.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -16,9 +20,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.3",
-    "resend": "^6.9.3",
+    "resend": "6.1.3",
     "sharp": "^0.34.5",
-    "stripe": "^20.2.0",
-    "uuid": "^13.0.0"
+    "stripe": "^20.2.0"
   }
 }
