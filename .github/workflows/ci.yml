@@ -1,0 +1,87 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: development
+      PORT: 4242
+      LOCAL_DEV_SAFE_MODE: "true"
+      MONGO_URI: mongodb://127.0.0.1:27017/note-localtest
+      JWT_SECRET: local-ci-secret-change-me
+      ADMIN_PASSWORD: change-me
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      RESEND_API_KEY: re_placeholder
+      FRONTEND_PUBLIC_URL: http://localhost:5500
+      BACKEND_PUBLIC_URL: http://localhost:4242
+      TRUSTED_BROWSER_ORIGINS: http://localhost:5500
+      BACKEND_BASE_URL: http://localhost:4242
+      SMOKE_TRUSTED_ORIGIN: http://localhost:5500
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: npm run test:syntax
+
+      - name: Dependency audit
+        run: npm run test:audit
+
+      - name: Seed local MongoDB
+        run: node importProducts.js
+
+      - name: Start backend in safe mode
+        run: |
+          nohup node server.js > backend-ci.log 2>&1 &
+          echo $! > backend-ci.pid
+
+      - name: Wait for readiness
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS "$BACKEND_BASE_URL/ready" >/dev/null; then
+              exit 0
+            fi
+            echo "Waiting for backend readiness ($attempt/30)"
+            sleep 2
+          done
+          cat backend-ci.log
+          exit 1
+
+      - name: Backend smoke test
+        run: npm run smoke
+
+      - name: Safe-mode checkout smoke test
+        run: npm run smoke:checkout:safe
+
+      - name: Backend logs on failure
+        if: failure()
+        run: cat backend-ci.log || true

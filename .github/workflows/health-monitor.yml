@@ -2,13 +2,13 @@ name: Health Monitor
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
   health-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Check backend health endpoint
         env:
@@ -19,9 +19,35 @@ jobs:
           URL="${BACKEND_HEALTH_URL:-https://note-backend-5gy0.onrender.com/health}"
           echo "Checking backend: $URL"
 
-          HTTP_CODE="$(curl -sS --max-time 20 --retry 2 --retry-delay 2 -o backend-health.json -w "%{http_code}" "$URL")"
-          echo "Backend HTTP status: $HTTP_CODE"
-          test "$HTTP_CODE" -ge 200 -a "$HTTP_CODE" -lt 400
+          # Render free/low-traffic services can cold-start slowly. Keep trying long
+          # enough to wake the instance instead of failing on the first timeout.
+          for attempt in $(seq 1 12); do
+            echo "Backend attempt $attempt/12"
+            HTTP_CODE="$(
+              curl -sS \
+                --connect-timeout 15 \
+                --max-time 60 \
+                --retry 3 \
+                --retry-delay 5 \
+                --retry-all-errors \
+                -o backend-health.json \
+                -w "%{http_code}" \
+                "$URL" || true
+            )"
+            echo "Backend HTTP status: ${HTTP_CODE:-curl_failed}"
+
+            if [ "${HTTP_CODE:-000}" -ge 200 ] && [ "${HTTP_CODE:-000}" -lt 400 ]; then
+              break
+            fi
+
+            if [ "$attempt" -eq 12 ]; then
+              echo "Backend did not become healthy in time."
+              [ -f backend-health.json ] && cat backend-health.json || true
+              exit 1
+            fi
+
+            sleep 10
+          done
 
           if ! grep -q '"status":"ok"' backend-health.json; then
             echo "Backend health payload did not report status=ok"
@@ -38,6 +64,6 @@ jobs:
           URL="${FRONTEND_HEALTH_URL:-https://note-fragrances.de/}"
           echo "Checking frontend: $URL"
 
-          HTTP_CODE="$(curl -sS --max-time 20 --retry 2 --retry-delay 2 -o /dev/null -w "%{http_code}" "$URL")"
+          HTTP_CODE="$(curl -sS --connect-timeout 15 --max-time 60 --retry 3 --retry-delay 5 --retry-all-errors -o /dev/null -w "%{http_code}" "$URL")"
           echo "Frontend HTTP status: $HTTP_CODE"
           test "$HTTP_CODE" -ge 200 -a "$HTTP_CODE" -lt 400
