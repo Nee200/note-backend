@@ -16,3 +16,15 @@ live-smoke-cookies*.txt
 smoke-cookies.txt
 sanitize-check-cookies.txt
 admin-health-cookies.txt
+
+# One-off maintenance/AI migration scripts and generated previews
+check_*.js
+compress.js
+email-template-preview.html
+fix_*.js
+generate_*.js
+migrate_*.js
+reset_*.js
+set_*.js
+update_*.js
+bestseller_check.txt
