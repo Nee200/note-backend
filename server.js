@@ -65,7 +65,6 @@ const TRUSTED_BROWSER_ORIGINS = Array.from(new Set([
         'http://localhost:5500',
         'http://127.0.0.1:5500'
     ]),
-    'https://keen-mooncake-5c73e2.netlify.app',
     'https://note-fragrances.de',
     'https://www.note-fragrances.de',
     ...String(process.env.TRUSTED_BROWSER_ORIGINS || '')
@@ -182,6 +181,22 @@ const adminWriteLimiter = rateLimit({
     message: { error: 'Zu viele Admin-Schreibanfragen. Bitte kurz warten.' }
 });
 
+const csrfTokenLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Sicherheits-Token-Anfragen. Bitte kurz warten.' }
+});
+
+const checkoutLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Zu viele Checkout-Anfragen. Bitte kurz warten.' }
+});
+
 const SECURITY_MONITOR_INTERVAL_MS = Number(process.env.SECURITY_MONITOR_INTERVAL_MS || 300000);
 const SECURITY_MONITOR_HISTORY_LIMIT = 25;
 const JSON_PARSE_ERROR_WINDOW_MS = 10 * 60 * 1000;
@@ -285,6 +300,58 @@ function sanitizeText(value, maxLength = 200) {
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, maxLength);
+}
+
+function extractCheckoutCustomerInfo(session) {
+    const customerDetails = session && session.customer_details ? session.customer_details : {};
+    const collectedInformation = session && session.collected_information ? session.collected_information : {};
+    const shippingDetails = collectedInformation.shipping_details
+        || (session && session.shipping_details)
+        || null;
+
+    const name = sanitizeText(
+        (shippingDetails && shippingDetails.name)
+        || collectedInformation.individual_name
+        || customerDetails.individual_name
+        || customerDetails.name
+        || collectedInformation.business_name
+        || customerDetails.business_name
+        || '',
+        120
+    );
+    const email = sanitizeEmail(customerDetails.email || (session && session.customer_email) || '');
+    const rawAddress = (shippingDetails && shippingDetails.address)
+        || customerDetails.address
+        || null;
+
+    let address = null;
+    if (rawAddress && typeof rawAddress === 'object') {
+        address = {
+            line1: sanitizeText(rawAddress.line1 || '', 200),
+            line2: sanitizeText(rawAddress.line2 || '', 200),
+            city: sanitizeText(rawAddress.city || '', 120),
+            postal_code: sanitizeText(rawAddress.postal_code || '', 30),
+            state: sanitizeText(rawAddress.state || '', 120),
+            country: sanitizeText(rawAddress.country || '', 10)
+        };
+        if (name) address.name = name;
+    }
+
+    return { name, email, address };
+}
+
+async function resolveCheckoutCustomerInfo(session) {
+    let info = extractCheckoutCustomerInfo(session);
+    if (info.name || !session || !session.id) return info;
+
+    try {
+        const refreshedSession = await stripe.checkout.sessions.retrieve(session.id);
+        info = extractCheckoutCustomerInfo(refreshedSession);
+    } catch (error) {
+        console.warn('[Stripe] Kundendaten konnten nicht erneut geladen werden:', error.message);
+    }
+
+    return info;
 }
 
 function sanitizeCategory(value) {
@@ -1402,7 +1469,8 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                 console.error('Fehler beim Abrufen der Line Items:', err);
             }
 
-            const addressData = session.customer_details ? session.customer_details.address : null;
+            const checkoutCustomerInfo = await resolveCheckoutCustomerInfo(session);
+            const addressData = checkoutCustomerInfo.address;
             const couponCode = session.metadata && session.metadata.couponCode ? session.metadata.couponCode : '';
             const discountAmount = session.total_details && typeof session.total_details.amount_discount === 'number'
                 ? session.total_details.amount_discount
@@ -1410,8 +1478,8 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 
             const newOrder = {
                 date: new Date().toISOString(),
-                email: session.customer_details && session.customer_details.email,
-                name: session.customer_details && session.customer_details.name,
+                email: checkoutCustomerInfo.email,
+                name: checkoutCustomerInfo.name,
                 amount: session.amount_total,  // kept in cents; admin UI divides by 100
                 discountAmount,
                 couponCode,
@@ -1444,13 +1512,11 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
             }
 
             // Send order confirmation email to customer
-            const customerEmail = session.customer_details && session.customer_details.email;
-            const customerName = session.customer_details && session.customer_details.name || 'Kunde';
+            const customerEmail = checkoutCustomerInfo.email;
+            const customerName = checkoutCustomerInfo.name || 'Kunde';
             if (customerEmail) {
                 try {
-                    const addr = session.shipping_details && session.shipping_details.address
-                        ? session.shipping_details.address
-                        : (session.customer_details && session.customer_details.address);
+                    const addr = checkoutCustomerInfo.address;
                     const emailItems = items.map((item) => ({
                         description: item.description,
                         quantity: item.quantity,
@@ -1569,7 +1635,7 @@ app.get('/ready', async (req, res) => {
     }
 });
 
-app.get('/api/csrf-token', (req, res) => {
+app.get('/api/csrf-token', csrfTokenLimiter, (req, res) => {
     rememberCsrfToken(req.csrfToken);
     res.json({ csrfToken: req.csrfToken });
 });
@@ -1629,9 +1695,9 @@ app.post('/api/contact', formLimiter, requireTrustedOrigin, requireCsrfToken, as
 // --- Newsletter Anmeldung ---
 app.post('/api/newsletter', newsletterLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     const { email } = req.body;
-    const normalizedEmail = email ? email.toLowerCase().trim() : '';
+    const normalizedEmail = sanitizeEmail(email);
 
-    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    if (!normalizedEmail) {
         return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
     }
 
@@ -1771,11 +1837,18 @@ app.post('/api/validate-coupon', couponLimiter, requireTrustedOrigin, requireCsr
 app.post('/api/register', authLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
         const { email, password, name } = req.body;
-        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        const normalizedEmail = sanitizeEmail(email);
         const safeName = sanitizeText(name, 120);
 
-        if (!normalizedEmail || !password) {
+        if (!normalizedEmail || typeof password !== 'string') {
             return res.status(400).json({ error: 'Email und Passwort erforderlich' });
+        }
+
+        const passwordBytes = Buffer.byteLength(password, 'utf8');
+        if (password.length < 12 || passwordBytes > 72) {
+            return res.status(400).json({
+                error: 'Das Passwort muss mindestens 12 Zeichen lang sein und darf 72 Bytes nicht überschreiten.'
+            });
         }
 
         if (!JWT_SECRET) {
@@ -1804,7 +1877,11 @@ app.post('/api/register', authLimiter, requireTrustedOrigin, requireCsrfToken, a
 app.post('/api/login', authLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
         const { email, password } = req.body;
-        const normalizedEmail = email ? email.trim().toLowerCase() : '';
+        const normalizedEmail = sanitizeEmail(email);
+
+        if (!normalizedEmail || typeof password !== 'string') {
+            return res.status(400).json({ error: 'Email und Passwort erforderlich' });
+        }
 
         if (!JWT_SECRET) {
             return res.status(500).json({ error: 'Server-Konfiguration unvollständig' });
@@ -2911,7 +2988,13 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
         return res.status(500).json({ error: 'Admin login is not configured correctly.' });
     }
 
-    if (password === ADMIN_PASSWORD) {
+    const submittedPassword = typeof password === 'string' ? password : '';
+    const submittedBuffer = Buffer.from(submittedPassword, 'utf8');
+    const expectedBuffer = Buffer.from(ADMIN_PASSWORD, 'utf8');
+    const passwordMatches = submittedBuffer.length === expectedBuffer.length
+        && crypto.timingSafeEqual(submittedBuffer, expectedBuffer);
+
+    if (passwordMatches) {
         // Success – clear attempts
         delete loginAttempts[ip];
         const adminToken = jwt.sign(
@@ -3519,7 +3602,25 @@ app.get('/api/admin/orders', async (req, res) => {
             products.map(product => [String(product.id || '').toUpperCase(), product])
         );
 
-        const orders = await Order.find({}).sort({ date: -1 }).lean();
+        const rawOrders = await Order.find({}).sort({ date: -1 }).lean();
+        const orders = await Promise.all(rawOrders.map(async (order) => {
+            const hasName = typeof order.name === 'string' && order.name.trim();
+            if (hasName || !order.stripeSessionId || !EXPECTS_LIVE_STRIPE_MODE) return order;
+
+            const customerInfo = await resolveCheckoutCustomerInfo({ id: order.stripeSessionId });
+            if (!customerInfo.name) return order;
+
+            const updateFields = { name: customerInfo.name };
+            if (customerInfo.email) updateFields.email = customerInfo.email;
+            if (customerInfo.address) updateFields.address = customerInfo.address;
+
+            await Order.updateOne(
+                { _id: order._id, $or: [{ name: { $exists: false } }, { name: '' }, { name: null }] },
+                { $set: updateFields }
+            );
+
+            return { ...order, ...updateFields };
+        }));
         const enrichedOrders = orders.map((order) => {
             const items = Array.isArray(order.items) ? order.items : [];
             const mappedItems = items.map((item) => {
@@ -3826,12 +3927,12 @@ app.get('/admin', async (req, res) => {
     res.send(html);
 });
 
-app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+app.post('/create-checkout-session', checkoutLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
         const { items, customerEmail, couponCode } = req.body; // Expecting {items: [{id: "1-50", quantity: 2 }, ...], customerEmail: "...", couponCode: "NOTE-XXXXX" }
         const normalizedCustomerEmail = customerEmail ? sanitizeEmail(customerEmail) : '';
 
-        if (!items || !Array.isArray(items) || items.length === 0) {
+        if (!items || !Array.isArray(items) || items.length === 0 || items.length > 50) {
             return res.status(400).json({ error: 'Warenkorb ist leer oder ungültig' });
         }
 
@@ -3844,6 +3945,9 @@ app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, asy
         let subtotal = 0;
 
         for (const item of items) {
+            if (!item || typeof item.id !== 'string' || item.id.length > 80) {
+                return res.status(400).json({ error: 'Ungültige Produkt-ID im Warenkorb.' });
+            }
             const quantity = sanitizeQuantity(item.quantity);
             if (!quantity) {
                 return res.status(400).json({ error: 'Ungültige Menge im Warenkorb.' });
@@ -3972,14 +4076,16 @@ app.post('/create-checkout-session', requireTrustedOrigin, requireCsrfToken, asy
         res.json({ url: session.url });
     } catch (error) {
         console.error('Error creating checkout session:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Checkout konnte nicht gestartet werden.' });
     }
 });
 
-app.post('/create-pickup-order', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
         const { items, customerName, customerEmail, couponCode } = req.body;
-        if (!items || !items.length) return res.status(400).json({ error: 'Warenkorb leer' });
+        if (!Array.isArray(items) || !items.length || items.length > 50) {
+            return res.status(400).json({ error: 'Warenkorb leer oder ungültig' });
+        }
 
         const safeCustomerName = sanitizeText(customerName, 120);
         const normalizedCustomerEmail = sanitizeEmail(customerEmail);
@@ -3991,6 +4097,9 @@ app.post('/create-pickup-order', requireTrustedOrigin, requireCsrfToken, async (
         let totalCents = 0;
 
         for (const item of items) {
+            if (!item || typeof item.id !== 'string' || item.id.length > 80) {
+                return res.status(400).json({ error: 'Ungültige Produkt-ID im Warenkorb.' });
+            }
             const quantity = sanitizeQuantity(item.quantity);
             if (!quantity) {
                 return res.status(400).json({ error: 'Ungültige Menge im Warenkorb.' });
