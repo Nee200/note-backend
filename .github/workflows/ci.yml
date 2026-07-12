@@ -57,7 +57,7 @@ jobs:
         run: npm run test:audit
 
       - name: Seed local MongoDB
-        run: node importProducts.js
+        run: node scripts/seed-ci-products.js
 
       - name: Start backend in safe mode
         run: |
