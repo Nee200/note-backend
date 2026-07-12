@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Check backend health endpoint
+      - name: Check backend readiness endpoint
         env:
-          BACKEND_HEALTH_URL: ${{ vars.BACKEND_HEALTH_URL }}
+          BACKEND_READY_URL: ${{ vars.BACKEND_READY_URL }}
         run: |
           set -euo pipefail
 
-          URL="${BACKEND_HEALTH_URL:-https://note-backend-5gy0.onrender.com/health}"
+          URL="${BACKEND_READY_URL:-https://note-backend-5gy0.onrender.com/ready}"
           echo "Checking backend: $URL"
 
           # Render free/low-traffic services can cold-start slowly. Keep trying long
@@ -53,8 +53,8 @@ jobs:
             sleep 10
           done
 
-          if ! grep -q '"status":"ok"' backend-health.json; then
-            echo "Backend health payload did not report status=ok"
+          if ! grep -q '"status":"ready"' backend-health.json; then
+            echo "Backend readiness payload did not report status=ready"
             cat backend-health.json
             exit 1
           fi
