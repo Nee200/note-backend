@@ -48,6 +48,8 @@ async function main() {
     const csrf = await request('/api/csrf-token');
     assert.ok(okStatus(csrf.response.status), `/api/csrf-token returned ${csrf.response.status}`);
     assert.ok(csrf.body && typeof csrf.body.csrfToken === 'string' && csrf.body.csrfToken.length >= 24, '/api/csrf-token must return a token');
+    const csrfCookie = String(csrf.response.headers.get('set-cookie') || '').split(';')[0];
+    assert.ok(csrfCookie.startsWith('csrf_token='), '/api/csrf-token must set the CSRF cookie');
     console.log('[smoke] /api/csrf-token ok');
 
     const missingCsrf = await request('/api/validate-coupon', {
@@ -79,6 +81,7 @@ async function main() {
             headers: {
                 'Content-Type': 'application/json',
                 Origin: trustedOrigin,
+                Cookie: csrfCookie,
                 'X-CSRF-Token': csrf.body.csrfToken
             },
             body: JSON.stringify({ email: `smoke-newsletter-${Date.now()}@example.test` })
