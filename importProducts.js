@@ -25,6 +25,11 @@ async function importProducts() {
         }
         console.log(`Import successful (${importedCount} products).`);
     } catch (error) {
+        const annotationMessage = String(error && error.message ? error.message : error || 'Unknown import failure')
+            .replace(/%/g, '%25')
+            .replace(/\r/g, '%0D')
+            .replace(/\n/g, '%0A');
+        console.error(`::error title=Product import failed::${annotationMessage}`);
         console.error('Import failed:', error);
         process.exitCode = 1;
     } finally {
