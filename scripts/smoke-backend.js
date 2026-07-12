@@ -96,6 +96,11 @@ async function main() {
 }
 
 main().catch((error) => {
+    const message = String(error && error.message ? error.message : error || 'Unknown smoke failure')
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A');
+    console.error(`::error title=Backend smoke failed::${message}`);
     console.error('[smoke] Backend smoke failed');
     console.error(error && error.stack ? error.stack : error);
     process.exit(1);
