@@ -73,6 +73,22 @@ async function main() {
     assert.strictEqual(badOrigin.response.status, 403, `bad Origin should return 403, got ${badOrigin.response.status}`);
     console.log('[smoke] Origin enforcement ok');
 
+    if (String(process.env.LOCAL_DEV_SAFE_MODE || '').toLowerCase() === 'true') {
+        const newsletter = await request('/api/newsletter', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Origin: trustedOrigin,
+                'X-CSRF-Token': csrf.body.csrfToken
+            },
+            body: JSON.stringify({ email: `smoke-newsletter-${Date.now()}@example.test` })
+        });
+        assert.ok(okStatus(newsletter.response.status), `/api/newsletter returned ${newsletter.response.status}: ${newsletter.text}`);
+        assert.strictEqual(newsletter.body && newsletter.body.success, true, 'newsletter signup must report success');
+        assert.strictEqual(newsletter.body && newsletter.body.safeMode, true, 'newsletter smoke must stay in safe mode');
+        console.log('[smoke] Newsletter signup ok (safe mode)');
+    }
+
     console.log('[smoke] Backend smoke passed');
 }
 
