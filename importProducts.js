@@ -3,24 +3,33 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const Product = require('./models/Product');
 
-mongoose.connect(process.env.MONGO_URI, {}).then(async () => {
-    console.log('MongoDB connected for import...');
-
+async function importProducts() {
     try {
+        await mongoose.connect(process.env.MONGO_URI, {});
+        console.log('MongoDB connected for import...');
+
         const rawData = fs.readFileSync('products.json', 'utf8');
         const productsArray = JSON.parse(rawData);
+        if (!Array.isArray(productsArray) || productsArray.length === 0) {
+            throw new Error('products.json contains no products.');
+        }
 
         console.log(`Found ${productsArray.length} products to import.`);
-
-        // Clear existing products to avoid duplicates during test
         await Product.deleteMany({});
         console.log('Cleared existing products.');
 
         await Product.insertMany(productsArray);
-        console.log('Import successful!');
+        const importedCount = await Product.countDocuments({});
+        if (importedCount !== productsArray.length) {
+            throw new Error(`Product import incomplete: expected ${productsArray.length}, found ${importedCount}.`);
+        }
+        console.log(`Import successful (${importedCount} products).`);
     } catch (error) {
         console.error('Import failed:', error);
+        process.exitCode = 1;
     } finally {
-        mongoose.connection.close();
+        await mongoose.disconnect().catch(() => {});
     }
-}).catch(err => console.error(err));
+}
+
+importProducts();

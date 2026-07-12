@@ -1611,6 +1611,28 @@ app.get('/ready', async (req, res) => {
 
     try {
         await mongoose.connection.db.admin().ping();
+        if (!Array.isArray(productCache) || productCache.length === 0) {
+            await refreshProductCache();
+        }
+
+        const productsReady = Array.isArray(productCache) && productCache.length > 0;
+        if (!productsReady) {
+            return res.status(503).json({
+                status: 'not_ready',
+                reason: 'product_catalog_not_ready',
+                checks: {
+                    db: {
+                        ok: true,
+                        state: getMongoStateLabel(mongoReadyState)
+                    },
+                    products: {
+                        ok: false,
+                        count: 0
+                    }
+                }
+            });
+        }
+
         return res.status(200).json({
             status: 'ready',
             now: new Date().toISOString(),
@@ -1618,6 +1640,10 @@ app.get('/ready', async (req, res) => {
                 db: {
                     ok: true,
                     state: getMongoStateLabel(mongoReadyState)
+                },
+                products: {
+                    ok: true,
+                    count: productCache.length
                 }
             }
         });
