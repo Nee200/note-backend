@@ -1744,13 +1744,19 @@ app.post('/api/newsletter', newsletterLimiter, requireTrustedOrigin, requireCsrf
             subscriber.confirmTokenExpiresAt = confirmTokenExpiresAt;
             subscriber.status = 'pending';
             subscriber.confirmedAt = undefined;
+            // Der Code bleibt bis zur Bestätigung inaktiv. Er verhindert zugleich
+            // Kollisionen mit älteren, nicht-sparsamen MongoDB-Indizes auf `code`.
+            if (!subscriber.code) {
+                subscriber.code = await generateNewsletterCode();
+            }
             await subscriber.save();
         } else {
             subscriber = await new Subscriber({
                 email: normalizedEmail,
                 status: 'pending',
                 confirmToken,
-                confirmTokenExpiresAt
+                confirmTokenExpiresAt,
+                code: await generateNewsletterCode()
             }).save();
         }
 
