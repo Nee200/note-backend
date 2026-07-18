@@ -1212,7 +1212,20 @@ async function buildReviewSummaryMap(productIds) {
 let productCache = null;
 async function refreshProductCache() {
     try {
-        productCache = await Product.find({}, '-_id -__v').lean();
+        const databaseProducts = await Product.find({}, '-_id -__v').lean();
+
+        // Lokale Vorschau: Neuheiten aus products.json einblenden, ohne die
+        // verbundene Produktionsdatenbank beim Entwickeln zu verändern.
+        if (!IS_PRODUCTION) {
+            const catalogPath = path.join(__dirname, 'products.json');
+            const localCatalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+            const localNewArrivals = localCatalog.filter((product) => product.newArrival === true);
+            const mergedProducts = new Map(databaseProducts.map((product) => [product.id, product]));
+            localNewArrivals.forEach((product) => mergedProducts.set(product.id, product));
+            productCache = Array.from(mergedProducts.values());
+        } else {
+            productCache = databaseProducts;
+        }
         console.log('[Cache] Produkt-Cache aktualisiert.');
     } catch (e) {
         console.error('[Cache] Fehler beim Cache-Update:', e);
@@ -3431,6 +3444,7 @@ app.put('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requ
             updateData.category = safeCategory;
         }
         if (req.body.bestseller !== undefined) updateData.bestseller = req.body.bestseller;
+        if (req.body.newArrival !== undefined) updateData.newArrival = req.body.newArrival === true;
 
         // Variants
         if (price30 !== undefined) {
@@ -3554,7 +3568,7 @@ app.post('/api/admin/products', adminWriteLimiter, requireTrustedOrigin, require
     }
 
     try {
-        const { id, name, category, inspiredBy, description, images, notes, variants } = req.body;
+        const { id, name, category, inspiredBy, description, images, notes, variants, newArrival } = req.body;
 
         const safeId = sanitizeProductId(id);
         const safeName = sanitizeText(name, 120);
@@ -3601,7 +3615,8 @@ app.post('/api/admin/products', adminWriteLimiter, requireTrustedOrigin, require
             description: sanitizeText(description, 1200),
             images: safeImages,
             notes: safeNotes,
-            variants: safeVariants
+            variants: safeVariants,
+            newArrival: newArrival === true
         });
 
         await newProduct.save();
