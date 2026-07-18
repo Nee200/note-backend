@@ -7,6 +7,9 @@
     "start": "node server.js",
     "test:syntax": "node --check server.js && node --check models/User.js && node --check models/Product.js && node --check models/Order.js && node --check models/Review.js && node --check models/Subscriber.js",
     "test:audit": "npm audit --omit=dev",
+    "import:new-arrivals": "node scripts/upsert-new-arrivals.js",
+    "import:bestseller-images": "node scripts/upsert-bestseller-images.js",
+    "sync:bestsellers": "node scripts/sync-curated-bestsellers.js",
     "smoke": "node scripts/smoke-backend.js",
     "smoke:checkout:safe": "node scripts/smoke-checkout-safe.js"
   },
