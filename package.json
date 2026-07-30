@@ -9,6 +9,7 @@
     "test:audit": "npm audit --omit=dev",
     "import:new-arrivals": "node scripts/upsert-new-arrivals.js",
     "import:bestseller-images": "node scripts/upsert-bestseller-images.js",
+    "update:standard-prices": "node scripts/update-standard-prices.js",
     "sync:bestsellers": "node scripts/sync-curated-bestsellers.js",
     "smoke": "node scripts/smoke-backend.js",
     "smoke:checkout:safe": "node scripts/smoke-checkout-safe.js"
