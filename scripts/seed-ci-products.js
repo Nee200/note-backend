@@ -19,8 +19,8 @@ async function seedCiProducts() {
             images: ['logo.webp'],
             bestseller: true,
             variants: {
-                30: { price: 24.98, originalPrice: 34.99 },
-                50: { price: 34.98, originalPrice: 44.99 }
+                30: { price: 34.99 },
+                50: { price: 44.99 }
             }
         });
 

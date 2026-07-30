@@ -24,7 +24,12 @@ async function run() {
 
     products.forEach((product) => {
         if (!product.variants?.['30']) throw new Error(`30-ml-Variante fehlt bei ${product.id}.`);
-        product.variants['30'].price = 19.99;
+        product.variants['30'].price = 34.99;
+        delete product.variants['30'].originalPrice;
+        if (product.variants?.['50']) {
+            product.variants['50'].price = 44.99;
+            delete product.variants['50'].originalPrice;
+        }
     });
     fs.writeFileSync(sourcePath, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8');
 
