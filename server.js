@@ -3974,6 +3974,46 @@ app.get('/admin', async (req, res) => {
     res.send(html);
 });
 
+const SUMMER_BUNDLE_CONFIG = Object.freeze({
+    30: Object.freeze({ priceCents: 6900, originalPriceCents: 10497 }),
+    50: Object.freeze({ priceCents: 9900, originalPriceCents: 13497 })
+});
+
+async function resolveSummerBundleItem(item, size) {
+    const config = SUMMER_BUNDLE_CONFIG[size];
+    if (!config) return null;
+
+    const selectionIds = Array.isArray(item.bundleSelections)
+        ? item.bundleSelections.map((id) => String(id || '').trim().toUpperCase())
+        : [];
+    if (
+        selectionIds.length !== 3
+        || new Set(selectionIds).size !== 3
+        || selectionIds.some((id) => !/^[A-Z0-9_-]{1,32}$/.test(id))
+    ) {
+        const error = new Error('Bitte wähle genau drei unterschiedliche Düfte für das Sommerbundle.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const products = await Product.find({ id: { $in: selectionIds } });
+    const productsById = new Map(products.map((product) => [String(product.id || '').toUpperCase(), product]));
+    const selectedProducts = selectionIds.map((id) => productsById.get(id));
+    if (selectedProducts.some((product) => !product || !product.variants || !product.variants[size])) {
+        const error = new Error('Mindestens ein gewählter Bundle-Duft ist in dieser Größe nicht verfügbar.');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return {
+        ...config,
+        size,
+        selectionIds,
+        selectedProducts,
+        pricePerBottleCents: config.priceCents / 3
+    };
+}
+
 app.post('/create-checkout-session', checkoutLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     try {
         const { items, customerEmail, couponCode } = req.body; // Expecting {items: [{id: "1-50", quantity: 2 }, ...], customerEmail: "...", couponCode: "NOTE-XXXXX" }
@@ -3998,6 +4038,25 @@ app.post('/create-checkout-session', checkoutLimiter, requireTrustedOrigin, requ
             const quantity = sanitizeQuantity(item.quantity);
             if (!quantity) {
                 return res.status(400).json({ error: 'Ungültige Menge im Warenkorb.' });
+            }
+
+            const summerBundleMatch = item.id.match(/^SUMMERBUNDLE-(30|50)$/i);
+            if (summerBundleMatch) {
+                const bundle = await resolveSummerBundleItem(item, Number(summerBundleMatch[1]));
+                for (const product of bundle.selectedProducts) {
+                    line_items.push({
+                        price_data: {
+                            currency: 'eur',
+                            product_data: {
+                                name: product.name + ' (' + bundle.size + 'ml) · Sommerbundle',
+                            },
+                            unit_amount: bundle.pricePerBottleCents,
+                        },
+                        quantity,
+                    });
+                    subtotal += bundle.pricePerBottleCents * quantity;
+                }
+                continue;
             }
 
             // "G1-50" -> baseId "G1", size "50"
@@ -4123,7 +4182,9 @@ app.post('/create-checkout-session', checkoutLimiter, requireTrustedOrigin, requ
         res.json({ url: session.url });
     } catch (error) {
         console.error('Error creating checkout session:', error);
-        res.status(500).json({ error: 'Checkout konnte nicht gestartet werden.' });
+        res.status(error.statusCode || 500).json({
+            error: error.statusCode ? error.message : 'Checkout konnte nicht gestartet werden.'
+        });
     }
 });
 
@@ -4150,6 +4211,33 @@ app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireC
             const quantity = sanitizeQuantity(item.quantity);
             if (!quantity) {
                 return res.status(400).json({ error: 'Ungültige Menge im Warenkorb.' });
+            }
+
+            const summerBundleMatch = item.id.match(/^SUMMERBUNDLE-(30|50)$/i);
+            if (summerBundleMatch) {
+                const bundle = await resolveSummerBundleItem(item, Number(summerBundleMatch[1]));
+                for (const product of bundle.selectedProducts) {
+                    let supplierId = '';
+                    const internalId = String(product.id || '').toUpperCase();
+                    const expectedSupplierPrefix = internalId.startsWith('G')
+                        ? 'M'
+                        : (internalId.startsWith('L') ? 'W' : '');
+                    if (expectedSupplierPrefix && product.inspiredBy) {
+                        const mapped = findBestSupplierMatchByInspiredBy(product.inspiredBy, expectedSupplierPrefix);
+                        if (mapped && mapped.supplierId) supplierId = mapped.supplierId;
+                    }
+
+                    line_items.push({
+                        quantity,
+                        description: product.name + ' (' + bundle.size + 'ml) [Sommerbundle · BARZAHLUNG]',
+                        amount_total: bundle.pricePerBottleCents * quantity,
+                        imageUrl: product.images && product.images.length > 0 ? product.images[0] : '',
+                        internalId,
+                        supplierId
+                    });
+                    totalCents += bundle.pricePerBottleCents * quantity;
+                }
+                continue;
             }
 
             const match = item.id.match(/^(.+?)-(\d+)$/);
@@ -4276,7 +4364,9 @@ app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireC
         res.json({ success: true, orderId: newOrder._id });
     } catch (e) {
         console.error('Pickup order error:', e);
-        res.status(500).json({ error: 'Serverfehler' });
+        res.status(e.statusCode || 500).json({
+            error: e.statusCode ? e.message : 'Serverfehler'
+        });
     }
 });
 
