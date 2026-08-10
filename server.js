@@ -12,6 +12,7 @@ const Product = require('./models/Product');
 const Order = require('./models/Order');
 const Review = require('./models/Review');
 const Subscriber = require('./models/Subscriber');
+const publicProductNames = require('./publicProductNames.json');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -4385,8 +4386,10 @@ app.get('/api/products', async (req, res) => {
         const reviewSummaryMap = await buildReviewSummaryMap(products.map(product => product.id));
         const enrichedProducts = products.map(product => {
             const plainProduct = typeof product.toObject === 'function' ? product.toObject() : product;
+            const publicName = publicProductNames[String(plainProduct.id || '').toUpperCase()] || '';
             return {
                 ...plainProduct,
+                publicName,
                 reviewSummary: reviewSummaryMap[plainProduct.id] || { average: 0, count: 0 }
             };
         });

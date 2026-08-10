@@ -43,6 +43,10 @@ async function main() {
     assert.ok(okStatus(products.response.status), `/api/products returned ${products.response.status}`);
     assert.ok(Array.isArray(products.body), '/api/products must return an array');
     assert.ok(products.body.length > 0, '/api/products must return at least one product');
+    assert.ok(
+        products.body.every(product => typeof product.publicName === 'string' && product.publicName.trim()),
+        '/api/products must provide a publicName for every product'
+    );
     console.log(`[smoke] /api/products ok (${products.body.length} products)`);
 
     const csrf = await request('/api/csrf-token');
