@@ -50,6 +50,7 @@ const {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_ALGORITHM = 'HS256';
 const ADMIN_TOKEN_COOKIE = 'admin_token';
 const USER_TOKEN_COOKIE = 'auth_token';
 const CSRF_TOKEN_COOKIE = 'csrf_token';
@@ -210,6 +211,19 @@ const CSRF_TOKEN_MEMORY_TTL_MS = Number(process.env.CSRF_TOKEN_MEMORY_TTL_MS || 
 const recentJsonParseErrorTimestamps = [];
 const issuedCsrfTokens = new Map();
 
+function signAuthToken(payload, expiresIn) {
+    return jwt.sign(payload, JWT_SECRET, {
+        algorithm: JWT_ALGORITHM,
+        expiresIn
+    });
+}
+
+function verifyAuthToken(token) {
+    return jwt.verify(token, JWT_SECRET, {
+        algorithms: [JWT_ALGORITHM]
+    });
+}
+
 function pruneIssuedCsrfTokens(now = Date.now()) {
     for (const [token, expiresAt] of issuedCsrfTokens.entries()) {
         if (!expiresAt || expiresAt <= now) {
@@ -303,6 +317,15 @@ function sanitizeText(value, maxLength = 200) {
         .slice(0, maxLength);
 }
 
+function sanitizeMultilineText(value, maxLength = 5000) {
+    if (typeof value !== 'string') return '';
+    return value
+        .replace(/\r\n?/g, '\n')
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+        .trim()
+        .slice(0, maxLength);
+}
+
 function extractCheckoutCustomerInfo(session) {
     const customerDetails = session && session.customer_details ? session.customer_details : {};
     const collectedInformation = session && session.collected_information ? session.collected_information : {};
@@ -365,6 +388,7 @@ function sanitizeCategory(value) {
 function sanitizeProductId(value) {
     const normalized = sanitizeText(value, 40).toUpperCase();
     if (!/^[A-Z0-9_-]{1,40}$/.test(normalized)) return '';
+    if (['__PROTO__', 'PROTOTYPE', 'CONSTRUCTOR'].includes(normalized)) return '';
     return normalized;
 }
 
@@ -1139,7 +1163,7 @@ async function getAuthenticatedUser(req) {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         const user = await User.findOne({ id: decoded.userId });
         if (!user) {
             const error = new Error('User nicht gefunden');
@@ -1241,7 +1265,7 @@ function isAdmin(req) {
     if (!token) return false;
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         return decoded && decoded.role === 'admin';
     } catch (err) {
         return false;
@@ -1314,14 +1338,25 @@ function buildSupplierMappingForInternalId(internalId, productMapById) {
     };
 }
 
-// Helper to parse cookies
+// Cookie names are client-controlled. A null-prototype map prevents special
+// names such as "__proto__" or "constructor" from affecting object state.
 const parseCookies = (request) => {
-    const list = {};
-    const rc = request.headers.cookie;
+    const list = Object.create(null);
+    const rawCookies = request && request.headers ? request.headers.cookie : '';
 
-    rc && rc.split(';').forEach(function (cookie) {
+    if (!rawCookies) return list;
+
+    rawCookies.split(';').forEach((cookie) => {
         const parts = cookie.split('=');
-        list[parts.shift().trim()] = decodeURI(parts.join('='));
+        const name = String(parts.shift() || '').trim();
+        if (!name) return;
+
+        const rawValue = parts.join('=');
+        try {
+            list[name] = decodeURIComponent(rawValue);
+        } catch (error) {
+            list[name] = rawValue;
+        }
     });
 
     return list;
@@ -1688,14 +1723,14 @@ app.post('/api/contact', formLimiter, requireTrustedOrigin, requireCsrfToken, as
     }
 
     try {
-        const normalizedName = String(name || '').trim();
+        const normalizedName = sanitizeText(name, 120);
         const safeEmail = sanitizeEmail(email);
-        const normalizedSubject = String(subject || '').trim();
-        const safeSubjectHeader = sanitizeHeaderText(subject);
-        const normalizedMessage = String(message || '').trim();
+        const normalizedSubject = sanitizeText(subject, 180);
+        const safeSubjectHeader = sanitizeHeaderText(normalizedSubject).slice(0, 180);
+        const normalizedMessage = sanitizeMultilineText(message, 5000);
 
-        if (!safeEmail) {
-            return res.status(400).json({ error: 'Ungültige E-Mail-Adresse.' });
+        if (!normalizedName || !safeEmail || !normalizedSubject || !normalizedMessage) {
+            return res.status(400).json({ error: 'Ungültige Formulardaten.' });
         }
 
         // 1. Nachricht an info@note-fragrances.de
@@ -1910,7 +1945,7 @@ app.post('/api/register', authLimiter, requireTrustedOrigin, requireCsrfToken, a
         const user = new User({ email: normalizedEmail, password: hashedPassword, name: safeName });
         await user.save();
 
-        const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+        const token = signAuthToken({ userId: user.id, email: user.email }, '24h');
         res.cookie(USER_TOKEN_COOKIE, token, getUserCookieOptions());
 
         res.json({ success: true, message: 'Registrierung erfolgreich', authToken: token, user: { name: user.name, email: user.email } });
@@ -1939,7 +1974,7 @@ app.post('/api/login', authLimiter, requireTrustedOrigin, requireCsrfToken, asyn
             return res.status(401).json({ error: 'Ungültige Email oder Passwort' });
         }
 
-        const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+        const token = signAuthToken({ userId: user.id, email: user.email }, '24h');
 
         res.cookie(USER_TOKEN_COOKIE, token, getUserCookieOptions());
 
@@ -1960,7 +1995,7 @@ app.get('/api/user', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         const user = await User.findOne({ id: decoded.userId });
         if (!user) return res.status(404).json({ error: 'User nicht gefunden' });
 
@@ -1983,7 +2018,7 @@ app.put('/api/user/profile', requireTrustedOrigin, requireCsrfToken, async (req,
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         const user = await User.findOne({ id: decoded.userId });
         if (!user) return res.status(404).json({ error: 'User nicht gefunden' });
 
@@ -2007,7 +2042,7 @@ app.post('/api/user/address', requireTrustedOrigin, requireCsrfToken, async (req
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         const user = await User.findOne({ id: decoded.userId });
         if (!user) return res.status(404).json({ error: 'User nicht gefunden' });
 
@@ -2040,7 +2075,7 @@ app.delete('/api/user/address/:id', requireTrustedOrigin, requireCsrfToken, asyn
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         const user = await User.findOne({ id: decoded.userId });
         if (!user) return res.status(404).json({ error: 'User nicht gefunden' });
 
@@ -2061,7 +2096,7 @@ app.get('/api/user/orders', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Nicht eingeloggt' });
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = verifyAuthToken(token);
         const userEmail = decoded.email;
 
 
@@ -2085,7 +2120,7 @@ app.get('/api/products/:productId/reviews', async (req, res) => {
         try {
             const token = getUserTokenFromRequest(req);
             if (token) {
-                const decoded = jwt.verify(token, JWT_SECRET);
+                const decoded = verifyAuthToken(token);
                 userId = decoded.userId || null;
             }
         } catch (err) {
@@ -2175,42 +2210,43 @@ app.post('/api/products/:productId/reviews', reviewLimiter, requireTrustedOrigin
 
 
 // --- Live Viewer Tracking ---
-const productViewers = {}; // {productId: [ {ip, timestamp} ] }
+// Map avoids prototype-key collisions from client-controlled product IDs.
+const productViewers = new Map();
 
 // Helper to clean up old viewers (> 60 seconds inactivity)
 function cleanupViewers(productId) {
-    if (!productViewers[productId]) return;
+    const currentViewers = productViewers.get(productId);
+    if (!currentViewers) return;
     const now = Date.now();
-    productViewers[productId] = productViewers[productId].filter(v => now - v.timestamp < 60000);
-    if (productViewers[productId].length === 0) {
-        delete productViewers[productId];
+    const activeViewers = currentViewers.filter(v => now - v.timestamp < 60000);
+    if (activeViewers.length === 0) {
+        productViewers.delete(productId);
+    } else {
+        productViewers.set(productId, activeViewers);
     }
 }
 
 app.post('/api/view-product', viewLimiter, (req, res) => {
-    const { productId } = req.body;
+    const productId = sanitizeProductId(req.body && req.body.productId);
     if (!productId) {
-        return res.status(400).json({ error: 'Missing productId' });
+        return res.status(400).json({ error: 'Ungültige Produkt-ID.' });
     }
 
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = getClientIp(req);
     const now = Date.now();
 
-    if (!productViewers[productId]) {
-        productViewers[productId] = [];
-    }
-
     // Remove existing entry for this IP to update timestamp
-    productViewers[productId] = productViewers[productId].filter(v => v.ip !== ip);
+    const currentViewers = (productViewers.get(productId) || []).filter(v => v.ip !== ip);
 
     // Add new entry
-    productViewers[productId].push({ ip, timestamp: now });
+    currentViewers.push({ ip, timestamp: now });
+    productViewers.set(productId, currentViewers);
 
     // Cleanup old entries
     cleanupViewers(productId);
 
     // Calculate simulated cart count based on viewers (approx 20-40% of viewers, min 2)
-    const viewerCount = productViewers[productId].length;
+    const viewerCount = (productViewers.get(productId) || []).length;
     // Deterministic "random" cart count based on productId + viewerCount to keep it stable but dynamic
     // Just using a simple ratio for now to be "live-ish"
     let cartCount = Math.floor(viewerCount * 0.35);
@@ -2229,12 +2265,16 @@ app.post('/admin/login', (req, res) => {
 });
 
 // --- Brute-force protection for admin login ---
-const loginAttempts = {}; // {ip: {count, lockedUntil} }
+const loginAttempts = new Map();
 const MAX_ATTEMPTS = 3;
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 function getClientIp(req) {
-    return (req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown').split(',')[0].trim();
+    // Express derives req.ip using the configured trusted-proxy hop count.
+    // Never trust a raw X-Forwarded-For value supplied by the client here.
+    return String(req.ip || (req.socket && req.socket.remoteAddress) || 'unknown')
+        .trim()
+        .slice(0, 128);
 }
 
 const securityMonitorState = {
@@ -2619,7 +2659,21 @@ async function runDependencyScan() {
 
 function countActiveAdminLockouts() {
     const now = Date.now();
-    return Object.values(loginAttempts).filter(record => record && record.lockedUntil > now).length;
+    let active = 0;
+    for (const [ip, record] of loginAttempts.entries()) {
+        if (!record) {
+            loginAttempts.delete(ip);
+            continue;
+        }
+        if (record.lockedUntil > now) {
+            active += 1;
+        } else if (record.lockedUntil > 0) {
+            // Keep failed attempts that have not reached the lockout threshold,
+            // but discard completed lockouts.
+            loginAttempts.delete(ip);
+        }
+    }
+    return active;
 }
 
 function buildLocalProbeUrl(pathname) {
@@ -2726,6 +2780,25 @@ async function runActiveSecurityProbes() {
             severity: 'warning',
             method: 'GET',
             pathname: '/api/admin/check',
+            expectedStatuses: [401]
+        }),
+        runHttpProbe({
+            id: 'probe-viewer-prototype-input',
+            label: 'Probe: Manipulierte Produkt-ID blockiert',
+            severity: 'critical',
+            method: 'POST',
+            pathname: '/api/view-product',
+            headers: jsonHeaders,
+            body: JSON.stringify({ productId: '__proto__' }),
+            expectedStatuses: [400, 429]
+        }),
+        runHttpProbe({
+            id: 'probe-cookie-prototype-input',
+            label: 'Probe: Manipulierte Cookie-Namen sicher verarbeitet',
+            severity: 'critical',
+            method: 'GET',
+            pathname: '/api/admin/check',
+            headers: { Cookie: '__proto__=polluted; constructor=blocked' },
             expectedStatuses: [401]
         })
     ]);
@@ -3018,7 +3091,12 @@ function startSecurityMonitorLoop() {
 app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrfToken, (req, res) => {
     const ip = getClientIp(req);
     const now = Date.now();
-    const record = loginAttempts[ip] || { count: 0, lockedUntil: 0 };
+    let record = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+
+    if (record.lockedUntil > 0 && record.lockedUntil <= now) {
+        record = { count: 0, lockedUntil: 0 };
+        loginAttempts.delete(ip);
+    }
 
     // Check if currently locked
     if (record.lockedUntil > now) {
@@ -3035,6 +3113,9 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
     }
 
     const submittedPassword = typeof password === 'string' ? password : '';
+    if (Buffer.byteLength(submittedPassword, 'utf8') > 256) {
+        return res.status(400).json({ error: 'Ungültige Anmeldedaten.' });
+    }
     const submittedBuffer = Buffer.from(submittedPassword, 'utf8');
     const expectedBuffer = Buffer.from(ADMIN_PASSWORD, 'utf8');
     const passwordMatches = submittedBuffer.length === expectedBuffer.length
@@ -3042,12 +3123,8 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
 
     if (passwordMatches) {
         // Success – clear attempts
-        delete loginAttempts[ip];
-        const adminToken = jwt.sign(
-            { role: 'admin' },
-            JWT_SECRET,
-            { expiresIn: '1h' }
-        );
+        loginAttempts.delete(ip);
+        const adminToken = signAuthToken({ role: 'admin' }, '1h');
         res.cookie(ADMIN_TOKEN_COOKIE, adminToken, getAdminCookieOptions());
         res.json({ success: true, adminAuthToken: adminToken });
     } else {
@@ -3058,7 +3135,7 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
         if (record.count >= MAX_ATTEMPTS) {
             record.lockedUntil = now + LOCKOUT_MS;
             record.count = 0; // reset after lockout starts
-            loginAttempts[ip] = record;
+            loginAttempts.set(ip, record);
             console.warn(`Admin login: IP ${ip} gesperrt nach ${MAX_ATTEMPTS} Fehlversuchen`);
             return res.status(429).json({
                 error: `Zu viele Fehlversuche.IP fuer 15 Minuten gesperrt.`,
@@ -3066,7 +3143,7 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
             });
         }
 
-        loginAttempts[ip] = record;
+        loginAttempts.set(ip, record);
         return res.status(401).json({
             error: `Falsches Passwort.Noch ${remaining} Versuch(e) verbleibend.`,
             attemptsLeft: remaining
@@ -3169,6 +3246,18 @@ app.get('/api/admin/security-status', async (req, res) => {
             label: 'Serverseitige Input-Validierung aktiv',
             ok: true,
             detail: 'Sanitizer/Validatoren für User-, Coupon-, Review- und Produktdaten.'
+        },
+        {
+            id: 'jwt-algorithm',
+            label: 'JWT-Signaturverfahren fest vorgegeben',
+            ok: JWT_ALGORITHM === 'HS256',
+            detail: 'Tokens werden ausschließlich mit HS256 erstellt und geprüft.'
+        },
+        {
+            id: 'prototype-safe-state',
+            label: 'Temporärer Security-State prototypsicher',
+            ok: loginAttempts instanceof Map && productViewers instanceof Map,
+            detail: 'Admin-Sperren und Viewer-Zähler verwenden Map-Strukturen.'
         }
     ];
 

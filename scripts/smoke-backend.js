@@ -79,6 +79,45 @@ async function main() {
     assert.strictEqual(badOrigin.response.status, 403, `bad Origin should return 403, got ${badOrigin.response.status}`);
     console.log('[smoke] Origin enforcement ok');
 
+    const prototypeProductId = await request('/api/view-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: '__proto__' })
+    });
+    assert.strictEqual(
+        prototypeProductId.response.status,
+        400,
+        `prototype-like product ID should return 400, got ${prototypeProductId.response.status}`
+    );
+    console.log('[smoke] Prototype-safe viewer input ok');
+
+    const specialCookieNames = await request('/api/admin/check', {
+        headers: { Cookie: '__proto__=polluted; constructor=blocked' }
+    });
+    assert.strictEqual(
+        specialCookieNames.response.status,
+        401,
+        `special cookie names should remain harmless, got ${specialCookieNames.response.status}`
+    );
+    console.log('[smoke] Prototype-safe cookie parsing ok');
+
+    const oversizedAdminPassword = await request('/api/admin/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Origin: trustedOrigin,
+            Cookie: csrfCookie,
+            'X-CSRF-Token': csrf.body.csrfToken
+        },
+        body: JSON.stringify({ password: 'x'.repeat(257) })
+    });
+    assert.strictEqual(
+        oversizedAdminPassword.response.status,
+        400,
+        `oversized admin password should return 400, got ${oversizedAdminPassword.response.status}`
+    );
+    console.log('[smoke] Admin credential size limit ok');
+
     if (String(process.env.LOCAL_DEV_SAFE_MODE || '').toLowerCase() === 'true') {
         const newsletter = await request('/api/newsletter', {
             method: 'POST',
