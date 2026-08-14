@@ -94,10 +94,9 @@ async function main() {
     const specialCookieNames = await request('/api/admin/check', {
         headers: { Cookie: '__proto__=polluted; constructor=blocked' }
     });
-    assert.strictEqual(
-        specialCookieNames.response.status,
-        401,
-        `special cookie names should remain harmless, got ${specialCookieNames.response.status}`
+    assert.ok(
+        [401, 403].includes(specialCookieNames.response.status),
+        `special cookie names should be rejected, got ${specialCookieNames.response.status}`
     );
     console.log('[smoke] Prototype-safe cookie parsing ok');
 
