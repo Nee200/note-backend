@@ -331,6 +331,28 @@ M329 Xerjoff Coro
 M330 Parfums De Marly Oajan
 M331 Ex Nihilo Blue Talisman
 M332 Parfums De Marly Haltana
+M333 Guerlain Cherry Oud
+M334 Prada Paradigme
+M335 Xerjoff Torino 25
+M336 MFK Oud Silk Mood
+M337 Xerjoff La Capitale
+M338 Penhaligons Changing Constance
+M339 New Notes Carmelo Vanilla
+M340 Anfas Ishq
+M341 Xerjoff Duran Black Moonlight
+M342 Armani Stronger With You Powerfully
+M343 Chanel Bleu de Chanel Exclusif
+M344 Xerjoff Gibeon
+M345 JPG Scandal Intense
+M346 Tom Ford Amber Intrigue
+M347 Gucci Guilty Absolu
+M348 Xerjoff Louis XV 1722 Rose
+M349 Matiere Premiere Vanilla Powder
+M350 Dior Gris Dior
+M351 Marc Gebauer Orange Flamingo
+M352 Memo Paris African Leather
+M353 Louis Vuitton Ambre Levant
+M354 Louis Vuitton Attrape Reves
 W1 Escada Magnetisim
 W2 Dior Hypnotic Poison
 W3 Prada Candy
@@ -533,6 +555,19 @@ W199 Parfums De Marly Palatine
 W200 Prada Paradox Intense
 W201 Parfums De Marly Valaya Exclusif
 W202 YSL Libre Vanille Couture
+W203 Carolina Herrera Good Girl Blush
+W204 New Notes Carmelo Vanilla
+W205 YSL Libre Berry Crush
+W206 Burberry Goddess Parfum
+W207 Kayali Freedom Musk Bouquet 27
+W208 Armani Power of You
+W209 Valentino Born in Roma Ivory
+W210 Gisada Ambassadora Gold
+W211 Versace Dylan Blush Pink
+W212 Narciso Rodriguez for Her Pure Musc
+W213 Louis Vuitton Attrape Reves
+W214 Hermes Un Jardin Sur le Nil
+W215 Matiere Premiere Vanilla Powder
 `;
 
 function normalizeComparableText(value) {
@@ -718,4 +753,3 @@ module.exports = {
     findBestSupplierMatchByInspiredBy,
     normalizeComparableText
 };
-
