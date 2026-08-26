@@ -10,8 +10,22 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
+const Invoice = require('./models/Invoice');
 const Review = require('./models/Review');
 const Subscriber = require('./models/Subscriber');
+const {
+    asDate: asInvoiceDate,
+    cleanText: cleanInvoiceText,
+    resolveServiceDate,
+    ensureInvoiceForOrder,
+    getPublicInvoiceConfig
+} = require('./services/invoiceService');
+const {
+    allocateOrderNumber,
+    ensureOrderNumber,
+    ensureOrderNumbers,
+    getPublicOrderNumberConfig
+} = require('./services/orderNumberService');
 const publicProductNames = require('./publicProductNames.json');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { Resend } = require('resend');
@@ -55,6 +69,9 @@ const ADMIN_TOKEN_COOKIE = 'admin_token';
 const USER_TOKEN_COOKIE = 'auth_token';
 const CSRF_TOKEN_COOKIE = 'csrf_token';
 const PORT = Number(process.env.PORT || 4242);
+const INVOICES_ENABLED = ['1', 'true', 'yes', 'on'].includes(
+    String(process.env.INVOICES_ENABLED || 'false').trim().toLowerCase()
+);
 const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-backend-5gy0.onrender.com' : 'http://localhost:4242');
 const FRONTEND_PUBLIC_URL = process.env.FRONTEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-fragrances.de' : 'http://localhost:5500');
 const INTERNAL_ORDER_NOTIFICATION_EMAIL = String(process.env.INTERNAL_ORDER_NOTIFICATION_EMAIL || 'info@note-fragrances.de').trim();
@@ -691,7 +708,22 @@ function buildEmailItemsHtml(items) {
     }).join('');
 }
 
+function normalizeOrderNumber(value) {
+    return String(value || '')
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9#-]/g, '')
+        .slice(0, 40);
+}
+
+function buildEmailOrderNumberLine(orderNumber) {
+    const safeOrderNumber = escapeHtml(normalizeOrderNumber(orderNumber));
+    if (!safeOrderNumber) return '';
+    return `<br><br><span style="display:inline-block;padding:6px 10px;border:1px solid #d9d2c4;border-radius:4px;font-size:11px;letter-spacing:0.08em;color:#5f5a51;background:#faf8f3;">Bestellnummer&nbsp; <strong style="color:#1a1a1a;">${safeOrderNumber}</strong></span>`;
+}
+
 function buildOrderConfirmationEmailPayload({
+    orderNumber = '',
     customerName = 'Kunde',
     items = [],
     shippingCostCents = null,
@@ -713,13 +745,17 @@ function buildOrderConfirmationEmailPayload({
         : '';
     const itemsHtml = buildEmailItemsHtml(items);
     const addressHtml = formatAddressHtml(address);
+    const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+    const orderNumberLine = buildEmailOrderNumberLine(normalizedOrderNumber);
 
     return {
-        subject: 'Deine Bestellung bei NOTE. fragrances \u2713',
+        subject: normalizedOrderNumber
+            ? `Deine Bestellung ${normalizedOrderNumber} bei NOTE. fragrances \u2713`
+            : 'Deine Bestellung bei NOTE. fragrances \u2713',
         html: renderBrandEmail({
             badge: 'Bestellbestaetigung',
             title: `Vielen Dank, ${safeCustomerName}!`,
-            introHtml: 'Deine Bestellung ist bei uns eingegangen und wird schnellstmoeglich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.',
+            introHtml: `Deine Bestellung ist bei uns eingegangen und wird schnellstmoeglich bearbeitet. Wir melden uns, sobald dein Paket auf dem Weg ist.${orderNumberLine}`,
             iconImageUrl: EMAIL_ICON_CHECK_IMAGE_URL,
             bodyHtml: `<tr><td style="background:#f5f3ee;padding:26px 40px 0;">
   <div style="border-top:1px solid #dfd8ca;padding-top:18px;">
@@ -761,6 +797,7 @@ function buildOrderConfirmationEmailPayload({
 }
 
 function buildPickupOrderConfirmationEmailPayload({
+    orderNumber = '',
     customerName = 'Kunde',
     items = [],
     discountAmountCents = 0,
@@ -770,6 +807,8 @@ function buildPickupOrderConfirmationEmailPayload({
     const safeCustomerName = escapeHtml(customerName || 'Kunde');
     const safeCouponCode = escapeHtml(couponCode || '');
     const itemsHtml = buildEmailItemsHtml(items);
+    const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+    const orderNumberLine = buildEmailOrderNumberLine(normalizedOrderNumber);
     const discountHtml = Number(discountAmountCents) > 0
         ? `<tr>
   <td style="font-size:13px;color:#7f776a;padding-top:8px;">Rabatt${safeCouponCode ? ` (${safeCouponCode})` : ''}</td>
@@ -778,11 +817,13 @@ function buildPickupOrderConfirmationEmailPayload({
         : '';
 
     return {
-        subject: 'Deine Abhol-Bestellung bei NOTE. fragrances \u2713',
+        subject: normalizedOrderNumber
+            ? `Deine Abhol-Bestellung ${normalizedOrderNumber} bei NOTE. fragrances \u2713`
+            : 'Deine Abhol-Bestellung bei NOTE. fragrances \u2713',
         html: renderBrandEmail({
             badge: 'Bestellbestaetigung',
             title: `Vielen Dank, ${safeCustomerName}!`,
-            introHtml: 'Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird fuer dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.',
+            introHtml: `Deine Bestellung zur <strong>Selbstabholung</strong> ist bei uns eingegangen und wird fuer dich bereitgestellt. Wir melden uns per E-Mail, sobald du sie im Store abholen kannst.${orderNumberLine}`,
             iconImageUrl: EMAIL_ICON_CHECK_IMAGE_URL,
             bodyHtml: `<tr><td style="background:#f5f3ee;padding:26px 40px 0;">
   <div style="border-top:1px solid #dfd8ca;padding-top:18px;">
@@ -817,19 +858,23 @@ function buildPickupOrderConfirmationEmailPayload({
     };
 }
 
-function buildShippingEmailPayload({ customerName = 'du', trackingUrl = '' }) {
+function buildShippingEmailPayload({ orderNumber = '', customerName = 'du', trackingUrl = '' }) {
     const safeOrderName = escapeHtml(customerName || 'du');
     const safeTrackingUrl = sanitizeTrackingUrl(trackingUrl);
+    const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+    const orderNumberLine = buildEmailOrderNumberLine(normalizedOrderNumber);
     const trackingBlock = safeTrackingUrl
         ? `<table border="0" cellpadding="0" cellspacing="0" style="margin:12px auto 0;border-collapse:collapse;"><tr><td style="background:#d4af37;border-radius:2px;padding:14px 32px;"><a href="${safeTrackingUrl}" style="font-family:Arial,sans-serif;font-size:12px;color:#000;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">&#128269;&nbsp;Sendung verfolgen</a></td></tr></table>`
         : '';
 
     return {
-        subject: 'Deine Bestellung ist unterwegs! \u{1F4E6}',
+        subject: normalizedOrderNumber
+            ? `Deine Bestellung ${normalizedOrderNumber} ist unterwegs! \u{1F4E6}`
+            : 'Deine Bestellung ist unterwegs! \u{1F4E6}',
         html: renderBrandEmail({
             badge: 'Auf dem Weg zu dir',
             title: `Hallo ${safeOrderName}!`,
-            introHtml: 'Gute Neuigkeiten &ndash; deine Bestellung ist soeben auf dem Weg zu dir!<br><br>Du kannst deinen Duft in den naechsten <strong style="color:#000;">1&ndash;3 Werktagen</strong> erwarten.<br><br>Wir wuenschen dir viel Freude mit deinem neuen Extrait de Parfum.',
+            introHtml: `Gute Neuigkeiten &ndash; deine Bestellung ist soeben auf dem Weg zu dir!<br><br>Du kannst deinen Duft in den naechsten <strong style="color:#000;">1&ndash;3 Werktagen</strong> erwarten.<br><br>Wir wuenschen dir viel Freude mit deinem neuen Extrait de Parfum.${orderNumberLine}`,
             iconHtml: '&#128230;',
             ctaHtml: `<table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;">
   <tr>
@@ -843,14 +888,18 @@ ${trackingBlock}`
     };
 }
 
-function buildPickupReadyEmailPayload({ customerName = 'du', amountCents = 0 }) {
+function buildPickupReadyEmailPayload({ orderNumber = '', customerName = 'du', amountCents = 0 }) {
     const safeCustomerName = escapeHtml(customerName || 'du');
+    const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+    const orderNumberLine = buildEmailOrderNumberLine(normalizedOrderNumber);
     return {
-        subject: 'Dein Parfum ist abholbereit! \u2713',
+        subject: normalizedOrderNumber
+            ? `Deine Bestellung ${normalizedOrderNumber} ist abholbereit! \u2713`
+            : 'Dein Parfum ist abholbereit! \u2713',
         html: renderBrandEmail({
             badge: 'Abholbereit',
             title: `Hallo ${safeCustomerName}!`,
-            introHtml: `Deine Bestellung ist nun fertig gepackt und liegt zur Abholung fuer dich bereit. Hier findest du uns:<br><span style="color:#333;">Warnitzer Str. 20, 13057 Berlin</span><br><br>Bitte bringe den Zahlbetrag von <strong style="color:#000; font-weight:700;">${formatEuroFromCents(amountCents)} &euro;</strong> moeglichst passend in Bar mit. Wir freuen uns auf deinen Besuch!`,
+            introHtml: `Deine Bestellung ist nun fertig gepackt und liegt zur Abholung fuer dich bereit. Hier findest du uns:<br><span style="color:#333;">Warnitzer Str. 20, 13057 Berlin</span><br><br>Bitte bringe den Zahlbetrag von <strong style="color:#000; font-weight:700;">${formatEuroFromCents(amountCents)} &euro;</strong> moeglichst passend in Bar mit. Wir freuen uns auf deinen Besuch!${orderNumberLine}`,
             iconImageUrl: EMAIL_ICON_CHECK_IMAGE_URL
         })
     };
@@ -943,6 +992,7 @@ function buildContactInternalEmailHtml({ name, email, subjectText, message, rece
 }
 
 function buildPickupOrderInternalEmailPayload({
+    orderNumber = '',
     customerName = '',
     customerEmail = '',
     items = [],
@@ -953,6 +1003,8 @@ function buildPickupOrderInternalEmailPayload({
 }) {
     const safeCustomerName = escapeHtml(customerName || 'Kunde');
     const safeCustomerEmail = escapeHtml(customerEmail || '');
+    const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+    const safeOrderNumber = escapeHtml(normalizedOrderNumber);
     const safeDate = escapeHtml(receivedAtText || '');
     const safeCouponCode = escapeHtml(couponCode || '');
     const listHtml = Array.isArray(items) && items.length
@@ -982,6 +1034,7 @@ function buildPickupOrderInternalEmailPayload({
 <tr><td style="background:#f5f3ee;padding:28px 40px 0;">
   <p style="margin:0 0 18px;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#aaa;font-weight:600;">Bestelldetails (Intern)</p>
   <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+    ${safeOrderNumber ? `<tr><td style="font-size:13px;color:#666;padding:0 0 6px;">Bestellnummer</td><td style="font-size:13px;color:#1a1a1a;text-align:right;font-weight:700;">${safeOrderNumber}</td></tr>` : ''}
     <tr><td style="font-size:13px;color:#666;padding:0 0 6px;">Kunde</td><td style="font-size:13px;color:#1a1a1a;text-align:right;">${safeCustomerName}</td></tr>
     <tr><td style="font-size:13px;color:#666;padding:0 0 6px;">E-Mail</td><td style="font-size:13px;color:#1a1a1a;text-align:right;"><a href="mailto:${safeCustomerEmail}" style="color:#1a1a1a;text-decoration:none;">${safeCustomerEmail}</a></td></tr>
     <tr><td style="font-size:13px;color:#666;padding:0 0 6px;">Bestelltyp</td><td style="font-size:13px;color:#1a1a1a;text-align:right;">Selbstabholung</td></tr>
@@ -1007,7 +1060,9 @@ function buildPickupOrderInternalEmailPayload({
 </td></tr>`;
 
     return {
-        subject: `Neue Selbstabholung-Bestellung (${safeCustomerName})`,
+        subject: normalizedOrderNumber
+            ? `Neue Selbstabholung ${normalizedOrderNumber} (${safeCustomerName})`
+            : `Neue Selbstabholung-Bestellung (${safeCustomerName})`,
         html: renderBrandEmail({
             badge: 'Interne Bestellung',
             title: 'Neue Selbstabholung',
@@ -1035,6 +1090,7 @@ function buildAdminEmailTemplatePreviews() {
         country: 'DE'
     };
     const orderMail = buildOrderConfirmationEmailPayload({
+        orderNumber: '#123',
         customerName: 'Max',
         items: sampleItems,
         shippingCostCents: 0,
@@ -1043,9 +1099,10 @@ function buildAdminEmailTemplatePreviews() {
         totalAmountCents: 7497,
         address: sampleAddress
     });
-    const shippingMail = buildShippingEmailPayload({ customerName: 'Max', trackingUrl: '' });
-    const pickupReadyMail = buildPickupReadyEmailPayload({ customerName: 'Max', amountCents: 8990 });
+    const shippingMail = buildShippingEmailPayload({ orderNumber: '#123', customerName: 'Max', trackingUrl: '' });
+    const pickupReadyMail = buildPickupReadyEmailPayload({ orderNumber: '#123', customerName: 'Max', amountCents: 8990 });
     const pickupOrderMail = buildPickupOrderConfirmationEmailPayload({
+        orderNumber: '#123',
         customerName: 'Max',
         items: sampleItems,
         discountAmountCents: 0,
@@ -1056,6 +1113,7 @@ function buildAdminEmailTemplatePreviews() {
     const newsletterMail = buildNewsletterDiscountEmailPayload({ code: 'NOTE-M7K2X', discount: 5 });
     const contactConfirmMail = buildContactConfirmationEmailPayload({ name: 'Maria', subjectText: 'Frage zur Bestellung' });
     const pickupOrderInternalPreviewMail = buildPickupOrderInternalEmailPayload({
+        orderNumber: '#123',
         customerName: 'Max Mustermann',
         customerEmail: 'max@beispiel.de',
         items: [
@@ -1474,14 +1532,34 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 
     // Handle the event
     switch (event.type) {
-        case 'checkout.session.completed':
+        case 'checkout.session.completed': {
             const session = event.data.object;
-            console.log('Zahlung erfolgreich!');
+            console.log('[Webhook] Checkout abgeschlossen | Zahlungsstatus:', session.payment_status || 'unbekannt');
 
             // Idempotenz: Stripe kann Webhooks mehrfach zustellen.
-            const existingOrder = await Order.findOne({ stripeSessionId: session.id }).lean();
+            const existingOrder = await Order.findOne({ stripeSessionId: session.id });
             if (existingOrder) {
                 console.log('[Webhook] Session bereits verarbeitet:', session.id);
+                await ensureOrderNumber(existingOrder);
+                existingOrder.paymentStatus = session.payment_status || existingOrder.paymentStatus;
+                existingOrder.stripePaymentIntentId = typeof session.payment_intent === 'string'
+                    ? session.payment_intent
+                    : (session.payment_intent && session.payment_intent.id) || existingOrder.stripePaymentIntentId;
+                if (session.payment_status === 'paid' && !existingOrder.paidAt) {
+                    existingOrder.paidAt = new Date(Number(event.created || Math.floor(Date.now() / 1000)) * 1000);
+                }
+                await existingOrder.save();
+                if (INVOICES_ENABLED && session.payment_status === 'paid') {
+                    try {
+                        await ensureInvoiceForOrder({
+                            order: existingOrder,
+                            stripeClient: stripe,
+                            generatedBy: 'stripe_webhook_duplicate'
+                        });
+                    } catch (invoiceError) {
+                        console.error('[Invoice] Wiederholte Webhook-Verarbeitung fehlgeschlagen:', invoiceError.message);
+                    }
+                }
                 return response.json({ received: true, duplicate: true });
             }
 
@@ -1524,28 +1602,48 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
             const discountAmount = session.total_details && typeof session.total_details.amount_discount === 'number'
                 ? session.total_details.amount_discount
                 : (session.metadata && session.metadata.discountAmountCents ? parseInt(session.metadata.discountAmountCents, 10) || 0 : 0);
+            const orderDate = new Date();
+            const orderNumber = await allocateOrderNumber();
 
             const newOrder = {
-                date: new Date().toISOString(),
+                date: orderDate,
+                orderNumber,
                 email: checkoutCustomerInfo.email,
                 name: checkoutCustomerInfo.name,
                 amount: session.amount_total,  // kept in cents; admin UI divides by 100
+                currency: session.currency || 'eur',
                 discountAmount,
+                shippingAmount: session.shipping_cost && Number.isFinite(Number(session.shipping_cost.amount_total))
+                    ? Number(session.shipping_cost.amount_total)
+                    : 0,
+                taxAmount: session.total_details && Number.isFinite(Number(session.total_details.amount_tax))
+                    ? Number(session.total_details.amount_tax)
+                    : 0,
                 couponCode,
                 address: addressData,
                 items: items,
                 stripeSessionId: session.id,
-                stripeEventId: event.id
+                stripeEventId: event.id,
+                stripePaymentIntentId: typeof session.payment_intent === 'string'
+                    ? session.payment_intent
+                    : (session.payment_intent && session.payment_intent.id) || '',
+                paymentStatus: session.payment_status || '',
+                paidAt: session.payment_status === 'paid'
+                    ? new Date(Number(event.created || Math.floor(Date.now() / 1000)) * 1000)
+                    : null,
+                invoiceStatus: session.payment_status === 'paid' ? 'awaiting_service_date' : 'awaiting_payment'
             };
 
             // Save to MongoDB (primary)
+            let savedOrder = null;
             try {
                 const order = new Order(newOrder);
                 await order.save();
+                savedOrder = order;
                 if (couponCode) {
                     await Subscriber.updateOne({ code: couponCode, used: false }, { $set: { used: true } });
                 }
-                console.log('Bestellung in MongoDB gespeichert:', order._id);
+                console.log('Bestellung in MongoDB gespeichert:', order.orderNumber, order._id);
             } catch (dbErr) {
                 console.error('MongoDB Fehler beim Speichern der Webhook-Order:', dbErr);
                 if (!IS_PRODUCTION) {
@@ -1557,6 +1655,19 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                     }
                     orders.push(newOrder);
                     try { fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2), 'utf8'); } catch (e) { }
+                }
+            }
+
+            if (INVOICES_ENABLED && savedOrder && session.payment_status === 'paid') {
+                try {
+                    await ensureInvoiceForOrder({
+                        order: savedOrder,
+                        stripeClient: stripe,
+                        generatedBy: 'stripe_webhook'
+                    });
+                } catch (invoiceError) {
+                    // Die Bestellung und Zahlungsbestaetigung duerfen nicht an der PDF-Erzeugung scheitern.
+                    console.error('[Invoice] Automatische Verarbeitung fehlgeschlagen:', invoiceError.message);
                 }
             }
 
@@ -1575,6 +1686,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                             : '0,00'
                     }));
                     const mail = buildOrderConfirmationEmailPayload({
+                        orderNumber,
                         customerName,
                         items: emailItems,
                         shippingCostCents: session.shipping_cost && Number.isFinite(Number(session.shipping_cost.amount_total))
@@ -1599,6 +1711,48 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
                 }
             }
             break;
+        }
+        case 'checkout.session.async_payment_succeeded': {
+            const session = event.data.object;
+            const order = await Order.findOne({ stripeSessionId: session.id });
+            if (!order) {
+                console.error('[Webhook] Keine Bestellung fuer spaet bestaetigte Stripe-Session:', session.id);
+                break;
+            }
+            await ensureOrderNumber(order);
+            order.paymentStatus = 'paid';
+            order.paidAt = order.paidAt || new Date(Number(event.created || Math.floor(Date.now() / 1000)) * 1000);
+            order.stripePaymentIntentId = typeof session.payment_intent === 'string'
+                ? session.payment_intent
+                : (session.payment_intent && session.payment_intent.id) || order.stripePaymentIntentId;
+            await order.save();
+            if (INVOICES_ENABLED) {
+                try {
+                    await ensureInvoiceForOrder({
+                        order,
+                        stripeClient: stripe,
+                        generatedBy: 'stripe_async_payment_webhook'
+                    });
+                } catch (invoiceError) {
+                    console.error('[Invoice] Verarbeitung nach spaeter Zahlung fehlgeschlagen:', invoiceError.message);
+                }
+            }
+            break;
+        }
+        case 'checkout.session.async_payment_failed': {
+            const session = event.data.object;
+            await Order.updateOne(
+                { stripeSessionId: session.id },
+                {
+                    $set: {
+                        paymentStatus: 'failed',
+                        invoiceStatus: 'awaiting_payment',
+                        invoiceError: 'Stripe hat die asynchrone Zahlung als fehlgeschlagen gemeldet.'
+                    }
+                }
+            );
+            break;
+        }
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
@@ -2101,6 +2255,7 @@ app.get('/api/user/orders', async (req, res) => {
 
 
         const userOrders = await Order.find({ email: userEmail }).sort({ date: -1 });
+        await ensureOrderNumbers(userOrders);
 
         res.json({ orders: userOrders });
 
@@ -3126,7 +3281,13 @@ app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrf
         loginAttempts.delete(ip);
         const adminToken = signAuthToken({ role: 'admin' }, '1h');
         res.cookie(ADMIN_TOKEN_COOKIE, adminToken, getAdminCookieOptions());
-        res.json({ success: true, adminAuthToken: adminToken });
+        res.json({
+            success: true,
+            adminAuthToken: adminToken,
+            features: {
+                invoices: INVOICES_ENABLED
+            }
+        });
     } else {
         // Wrong password – increment counter
         record.count = (record.count || 0) + 1;
@@ -3158,7 +3319,12 @@ app.post('/api/admin/logout', requireTrustedOrigin, requireCsrfToken, (req, res)
 
 app.get('/api/admin/check', (req, res) => {
     if (isAdmin(req)) {
-        res.json({ success: true });
+        res.json({
+            success: true,
+            features: {
+                invoices: INVOICES_ENABLED
+            }
+        });
     } else {
         res.status(401).json({ error: 'Not authorized' });
     }
@@ -3740,6 +3906,7 @@ app.get('/api/admin/orders', async (req, res) => {
         );
 
         const rawOrders = await Order.find({}).sort({ date: -1 }).lean();
+        await ensureOrderNumbers(rawOrders);
         const orders = await Promise.all(rawOrders.map(async (order) => {
             const hasName = typeof order.name === 'string' && order.name.trim();
             if (hasName || !order.stripeSessionId || !EXPECTS_LIVE_STRIPE_MODE) return order;
@@ -3786,6 +3953,303 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
+function getMissingInvoiceOrderQuery() {
+    return {
+        stripeSessionId: { $exists: true, $nin: ['', null] },
+        $or: [
+            { invoice: { $exists: false } },
+            { invoice: null }
+        ]
+    };
+}
+
+function serializeInvoice(invoice) {
+    const raw = invoice && typeof invoice.toObject === 'function' ? invoice.toObject() : invoice;
+    return {
+        id: String(raw._id),
+        number: raw.number,
+        status: raw.status,
+        issuedAt: raw.issuedAt,
+        serviceDate: raw.serviceDate,
+        paymentDate: raw.paymentDate,
+        orderReference: raw.orderReference,
+        currency: raw.currency,
+        customer: raw.customer,
+        subtotalGrossCents: raw.subtotalGrossCents,
+        discountGrossCents: raw.discountGrossCents,
+        shippingGrossCents: raw.shippingGrossCents,
+        totalNetCents: raw.totalNetCents,
+        totalTaxCents: raw.totalTaxCents,
+        totalGrossCents: raw.totalGrossCents,
+        vatRateBps: raw.vatRateBps,
+        payment: raw.payment,
+        pdfFileName: raw.pdfFileName,
+        pdfByteLength: raw.pdfByteLength,
+        pdfSha256: raw.pdfSha256,
+        pdfGeneratedAt: raw.pdfGeneratedAt
+    };
+}
+
+function serializePendingInvoiceOrder(order) {
+    const raw = order && typeof order.toObject === 'function' ? order.toObject() : order;
+    const serviceDate = resolveServiceDate(raw);
+    const address = raw.address && typeof raw.address === 'object' ? raw.address : {};
+    return {
+        orderId: String(raw._id),
+        orderNumber: raw.orderNumber || '',
+        orderDate: raw.date,
+        name: raw.name || address.name || '',
+        email: raw.email || '',
+        amount: raw.amount || 0,
+        currency: raw.currency || 'eur',
+        country: String(address.country || '').toUpperCase(),
+        orderStatus: raw.status || 'neu',
+        paymentStatus: raw.paymentStatus || 'not_synced',
+        paidAt: raw.paidAt || null,
+        shippedAt: raw.shippedAt || null,
+        proposedServiceDate: serviceDate.date,
+        invoiceStatus: raw.invoiceStatus || '',
+        invoiceError: raw.invoiceError || ''
+    };
+}
+
+app.get('/api/admin/invoices', async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    if (!INVOICES_ENABLED) {
+        return res.status(404).json({ error: 'Die Rechnungsfunktion ist derzeit deaktiviert.' });
+    }
+
+    try {
+        const [invoices, pendingOrders] = await Promise.all([
+            Invoice.find({}).select('-pdfData').sort({ issuedAt: -1, number: -1 }).lean(),
+            Order.find(getMissingInvoiceOrderQuery())
+                .select('date orderNumber email name amount currency address status paymentStatus paidAt shippedAt statusUpdatedAt invoiceStatus invoiceError')
+                .sort({ date: 1 })
+                .lean()
+        ]);
+        await ensureOrderNumbers(pendingOrders);
+        const serializedInvoices = invoices.map(serializeInvoice);
+        const pending = pendingOrders.map(serializePendingInvoiceOrder);
+        const totalGrossCents = serializedInvoices
+            .filter(invoice => invoice.status === 'issued')
+            .reduce((sum, invoice) => sum + Number(invoice.totalGrossCents || 0), 0);
+        const totalTaxCents = serializedInvoices
+            .filter(invoice => invoice.status === 'issued')
+            .reduce((sum, invoice) => sum + Number(invoice.totalTaxCents || 0), 0);
+
+        return res.json({
+            invoices: serializedInvoices,
+            pending,
+            summary: {
+                issuedCount: serializedInvoices.filter(invoice => invoice.status === 'issued').length,
+                pendingCount: pending.length,
+                awaitingServiceDateCount: pending.filter(item => item.invoiceStatus === 'awaiting_service_date').length,
+                manualReviewCount: pending.filter(item => item.invoiceStatus === 'manual_review').length,
+                errorCount: pending.filter(item => item.invoiceStatus === 'error').length,
+                totalGrossCents,
+                totalTaxCents
+            },
+            config: {
+                ...getPublicInvoiceConfig(),
+                orderNumbers: getPublicOrderNumberConfig()
+            }
+        });
+    } catch (error) {
+        console.error('[Invoice] Admin-Liste konnte nicht geladen werden:', error);
+        return res.status(500).json({ error: 'Rechnungen konnten nicht geladen werden.' });
+    }
+});
+
+app.get('/api/admin/invoices/:id/pdf', async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    if (!INVOICES_ENABLED) {
+        return res.status(404).json({ error: 'Die Rechnungsfunktion ist derzeit deaktiviert.' });
+    }
+
+    try {
+        const invoice = await Invoice.findById(req.params.id).select('+pdfData');
+        if (!invoice || !invoice.pdfData) {
+            return res.status(404).json({ error: 'Rechnungs-PDF nicht gefunden.' });
+        }
+        const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+        const safeFileName = String(invoice.pdfFileName || `Rechnung_${invoice.number}.pdf`)
+            .replace(/[^A-Za-z0-9_.-]/g, '_');
+        const pdfBuffer = Buffer.isBuffer(invoice.pdfData)
+            ? invoice.pdfData
+            : Buffer.from(invoice.pdfData.buffer || invoice.pdfData);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', String(pdfBuffer.length));
+        res.setHeader('Content-Disposition', `${disposition}; filename="${safeFileName}"`);
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        return res.send(pdfBuffer);
+    } catch (error) {
+        if (error && error.name === 'CastError') {
+            return res.status(400).json({ error: 'Ungültige Rechnungs-ID.' });
+        }
+        console.error('[Invoice] PDF konnte nicht geladen werden:', error);
+        return res.status(500).json({ error: 'Rechnungs-PDF konnte nicht geladen werden.' });
+    }
+});
+
+app.post('/api/admin/invoices/backfill', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    if (!INVOICES_ENABLED) {
+        return res.status(404).json({ error: 'Die Rechnungsfunktion ist derzeit deaktiviert.' });
+    }
+    if (LOCAL_DEV_SAFE_MODE) {
+        return res.status(409).json({
+            error: 'Der historische Stripe-Abgleich ist im lokalen Safe-Mode absichtlich deaktiviert.'
+        });
+    }
+
+    const requestedLimit = Number.parseInt(req.body && req.body.limit, 10);
+    const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 50;
+    const cursor = cleanInvoiceText(req.body && req.body.cursor, 80);
+    if (cursor && !mongoose.Types.ObjectId.isValid(cursor)) {
+        return res.status(400).json({ error: 'Ungültiger Abgleich-Cursor.' });
+    }
+
+    try {
+        const missingInvoiceQuery = getMissingInvoiceOrderQuery();
+        const query = cursor
+            ? { $and: [missingInvoiceQuery, { _id: { $gt: new mongoose.Types.ObjectId(cursor) } }] }
+            : missingInvoiceQuery;
+        const orders = await Order.find(query).sort({ _id: 1 }).limit(limit);
+        const summary = {
+            checked: 0,
+            generated: 0,
+            existing: 0,
+            awaitingPayment: 0,
+            awaitingServiceDate: 0,
+            manualReview: 0,
+            errors: 0
+        };
+        const results = [];
+
+        for (const order of orders) {
+            summary.checked += 1;
+            try {
+                const result = await ensureInvoiceForOrder({
+                    order,
+                    stripeClient: stripe,
+                    generatedBy: 'admin_historical_backfill'
+                });
+                if (result.status === 'generated') summary.generated += 1;
+                else if (result.status === 'existing') summary.existing += 1;
+                else if (result.status === 'awaiting_payment') summary.awaitingPayment += 1;
+                else if (result.status === 'awaiting_service_date') summary.awaitingServiceDate += 1;
+                else if (result.status === 'manual_review') summary.manualReview += 1;
+                results.push({
+                    orderId: String(order._id),
+                    status: result.status,
+                    invoiceNumber: result.invoice ? result.invoice.number : '',
+                    reason: result.reason || order.invoiceError || ''
+                });
+            } catch (error) {
+                summary.errors += 1;
+                results.push({
+                    orderId: String(order._id),
+                    status: 'error',
+                    reason: cleanInvoiceText(error.message, 500)
+                });
+            }
+        }
+
+        return res.json({
+            success: true,
+            summary,
+            results,
+            remainingMayExist: orders.length === limit,
+            nextCursor: orders.length ? String(orders[orders.length - 1]._id) : ''
+        });
+    } catch (error) {
+        console.error('[Invoice] Historischer Abgleich fehlgeschlagen:', error);
+        return res.status(500).json({ error: 'Historischer Rechnungsabgleich fehlgeschlagen.' });
+    }
+});
+
+app.post('/api/admin/invoices/orders/:orderId/generate', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Not authorized' });
+    }
+    if (!INVOICES_ENABLED) {
+        return res.status(404).json({ error: 'Die Rechnungsfunktion ist derzeit deaktiviert.' });
+    }
+    if (LOCAL_DEV_SAFE_MODE) {
+        return res.status(409).json({
+            error: 'Die Stripe-Rechnungserzeugung ist im lokalen Safe-Mode absichtlich deaktiviert.'
+        });
+    }
+
+    try {
+        const order = await Order.findById(req.params.orderId);
+        if (!order) return res.status(404).json({ error: 'Bestellung nicht gefunden.' });
+        if (!order.stripeSessionId) {
+            return res.status(400).json({ error: 'Nur bestätigte Stripe-Zahlungen können hier verarbeitet werden.' });
+        }
+
+        const serviceDate = asInvoiceDate(req.body && req.body.serviceDate);
+        if (!serviceDate) {
+            return res.status(400).json({ error: 'Bitte ein gültiges Leistungs-/Versanddatum angeben.' });
+        }
+        if (serviceDate.getTime() > Date.now() + 24 * 60 * 60 * 1000) {
+            return res.status(400).json({ error: 'Das Leistungsdatum darf nicht in der Zukunft liegen.' });
+        }
+
+        let taxRateBps;
+        if (req.body && req.body.taxRate !== undefined && req.body.taxRate !== '') {
+            const taxRate = Number(req.body.taxRate);
+            if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 30) {
+                return res.status(400).json({ error: 'Der Umsatzsteuersatz ist ungültig.' });
+            }
+            taxRateBps = Math.round(taxRate * 100);
+        }
+        const taxExemptionNote = cleanInvoiceText(req.body && req.body.taxExemptionNote, 300);
+        if (taxRateBps === 0 && !taxExemptionNote) {
+            return res.status(400).json({
+                error: 'Bei 0 % Umsatzsteuer ist ein konkreter Steuerbefreiungshinweis erforderlich.'
+            });
+        }
+
+        order.shippedAt = serviceDate;
+        await order.save();
+        const result = await ensureInvoiceForOrder({
+            order,
+            stripeClient: stripe,
+            serviceDate,
+            serviceDateSource: 'admin_confirmed_historical_date',
+            taxRateBps,
+            taxExemptionNote,
+            generatedBy: 'admin_manual_completion'
+        });
+        if (!result.invoice) {
+            return res.status(409).json({
+                error: result.reason || 'Die Rechnung konnte noch nicht finalisiert werden.',
+                status: result.status
+            });
+        }
+        return res.status(result.status === 'generated' ? 201 : 200).json({
+            success: true,
+            status: result.status,
+            invoice: serializeInvoice(result.invoice)
+        });
+    } catch (error) {
+        if (error && error.name === 'CastError') {
+            return res.status(400).json({ error: 'Ungültige Bestell-ID.' });
+        }
+        console.error('[Invoice] Manuelle Erzeugung fehlgeschlagen:', error);
+        return res.status(500).json({ error: cleanInvoiceText(error.message, 500) || 'Rechnung konnte nicht erzeugt werden.' });
+    }
+});
+
 app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
@@ -3799,11 +4263,31 @@ app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin,
 
         const order = await Order.findById(req.params.id);
         if (!order) return res.status(404).json({ error: 'Order nicht gefunden' });
+        await ensureOrderNumber(order);
 
         const previousStatus = order.status;
         order.status = status;
         order.statusUpdatedAt = new Date();
+        if (status === 'abgeschlossen' && previousStatus !== 'abgeschlossen' && !order.shippedAt) {
+            // Bei Versandlieferungen ist der Beginn der Versendung das Leistungsdatum.
+            order.shippedAt = order.statusUpdatedAt;
+        }
         await order.save();
+
+        let invoiceResult = null;
+        if (INVOICES_ENABLED && status === 'abgeschlossen' && order.stripeSessionId) {
+            try {
+                invoiceResult = await ensureInvoiceForOrder({
+                    order,
+                    stripeClient: stripe,
+                    serviceDate: order.shippedAt,
+                    serviceDateSource: 'admin_shipping_status',
+                    generatedBy: 'admin_shipping_status'
+                });
+            } catch (invoiceError) {
+                console.error('[Invoice] Erzeugung beim Versandabschluss fehlgeschlagen:', invoiceError.message);
+            }
+        }
 
         // Automatically send shipping notification when status changes to 'abgeschlossen'
         if (status === 'abgeschlossen' && previousStatus !== 'abgeschlossen' && order.email) {
@@ -3813,6 +4297,7 @@ app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin,
 
                 if (!isPickup) {
                     const shippingMail = buildShippingEmailPayload({
+                        orderNumber: order.orderNumber,
                         customerName: order.name || 'du',
                         trackingUrl: safeTrackingUrl
                     });
@@ -3823,7 +4308,7 @@ app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin,
                         subject: shippingMail.subject,
                         html: shippingMail.html
                     });
-                    console.log(`Versand-Email gesendet an ${order.email} für Bestellung ${order._id}`);
+                    console.log(`Versand-Email gesendet an ${order.email} für Bestellung ${order.orderNumber}`);
                 }
             } catch (emailErr) {
                 // Email fehler soll den Status-Update nicht blockieren
@@ -3831,7 +4316,14 @@ app.put('/api/admin/orders/:id/status', adminWriteLimiter, requireTrustedOrigin,
             }
         }
 
-        res.json({ success: true, order });
+        res.json({
+            success: true,
+            order,
+            invoice: invoiceResult && invoiceResult.invoice
+                ? { id: invoiceResult.invoice._id, number: invoiceResult.invoice.number }
+                : null,
+            invoiceStatus: invoiceResult ? invoiceResult.status : order.invoiceStatus
+        });
     } catch (err) {
         console.error('Fehler beim Update des Order Status:', err);
         res.status(500).json({ error: 'Server Fehler' });
@@ -3844,10 +4336,16 @@ app.delete('/api/admin/orders/:id', adminWriteLimiter, requireTrustedOrigin, req
     }
 
     try {
-        const deletedOrder = await Order.findByIdAndDelete(req.params.id);
-        if (!deletedOrder) {
+        const existingOrder = await Order.findById(req.params.id).lean();
+        if (!existingOrder) {
             return res.status(404).json({ error: 'Order nicht gefunden' });
         }
+        if (existingOrder.invoice || existingOrder.invoiceNumber) {
+            return res.status(409).json({
+                error: 'Bestellungen mit ausgestellter Rechnung dürfen aus Nachweisgründen nicht gelöscht werden. Bitte archivieren.'
+            });
+        }
+        const deletedOrder = await Order.findByIdAndDelete(req.params.id);
 
         res.json({
             success: true,
@@ -3866,6 +4364,7 @@ app.post('/api/admin/orders/:id/notify-pickup', adminWriteLimiter, requireTruste
     try {
         const order = await Order.findById(req.params.id);
         if (!order) return res.status(404).json({ error: 'Order nicht gefunden' });
+        await ensureOrderNumber(order);
         if (!order.email) return res.status(400).json({ error: 'Keine Email vorhanden' });
 
         // Update status to "in_bearbeitung" if it was "neu", 
@@ -3873,6 +4372,7 @@ app.post('/api/admin/orders/:id/notify-pickup', adminWriteLimiter, requireTruste
         // Actually this is just sending the email, but we could also auto-advance the status if requested.
 
         const pickupReadyMail = buildPickupReadyEmailPayload({
+            orderNumber: order.orderNumber,
             customerName: order.name || 'du',
             amountCents: order.amount
         });
@@ -4198,6 +4698,8 @@ app.post('/create-checkout-session', checkoutLimiter, requireTrustedOrigin, requ
             // Zahlungsmethoden (Karte, PayPal, Klarna, SEPA etc.)
             line_items: line_items,
             mode: 'payment',
+            // Für eine vollständige Rechnungsanschrift darf sie von der Lieferadresse abweichen.
+            billing_address_collection: 'required',
             shipping_address_collection: {
                 allowed_countries: ['DE', 'AT', 'CH'],
             },
@@ -4205,7 +4707,7 @@ app.post('/create-checkout-session', checkoutLimiter, requireTrustedOrigin, requ
                 enabled: false,
             },
             tax_id_collection: {
-                enabled: false,
+                enabled: true,
             },
             shipping_options: [
                 {
@@ -4380,8 +4882,11 @@ app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireC
             totalCents = Math.max(0, totalCents - discountAmountCents);
         }
 
+        const orderDate = new Date();
+        const orderNumber = await allocateOrderNumber();
         const newOrder = new Order({
-            date: new Date().toISOString(),
+            date: orderDate,
+            orderNumber,
             email: normalizedCustomerEmail,
             name: safeCustomerName,
             amount: totalCents,
@@ -4408,6 +4913,7 @@ app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireC
                         : '0,00'
                 }));
                 const pickupOrderMail = buildPickupOrderConfirmationEmailPayload({
+                    orderNumber,
                     customerName: safeCustomerName,
                     items: emailItems,
                     discountAmountCents,
@@ -4428,6 +4934,7 @@ app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireC
 
             try {
                 const internalPickupMail = buildPickupOrderInternalEmailPayload({
+                    orderNumber,
                     customerName: safeCustomerName,
                     customerEmail: normalizedCustomerEmail,
                     items: line_items,
@@ -4451,7 +4958,7 @@ app.post('/create-pickup-order', checkoutLimiter, requireTrustedOrigin, requireC
             console.log('[Safe Mode] Pickup-Bestellbestätigung wurde nicht versendet.');
         }
 
-        res.json({ success: true, orderId: newOrder._id });
+        res.json({ success: true, orderId: newOrder._id, orderNumber: newOrder.orderNumber });
     } catch (e) {
         console.error('Pickup order error:', e);
         res.status(e.statusCode || 500).json({
