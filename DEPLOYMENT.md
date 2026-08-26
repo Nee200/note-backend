@@ -12,5 +12,6 @@ This directory is the backend source of truth.
 Operational notes:
 
 - Production secrets must be configured in Render environment variables, not in Git.
+- Invoice generation and the AdminPortal invoice tab are disabled by default. Set `INVOICES_ENABLED=true` in Render and restart/deploy the service to activate them; existing invoice records stay preserved while disabled.
 - Local `.env`, `.env.localtest`, JSON data dumps, logs, cookie jars, and `tmp_*` request files are intentionally ignored.
 - The frontend is deployed separately from `note-frontend.git` to Netlify.
