@@ -70,7 +70,7 @@ const USER_TOKEN_COOKIE = 'auth_token';
 const CSRF_TOKEN_COOKIE = 'csrf_token';
 const PORT = Number(process.env.PORT || 4242);
 const INVOICES_ENABLED = ['1', 'true', 'yes', 'on'].includes(
-    String(process.env.INVOICES_ENABLED || 'false').trim().toLowerCase()
+    String(process.env.INVOICES_ENABLED || 'true').trim().toLowerCase()
 );
 const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-backend-5gy0.onrender.com' : 'http://localhost:4242');
 const FRONTEND_PUBLIC_URL = process.env.FRONTEND_PUBLIC_URL || (IS_PRODUCTION ? 'https://note-fragrances.de' : 'http://localhost:5500');
