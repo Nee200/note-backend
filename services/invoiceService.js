@@ -214,10 +214,8 @@ async function retrieveCheckoutSnapshot(stripeClient, order) {
     const session = await stripeClient.checkout.sessions.retrieve(order.stripeSessionId, {
         expand: ['payment_intent', 'payment_intent.latest_charge']
     });
-    const lineItemResponse = await stripeClient.checkout.sessions.listLineItems(order.stripeSessionId, {
-        limit: 100
-    });
-    const lineItems = Array.isArray(lineItemResponse && lineItemResponse.data) ? lineItemResponse.data : [];
+    const lineItems = await require('./stripeData').listAllLineItems(stripeClient, order.stripeSessionId);
+    require('./stripeData').assertCheckoutTotals(session, lineItems);
     const payment = getPaymentDetails(session);
     const customer = getInvoiceCustomer(session, order);
     const deliveryCountry = getDeliveryCountry(session, order);
@@ -319,7 +317,7 @@ async function allocateInvoiceNumber(issuedAt = new Date()) {
     counter = await InvoiceCounter.findByIdAndUpdate(
         key,
         { $inc: { sequence: 1 } },
-        { new: true }
+        { returnDocument: 'after' }
     );
     if (!counter) throw new Error('Rechnungsnummer konnte nicht vergeben werden.');
     return `${INVOICE_PREFIX}-${year}-${String(counter.sequence).padStart(6, '0')}`;
@@ -595,18 +593,45 @@ async function ensureInvoiceForOrder({
     if (!order || !order._id) throw new Error('Bestellung fehlt.');
     await ensureOrderNumber(order);
     const existing = await Invoice.findOne({ order: order._id });
-    if (existing) return { status: 'existing', invoice: existing };
+    if (existing) {
+        order.invoicePending = false;
+        order.invoice = existing._id;
+        order.invoiceNumber = existing.number;
+        order.invoiceIssuedAt = existing.issuedAt;
+        order.invoiceStatus = 'generated';
+        order.invoiceError = '';
+        order.taxAmount = existing.totalTaxCents;
+        await order.save();
+        return { status: 'existing', invoice: existing };
+    }
 
     let snapshot;
+    if (order.refundedAmountCents > 0 || (order.disputeStatus && order.disputeStatus !== 'won') || order.amount === 0) {
+        order.invoicePending = false;
+        order.invoiceStatus = 'manual_review';
+        order.invoiceError = 'Erstattung, Streitfall oder Nullbetrag: Original- und Korrekturbelege fachlich prüfen.';
+        await order.save();
+        return { status: 'manual_review', reason: order.invoiceError };
+    }
+    order.invoicePending = true;
+    await order.save();
     try {
         snapshot = await retrieveCheckoutSnapshot(stripeClient, order);
     } catch (error) {
+        order.invoicePending = true;
         order.invoiceStatus = 'error';
         order.invoiceError = cleanText(error.message, 500);
         await order.save();
         throw error;
     }
 
+    if (order.paymentStatus === 'paid' && snapshot.paymentStatus !== 'paid') {
+        order.invoicePending = false;
+        order.invoiceStatus = 'manual_review';
+        order.invoiceError = 'Der Providerstatus widerspricht der bereits bestätigten Zahlung. Bitte abgleichen.';
+        await order.save();
+        return { status: 'manual_review', reason: order.invoiceError };
+    }
     order.paymentStatus = snapshot.paymentStatus;
     order.paidAt = snapshot.payment.paidAt;
     order.stripePaymentIntentId = snapshot.payment.paymentIntentId;
@@ -614,6 +639,7 @@ async function ensureInvoiceForOrder({
     order.shippingAmount = snapshot.shippingGrossCents;
 
     if (snapshot.paymentStatus !== 'paid') {
+        order.invoicePending = false;
         order.invoiceStatus = 'awaiting_payment';
         order.invoiceError = '';
         await order.save();
@@ -623,6 +649,7 @@ async function ensureInvoiceForOrder({
     const country = cleanText(snapshot.deliveryCountry || snapshot.customer.address.country, 10).toUpperCase();
     const explicitTaxRate = Number.isInteger(taxRateBps);
     if (!AUTOMATIC_COUNTRIES.has(country) && !explicitTaxRate) {
+        order.invoicePending = false;
         order.invoiceStatus = 'manual_review';
         order.invoiceError = `Steuerliche Pruefung fuer Lieferland ${country || 'unbekannt'} erforderlich.`;
         await order.save();
@@ -632,6 +659,7 @@ async function ensureInvoiceForOrder({
     const resolvedServiceDate = asDate(serviceDate) || resolveServiceDate(order).date;
     const resolvedServiceDateSource = serviceDateSource || resolveServiceDate(order).source;
     if (!resolvedServiceDate) {
+        order.invoicePending = false;
         order.invoiceStatus = 'awaiting_service_date';
         order.invoiceError = 'Leistungs-/Versanddatum fehlt.';
         await order.save();
@@ -649,6 +677,7 @@ async function ensureInvoiceForOrder({
             generatedBy
         });
         const invoice = await Invoice.create(invoiceDocument);
+        order.invoicePending = false;
         order.invoice = invoice._id;
         order.invoiceNumber = invoice.number;
         order.invoiceIssuedAt = invoice.issuedAt;
@@ -660,8 +689,19 @@ async function ensureInvoiceForOrder({
     } catch (error) {
         if (error && error.code === 11000) {
             const racedInvoice = await Invoice.findOne({ order: order._id });
-            if (racedInvoice) return { status: 'existing', invoice: racedInvoice };
+            if (racedInvoice) {
+                order.invoicePending = false;
+                order.invoice = racedInvoice._id;
+                order.invoiceNumber = racedInvoice.number;
+                order.invoiceIssuedAt = racedInvoice.issuedAt;
+                order.invoiceStatus = 'generated';
+                order.invoiceError = '';
+                order.taxAmount = racedInvoice.totalTaxCents;
+                await order.save();
+                return { status: 'existing', invoice: racedInvoice };
+            }
         }
+        order.invoicePending = true;
         order.invoiceStatus = 'error';
         order.invoiceError = cleanText(error.message, 500);
         await order.save();

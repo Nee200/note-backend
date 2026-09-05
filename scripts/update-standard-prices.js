@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const maintenance = require('./maintenance').prepare({ task: 'update-standard-prices.js', localOnly: false });
 
 const fs = require('fs');
 const path = require('path');

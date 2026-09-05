@@ -1,0 +1,6 @@
+[
+  { "id": "G1", "name": "Testduft G1", "category": "men", "description": "Synthetisches Produkt für lokale Tests.", "inspiredBy": "Testkatalog", "images": ["images_parfume/parfume_mann.png"], "bestseller": true, "newArrival": true, "variants": { "30": { "price": 34.99 }, "50": { "price": 44.99 } }, "notes": { "head": "Zitrone", "heart": "Lavendel", "base": "Holz" } },
+  { "id": "G2", "name": "Testduft G2", "category": "men", "description": "Synthetisches Produkt für lokale Tests.", "images": ["images_parfume/parfume_mann.png"], "variants": { "30": { "price": 34.99 }, "50": { "price": 44.99 } } },
+  { "id": "L1", "name": "Testduft L1", "category": "women", "description": "Synthetisches Produkt für lokale Tests.", "images": ["images_parfume/parfume_frau.png"], "variants": { "30": { "price": 34.99 }, "50": { "price": 44.99 } } },
+  { "id": "AUTODUFT", "name": "Test-Autoduft", "category": "car-fragrance", "description": "Synthetisches Produkt für lokale Tests.", "images": ["logo.webp"], "variants": { "30": { "price": 19.99 } } }
+]
