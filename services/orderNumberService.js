@@ -33,7 +33,7 @@ async function allocateOrderNumber() {
     counter = await OrderCounter.findByIdAndUpdate(
         ORDER_COUNTER_KEY,
         { $inc: { sequence: 1 } },
-        { new: true }
+        { returnDocument: 'after' }
     );
     if (!counter) throw new Error('Bestellnummer konnte nicht vergeben werden.');
     return formatOrderNumber(counter.sequence);
@@ -55,7 +55,7 @@ async function ensureOrderNumber(order) {
             ]
         },
         { $set: { orderNumber: allocated } },
-        { new: true, runValidators: true }
+        { returnDocument: 'after', runValidators: true }
     );
     const finalNumber = updated && updated.orderNumber
         ? updated.orderNumber

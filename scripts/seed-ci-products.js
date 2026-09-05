@@ -3,29 +3,9 @@ const Product = require('../models/Product');
 
 async function seedCiProducts() {
     try {
+        require('../config/environment').assertLocalTestDatabase(process.env.MONGO_URI);
         await mongoose.connect(process.env.MONGO_URI, {});
-        await Product.deleteMany({});
-        await Product.create({
-            id: 'G1',
-            name: 'NØTE. CI Testduft',
-            category: 'men',
-            inspiredBy: 'CI fixture',
-            description: 'Lokales Testprodukt für den Backend-Smoke-Test.',
-            notes: {
-                head: 'Bergamotte',
-                heart: 'Lavendel',
-                base: 'Zedernholz'
-            },
-            images: ['logo.webp'],
-            bestseller: true,
-            variants: {
-                30: { price: 34.99 },
-                50: { price: 44.99 }
-            }
-        });
-
-        const count = await Product.countDocuments({});
-        if (count !== 1) throw new Error(`Expected one CI product, found ${count}.`);
+        for (const fixture of require('../fixtures/products.json')) await Product.updateOne({ id: fixture.id }, { $set: fixture }, { upsert: true, runValidators: true });
         console.log('[seed] CI product fixture ready.');
     } catch (error) {
         const annotationMessage = String(error && error.message ? error.message : error || 'Unknown CI seed failure')
