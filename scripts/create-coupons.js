@@ -1,3 +1,4 @@
+const maintenance = require('./maintenance').prepare({ task: 'create-coupons.js', localOnly: true });
 /**
  * Erzeugt zwei funktionsfähige 5%-Rabattcodes direkt in der Subscriber-Collection.
  *
@@ -11,7 +12,6 @@
  * Wir verwenden Platzhalter-E-Mails, die eindeutig sind, damit keine Kollision
  * mit echten Newsletter-Anmeldungen entsteht.
  */
-require('dotenv').config();
 const mongoose = require('mongoose');
 const Subscriber = require('../models/Subscriber');
 
@@ -37,6 +37,7 @@ const COUPONS = [
 
 (async () => {
     try {
+        if (!maintenance.apply) { console.log('Lokale synthetische Testgutscheine; keine Änderung.'); return; }
         await mongoose.connect(MONGO_URI);
         console.log('Verbunden mit MongoDB.');
 
@@ -46,8 +47,9 @@ const COUPONS = [
             // Bereits vorhanden? Dann nur aktualisieren/auffrischen.
             const existing = await Subscriber.findOne({ code: normalizedCode });
             if (existing) {
+                if (existing.used || existing.reservationKey || existing.status === 'unsubscribed') continue;
                 existing.status = 'active';
-                existing.used = false;
+                // Never reset a redeemed coupon.
                 existing.discount = c.discount;
                 existing.freeShipping = false;
                 existing.confirmedAt = existing.confirmedAt || new Date();

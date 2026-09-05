@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const maintenance = require('./maintenance').prepare({ task: 'sync-curated-bestsellers.js', localOnly: false });
 
 const fs = require('fs');
 const path = require('path');
@@ -34,6 +34,7 @@ async function run() {
     catalog.forEach((product) => {
         product.bestseller = curatedSet.has(product.id);
     });
+    if (!maintenance.apply) { console.log('Katalogänderungen vorbereitet; keine Dateien oder Datenbankeinträge geändert.'); return; }
     fs.writeFileSync(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8');
 
     await mongoose.connect(process.env.MONGO_URI);

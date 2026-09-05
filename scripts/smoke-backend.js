@@ -32,6 +32,12 @@ async function main() {
     const health = await request('/health');
     assert.ok(okStatus(health.response.status), `/health returned ${health.response.status}`);
     assert.strictEqual(health.body && health.body.status, 'ok', '/health must return status=ok');
+    const safeSmoke = String(process.env.LOCAL_DEV_SAFE_MODE || '').toLowerCase() === 'true';
+    if (safeSmoke) {
+        assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname), 'Safe smoke requires loopback');
+        assert.equal(health.body.safeMode, true, 'Safe mode must be confirmed before any POST');
+        assert.equal(health.body.externalAdaptersDisabled, true, 'External adapters must be disabled');
+    }
     console.log('[smoke] /health ok');
 
     const ready = await request('/ready');
@@ -86,10 +92,10 @@ async function main() {
     });
     assert.strictEqual(
         prototypeProductId.response.status,
-        400,
-        `prototype-like product ID should return 400, got ${prototypeProductId.response.status}`
+        410,
+        `removed viewer endpoint should return 410, got ${prototypeProductId.response.status}`
     );
-    console.log('[smoke] Prototype-safe viewer input ok');
+    console.log('[smoke] Fabricated viewer endpoint is disabled');
 
     const specialCookieNames = await request('/api/admin/check', {
         headers: { Cookie: '__proto__=polluted; constructor=blocked' }
@@ -112,12 +118,12 @@ async function main() {
     });
     assert.strictEqual(
         oversizedAdminPassword.response.status,
-        400,
-        `oversized admin password should return 400, got ${oversizedAdminPassword.response.status}`
+        401,
+        `oversized admin password must be rejected, got ${oversizedAdminPassword.response.status}`
     );
     console.log('[smoke] Admin credential size limit ok');
 
-    if (String(process.env.LOCAL_DEV_SAFE_MODE || '').toLowerCase() === 'true') {
+    if (safeSmoke) {
         const newsletter = await request('/api/newsletter', {
             method: 'POST',
             headers: {

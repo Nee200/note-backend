@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const maintenance = require('./maintenance').prepare({ task: 'upsert-bestseller-images.js', localOnly: false });
 
 const fs = require('fs');
 const path = require('path');
@@ -42,6 +42,7 @@ async function run() {
         product.images = [image, ...(product.images || []).filter((entry) => entry !== image)];
     });
 
+    if (!maintenance.apply) { console.log('Katalogänderungen vorbereitet; keine Dateien oder Datenbankeinträge geändert.'); return; }
     fs.writeFileSync(sourcePath, `${JSON.stringify(products, null, 2)}\n`, 'utf8');
 
     await mongoose.connect(process.env.MONGO_URI);
