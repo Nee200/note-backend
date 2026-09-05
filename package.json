@@ -32,7 +32,7 @@
     "mongoose": "^9.9.2",
     "otplib": "13.5.0",
     "pdfkit": "^0.17.2",
-    "resend": "^6.20.0",
+    "resend": "^6.25.0",
     "stripe": "^20.4.1"
   },
   "devDependencies": {
