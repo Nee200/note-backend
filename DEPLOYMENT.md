@@ -35,6 +35,8 @@ Die versionierte `.env.production.example` beschreibt die Felder, enthält aber 
 
 Ein TOTP-Secret muss mit dem vorgesehenen Authenticator eingerichtet und sicher hinterlegt werden. Der Code erzeugt kein unbekanntes Ersatzkonto. Für mehrere Personen jeweils eigene Konten verwenden. Passwort-/TOTP-Änderungen machen vorhandene Admin-Sitzungen durch einen Konfigurationsfingerabdruck ungültig. Ein TOTP-Zeitfenster kann nur einmal zur Anmeldung verwendet werden.
 
+Für diesen Shop sind zwei unabhängige Konten mit vollständigem Admin-Zugriff vorgesehen: `betreiber` und `admin`. Die Beispieldatei verwendet dafür `ADMIN_ACCOUNTS_JSON` mit jeweils eigenem bcrypt-Passworthash und eigenem TOTP-Secret. Die Bezeichnungen können vor dem Einrichten angepasst werden. Die Konfiguration weist wiederverwendete TOTP-Secrets und doppelte Benutzernamen ab. Eine Abmeldung betrifft nur die betreffende Sitzung; die Rotation der Zugangsdaten eines Kontos verändert den Konfigurationsfingerabdruck des anderen Kontos nicht. Beide Personen müssen ihren eigenen Authenticator vor der Aktivierung eingerichtet und die Anmeldung erfolgreich geprüft haben. Die Beispielwerte sind keine eingerichteten Zugänge.
+
 `LOCAL_DEV_SAFE_MODE` und `CHECKOUT_DRY_RUN` müssen in Produktion ausgeschaltet sein. Für isolierte Tests sind nur Loopback-Datenbanken mit `note-test…`, `note-localtest…` oder `note-audit…` erlaubt. Die vier Testprodukte dürfen nicht als produktiver Katalog importiert werden.
 
 ## Stripe-Endpunkt und Verarbeitung
@@ -81,10 +83,12 @@ Im Admin-Monitoring werden Datenbankzustand und tatsächliche Rückstände angez
 
 Historische Bestellungen erhalten keine pauschale Besitzerzuordnung und keine erfundenen Versanddaten. Alte E-Mail-Bestätigungen werden beim erneuten Stripe-Ereignis nicht blind nochmals versendet. Bestehende Rechnungen werden bei fehlender Verknüpfung wieder zugeordnet; eine Rechnung wird dafür nicht neu ausgestellt. Unbekannte Alt-Gutscheinreservierungen, externe Kassenbelege und Erstattungsbelege benötigen einen konkreten Datenabgleich.
 
+Die Kategorie `car-fragrance` des bestehenden Autoduft-Katalogs bleibt gültig; `autoduft` wird ebenfalls akzeptiert. Eine Katalogmigration ist hierfür nicht erforderlich. Die eindeutigen Sparse-Indizes für Stripe-Sessions und Gutscheincodes haben die ausdrücklichen Namen `stripe_session_unique_sparse` und `subscriber_code_unique_sparse`. Damit kollidieren sie nicht mit den früheren Definitionen `stripeSessionId_1` und `code_1`. Die alten Indizes werden nicht automatisch gelöscht. Beim ersten Start legt die Anwendung die noch fehlenden neuen Indizes an; doppelte Werte müssen vorher geprüft sein. Dieser Übergang ist mit synthetischen Datensätzen und den bisherigen Indexdefinitionen unter MongoDB 8.2.6 getestet.
+
 ## Wartung und Rückweg
 
 Die Import-/Preisskripte arbeiten standardmäßig als Trockenlauf. Ein Schreibaufruf benötigt ausdrücklich `--apply` oder beim alten Rechnungsskript `--execute` sowie `--database <exakter-name>` und `--host <exakter-host>`. Die Skripte laden keine beliebige `.env` nebenbei. Vor Schreibläufen das Ziel und die ausgegebenen Änderungen prüfen.
 
 Bei Problemen zunächst Zahlungsannahme kontrolliert pausieren und Fehler beheben. Ein Code-Rollback muss Backend und Frontend gemeinsam berücksichtigen. Die Datenbank nicht pauschal auf den Stand vor dem Release zurücksetzen: zwischenzeitliche Bestellungen, Zahlungen und unveränderliche Belege müssen erhalten bleiben. Alte Software sollte die neuen Zahlungszustände nicht weiterbearbeiten.
 
-Lokale Prüfung dieses Stands: `npm ci`, `npm run test:syntax`, `npm test`, `npm audit`. Die GitHub-Workflow-Datei ist `.github/workflows/ci.yml`; ihre Ausführung im entfernten Repository wurde mit dieser lokalen Umsetzung nicht ausgelöst.
+Prüfung dieses Stands: `npm ci`, `npm run test:syntax`, `npm test`, `npm audit`. Die GitHub-Workflow-Datei ist `.github/workflows/ci.yml`; die jeweils zum Commit gehörenden Ergebnisse sind am [Backend-PR #1](https://github.com/Nee200/note-backend/pull/1) sichtbar. Die lokale Suite umfasst nach den Ergänzungen zur Bestandskompatibilität und den zwei Admin-Konten 29 erfolgreiche Tests.

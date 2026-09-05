@@ -34,10 +34,10 @@ after(async () => {
 });
 beforeEach(async () => { await require('../models/RateLimit').deleteMany({}); });
 
-function client() {
+function client(apiBase = base) {
     const cookies = new Map();
     async function raw(path, options = {}) {
-        const response = await fetch(base + path, { ...options, headers: { Origin: 'http://localhost:5500', Cookie: [...cookies].map(([key, value]) => `${key}=${value}`).join('; '), ...options.headers } });
+        const response = await fetch(apiBase + path, { ...options, headers: { Origin: 'http://localhost:5500', Cookie: [...cookies].map(([key, value]) => `${key}=${value}`).join('; '), ...options.headers } });
         for (const cookie of response.headers.getSetCookie()) { const [pair] = cookie.split(';'); const index = pair.indexOf('='); cookies.set(pair.slice(0, index), pair.slice(index + 1)); }
         return response;
     }
@@ -329,4 +329,59 @@ test('a stale invoice-side order save cannot overwrite a newer refund', async ()
     stale.invoiceStatus = 'generated'; stale.paymentStatus = 'paid'; stale.markModified('paymentStatus');
     await assert.rejects(stale.save(), error => error.name === 'VersionError');
     assert.equal((await Order.findById(order._id)).paymentStatus, 'refunded');
+});
+
+test('operator and administrator have separate passwords, MFA and revocable sessions with equal admin access', async () => {
+    const { generateSecret, generate } = require('otplib');
+    const bcrypt = require('bcryptjs');
+    const accounts = [
+        { username: 'test-operator', passwordHash: await bcrypt.hash('synthetic-operator-password', 12), totpSecret: generateSecret() },
+        { username: 'test-administrator', passwordHash: await bcrypt.hash('synthetic-administrator-password', 12), totpSecret: generateSecret() }
+    ];
+    const operatorOtp = await generate({ secret: accounts[0].totpSecret });
+    let adminOtp = await generate({ secret: accounts[1].totpSecret });
+    while (operatorOtp === adminOtp) { accounts[1].totpSecret = generateSecret(); adminOtp = await generate({ secret: accounts[1].totpSecret }); }
+    const configuredApp = require('../app').createApp({ env: { ...env, ADMIN_ACCOUNTS_JSON: JSON.stringify(accounts) }, stripe, mailProvider: { emails: { send: async () => ({ data: { id: 'synthetic-mail' } }) } } });
+    const configuredServer = configuredApp.listen(0, '127.0.0.1');
+    await new Promise(resolve => configuredServer.once('listening', resolve));
+    const configuredBase = `http://127.0.0.1:${configuredServer.address().port}`;
+    try {
+        const operator = client(configuredBase), administrator = client(configuredBase);
+        assert.equal((await operator.call('/api/admin/login', { username: accounts[0].username, password: 'wrong-password', otp: operatorOtp })).status, 401);
+        assert.equal((await administrator.call('/api/admin/login', { username: accounts[1].username, password: 'synthetic-operator-password', otp: adminOtp })).status, 401);
+        assert.equal((await administrator.call('/api/admin/login', { username: accounts[1].username, password: 'synthetic-administrator-password', otp: operatorOtp })).status, 401);
+        assert.equal((await operator.call('/api/admin/login', { username: accounts[0].username, password: 'synthetic-operator-password', otp: operatorOtp })).status, 200);
+        assert.equal((await administrator.call('/api/admin/login', { username: accounts[1].username, password: 'synthetic-administrator-password', otp: adminOtp })).status, 200);
+        const jwt = require('jsonwebtoken');
+        assert.equal(jwt.decode(operator.cookies.get('admin_token')).adminId, accounts[0].username);
+        assert.equal(jwt.decode(administrator.cookies.get('admin_token')).adminId, accounts[1].username);
+        const originalPrice = (await Product.findOne({ id: 'G1' })).variants[30].price;
+        for (const account of [operator, administrator]) {
+            assert.equal((await account.call('/api/admin/check')).status, 200);
+            assert.equal((await account.call('/api/admin/orders')).status, 200);
+            assert.equal((await account.call('/api/admin/products-bulk', { ids: ['G1'], price30: originalPrice }, 'PUT')).status, 200);
+        }
+        const retiredToken = operator.cookies.get('admin_token');
+        assert.equal((await operator.call('/api/admin/logout', {})).status, 200);
+        assert.equal((await operator.call('/api/admin/check')).status, 401);
+        assert.equal((await administrator.call('/api/admin/check')).status, 200);
+        const replay = client(configuredBase); replay.cookies.set('admin_token', retiredToken);
+        assert.equal((await replay.call('/api/admin/check')).status, 401);
+    } finally { await new Promise(resolve => configuredServer.close(resolve)); }
+});
+
+test('MFA secrets must differ and rotating one administrator leaves the other credential version unchanged', () => {
+    const { generateSecret } = require('otplib');
+    const { createAdminAuthenticator } = require('../services/adminAuth');
+    const accounts = [
+        { username: 'operator', password: 'synthetic-operator-password', totpSecret: generateSecret() },
+        { username: 'administrator', password: 'synthetic-administrator-password', totpSecret: generateSecret() }
+    ];
+    const create = values => createAdminAuthenticator({ NODE_ENV: 'production', ADMIN_ACCOUNTS_JSON: JSON.stringify(values) });
+    const current = create(accounts);
+    assert.throws(() => create([accounts[0], { ...accounts[1], totpSecret: accounts[0].totpSecret }]), /eigenen TOTP-Faktor/);
+    assert.throws(() => create([accounts[0], { ...accounts[1], username: accounts[0].username }]), /eindeutig/);
+    const rotated = create([{ ...accounts[0], totpSecret: generateSecret() }, accounts[1]]);
+    assert.notEqual(current.fingerprint('operator'), rotated.fingerprint('operator'));
+    assert.equal(current.fingerprint('administrator'), rotated.fingerprint('administrator'));
 });
