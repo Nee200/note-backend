@@ -1,9 +1,13 @@
 node_modules/
 .env
 .env.localtest
+.env.*
+!.env.production.example
+!.env.localtest.example
 .DS_Store
 *.log
 products.json
+!fixtures/products.json
 orders.json
 users.json
 

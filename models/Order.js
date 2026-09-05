@@ -1,14 +1,41 @@
 const mongoose = require('mongoose');
 
 const OrderItemSchema = new mongoose.Schema({
+    productId: String,
+    sku: String,
+    variant: String,
+    internalId: String,
+    supplierId: String,
+    imageUrl: String,
     description: String,
-    quantity: Number,
-    amount_total: Number,
+    quantity: { type: Number, min: 1, validate: Number.isInteger },
+    unitAmountCents: { type: Number, min: 0, validate: Number.isSafeInteger },
+    lineTotalCents: { type: Number, min: 0, validate: Number.isSafeInteger },
+    amount_total: Number, // legacy; public DTO normalizes by the explicit order source
     currency: String
 }, { _id: false });
 
 const OrderSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now },
+    schemaVersion: { type: Number },
+    userId: { type: String, default: null },
+    checkoutRequestId: { type: String },
+    fulfillmentMethod: { type: String, enum: ['shipping', 'pickup'] },
+    paymentMethod: { type: String, enum: ['stripe', 'cash'] },
+    cashConfirmedBy: String,
+    cashConfirmedAt: Date,
+    cashReceiptReference: String,
+    refundedAmountCents: { type: Number, default: 0 },
+    disputeStatus: String,
+    financialResolutionReference: String,
+    financialReviewedAt: Date,
+    financialReviewedBy: String,
+    financialReviewedAmountCents: Number,
+    financialReviewedDisputeStatus: String,
+    cancelledAt: Date,
+    trackingUrl: String,
+    pendingNotifications: { type: [String], default: [] },
+    confirmationPolicy: { type: String, enum: ['send', 'legacy-review'] },
     orderNumber: { type: String, unique: true, sparse: true, index: true },
     email: String,
     name: String,
@@ -37,14 +64,20 @@ const OrderSchema = new mongoose.Schema({
         default: ''
     },
     invoiceError: { type: String, default: '' },
+    invoicePending: { type: Boolean, default: false },
+    invoiceRetryAt: Date,
     pickupEmailSent: { type: Boolean, default: false }
-});
+}, { optimisticConcurrency: true });
 
 OrderSchema.index(
     { stripeSessionId: 1 },
-    { unique: true, sparse: true }
+    { unique: true, sparse: true, name: 'stripe_session_unique_sparse' }
 );
 
 OrderSchema.index({ invoiceStatus: 1, date: -1 });
+OrderSchema.index({ invoicePending: 1, invoiceRetryAt: 1 });
+OrderSchema.index({ userId: 1, date: -1 });
+OrderSchema.index({ email: 1, userId: 1 });
+OrderSchema.index({ checkoutRequestId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Order', OrderSchema);

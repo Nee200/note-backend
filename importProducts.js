@@ -1,11 +1,11 @@
-require('dotenv').config();
+const maintenance = require('./scripts/maintenance').prepare({ task: 'catalog-import' });
 const mongoose = require('mongoose');
 const fs = require('fs');
 const Product = require('./models/Product');
 
 async function importProducts() {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {});
+
         console.log('MongoDB connected for import...');
 
         const rawData = fs.readFileSync('products.json', 'utf8');
@@ -15,11 +15,11 @@ async function importProducts() {
         }
 
         console.log(`Found ${productsArray.length} products to import.`);
-        await Product.deleteMany({});
-        console.log('Cleared existing products.');
-
-        await Product.insertMany(productsArray);
-        const importedCount = await Product.countDocuments({});
+        for (const product of productsArray) await new Product(product).validate();
+        if (!maintenance.apply) { console.log('Validierter Trockenlauf; kein Schreibzugriff.'); return; }
+        await mongoose.connect(process.env.MONGO_URI);
+        await Product.bulkWrite(productsArray.map(product => ({ updateOne: { filter: { id: product.id }, update: { $set: product }, upsert: true } })));
+        const importedCount = await Product.countDocuments({ id: { $in: productsArray.map(product => product.id) } });
         if (importedCount !== productsArray.length) {
             throw new Error(`Product import incomplete: expected ${productsArray.length}, found ${importedCount}.`);
         }

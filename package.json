@@ -5,17 +5,19 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test:syntax": "node --check server.js && node --check models/User.js && node --check models/Product.js && node --check models/Order.js && node --check models/OrderCounter.js && node --check models/Invoice.js && node --check models/InvoiceCounter.js && node --check services/orderNumberService.js && node --check services/invoiceService.js && node --check scripts/simulate-invoice-flow.js && node --check models/Review.js && node --check models/Subscriber.js",
+    "test:syntax": "node scripts/check-syntax.js",
     "test:invoice": "node --test test/invoiceService.test.js",
     "invoice:sample": "node scripts/render-sample-invoice.js",
     "invoice:simulate": "node scripts/simulate-invoice-flow.js",
     "test:audit": "npm audit --omit=dev",
     "import:new-arrivals": "node scripts/upsert-new-arrivals.js",
+    "import:autoduft": "node scripts/upsert-autoduft.js",
     "import:bestseller-images": "node scripts/upsert-bestseller-images.js",
     "update:standard-prices": "node scripts/update-standard-prices.js",
     "sync:bestsellers": "node scripts/sync-curated-bestsellers.js",
     "smoke": "node scripts/smoke-backend.js",
-    "smoke:checkout:safe": "node scripts/smoke-checkout-safe.js"
+    "smoke:checkout:safe": "node scripts/smoke-checkout-safe.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.3.0",
@@ -28,8 +30,18 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.2",
+    "otplib": "13.5.0",
     "pdfkit": "^0.17.2",
     "resend": "^6.20.0",
     "stripe": "^20.4.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "11.2.0"
+  },
+  "overrides": {
+    "qs": "6.16.0"
+  },
+  "engines": {
+    "node": ">=24.20 <25"
   }
 }
