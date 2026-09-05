@@ -8,7 +8,7 @@ const VariantSchema = new mongoose.Schema({
 const ProductSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true, match: /^[A-Z0-9_-]{1,40}$/ },
     name: { type: String, required: true, maxlength: 120 },
-    category: { type: String, enum: ['men', 'women', 'unisex', 'autoduft'] },
+    category: { type: String, enum: ['men', 'women', 'unisex', 'autoduft', 'car-fragrance'] },
     inspiredBy: String,
     description: String,
     longDescription: String,

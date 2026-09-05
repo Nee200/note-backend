@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const subscriberSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     status: { type: String, enum: ['pending', 'active', 'unsubscribed'], default: 'pending' },
-    code: { type: String, unique: true, sparse: true, trim: true },
+    code: { type: String, trim: true },
     discount: { type: Number, default: 5, min: 0, max: 100 }, // percent
     freeShipping: { type: Boolean, default: false },
     used: { type: Boolean, default: false },
@@ -25,5 +25,6 @@ const subscriberSchema = new mongoose.Schema({
 });
 
 subscriberSchema.index({ purgeAt: 1 }, { expireAfterSeconds: 0 });
+subscriberSchema.index({ code: 1 }, { unique: true, sparse: true, name: 'subscriber_code_unique_sparse' });
 
 module.exports = mongoose.model('Subscriber', subscriberSchema);

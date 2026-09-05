@@ -71,7 +71,7 @@ const OrderSchema = new mongoose.Schema({
 
 OrderSchema.index(
     { stripeSessionId: 1 },
-    { unique: true, sparse: true }
+    { unique: true, sparse: true, name: 'stripe_session_unique_sparse' }
 );
 
 OrderSchema.index({ invoiceStatus: 1, date: -1 });
