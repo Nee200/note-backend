@@ -50,6 +50,8 @@ const rateLimit = require('express-rate-limit');
 const rateKey = req => require('express-rate-limit').ipKeyGenerator(req.noteClientIP || req.ip);
 const { MongoRateStore } = require('./middleware/mongoRateStore');
 const adminAuthenticator = require('./services/adminAuth').createAdminAuthenticator(env);
+const adminEnrollment = require('./services/adminEnrollment').createAdminEnrollment({ secret: env.JWT_SECRET, reserved: adminAuthenticator.hasAccount });
+const adminCredentialVersion = name => adminAuthenticator.hasAccount(name) ? Promise.resolve(adminAuthenticator.fingerprint(name)) : adminEnrollment.fingerprint(name);
 const {
     supplierEntries,
     findSupplierEntryById,
@@ -423,7 +425,7 @@ function sanitizeQuantity(value) {
     return quantity;
 }
 
-function csrfSubject(req) { return [req?.userSession?.jti || '', req?.adminSession?.jti || ''].join(':'); }
+function csrfSubject(req) { return [req?.userSession?.jti || '', req?.adminSession?.jti || '', crypto.createHash('sha256').update(String(parseCookies(req).admin_setup || '')).digest('hex')].join(':'); }
 function generateCsrfToken(req) {
     const nonce = crypto.randomBytes(24).toString('hex');
     return nonce + '.' + crypto.createHmac('sha256', JWT_SECRET).update(nonce + ':' + csrfSubject(req)).digest('hex');
@@ -792,7 +794,7 @@ app.use((req, res, next) => {
     if (['/health', '/ready', '/webhook'].includes(req.path)) return next();
     const cookies = parseCookies(req);
     Promise.all([sessionService.resolve(cookies[USER_TOKEN_COOKIE]), sessionService.resolve(cookies[ADMIN_TOKEN_COOKIE])])
-        .then(([user, admin]) => { req.userSession = user?.role !== 'admin' ? user : null; req.adminSession = admin?.role === 'admin' && adminAuthenticator.hasAccount(admin.adminId) && admin.credentialVersion === adminAuthenticator.fingerprint(admin.adminId) ? admin : null; next(); }).catch(next);
+        .then(async ([user, admin]) => { req.userSession = user?.role !== 'admin' ? user : null; req.adminSession = admin?.role === 'admin' && admin.credentialVersion && admin.credentialVersion === await adminCredentialVersion(admin.adminId) ? admin : null; next(); }).catch(next);
 });
 app.use(ensureCsrfCookie);
 // Webhook-Route MUSS vor app.use(express.json()) definiert werden
@@ -1129,12 +1131,30 @@ app.post('/api/view-product', (req, res) => res.status(410).json({ disabled: tru
 app.post('/admin/login', (req, res) => res.status(410).send('Diese Anmelderoute wurde entfernt.'));
 
 // --- NEW API-based Admin Routes ---
-app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
-    const adminId = await adminAuthenticator.authenticate(req.body);
-    if (!adminId) return res.status(401).json({ error: 'Benutzername, Passwort oder Sicherheitscode ungültig.' });
-    const token = await sessionService.issue({ role: 'admin', adminId, credentialVersion: adminAuthenticator.fingerprint(adminId) }, 3600);
+async function issueAdmin(res, adminId) {
+    const token = await sessionService.issue({ role: 'admin', adminId, credentialVersion: await adminCredentialVersion(adminId) }, 3600);
     res.cookie(ADMIN_TOKEN_COOKIE, token, getAdminCookieOptions());
     res.json({ success: true, features: { invoices: INVOICES_ENABLED } });
+}
+app.post('/api/admin/login', adminAuthLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    const { username, password, otp } = req.body;
+    const adminId = await adminAuthenticator.authenticate(req.body) || await adminEnrollment.authenticate(username, password, otp);
+    if (!adminId) {
+        const setupToken = await adminEnrollment.begin(username, password);
+        if (setupToken) {
+            await sessionService.revoke(req.adminSession);
+            res.clearCookie(ADMIN_TOKEN_COOKIE, { ...getAdminCookieOptions(), maxAge: undefined });
+            res.cookie('admin_setup', setupToken, { ...getAdminCookieOptions(), maxAge: adminEnrollment.setupSeconds * 1000 });
+            return res.json({ setupRequired: true, step: 'password' });
+        }
+    }
+    if (!adminId) return res.status(401).json({ error: 'Benutzername, Passwort oder Sicherheitscode ungültig.' });
+    await issueAdmin(res, adminId);
+});
+
+require('./routes/adminEnrollment').registerAdminEnrollment(app, {
+    enrollment: adminEnrollment, limiter: adminAuthLimiter, isAdmin, requireTrustedOrigin, requireCsrfToken,
+    parseCookies, cookieOptions: getAdminCookieOptions, issueAdmin
 });
 
 app.post('/api/admin/logout', requireTrustedOrigin, requireCsrfToken, async (req, res) => {
