@@ -20,6 +20,7 @@ async function start() {
                 ['notifications', () => app.locals.notificationService.processPending()],
                 ['invoices', () => app.locals.invoiceRepairService.processPending()],
                 ['newsletter', () => app.locals.newsletterService.processPending()],
+                ['withdrawals', () => app.locals.withdrawalService.processPending()],
                 ['mail', () => app.locals.mailService.processPending()],
                 ['checkout', () => app.locals.checkoutService.reconcileExpired()]
             ]) {

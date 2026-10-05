@@ -171,6 +171,12 @@ const newsletterLimiter = rateLimit({
     message: { error: 'Zu viele Newsletter-Anmeldungen. Bitte versuche es später erneut.' }
 });
 
+const withdrawalLimiter = rateLimit({
+    store: new MongoRateStore('withdrawalLimiter'), keyGenerator: rateKey,
+    windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
+    message: { error: 'Zu viele Übermittlungen. Bitte kurz warten oder deinen Widerruf per E-Mail an info@note-fragrances.de senden.' }
+});
+
 const couponLimiter = rateLimit({
     store: new MongoRateStore('couponLimiter'), keyGenerator: rateKey,
     windowMs: 15 * 60 * 1000,
@@ -1198,6 +1204,11 @@ app.get('/api/admin/audit', async (req, res) => {
     const page = Math.max(1, Math.min(10000, Number.parseInt(req.query.page, 10) || 1));
     const entries = await require('./models/AdminAudit').find().sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 50).limit(51).lean();
     res.json({ entries: entries.slice(0, 50), page, hasMore: entries.length > 50 });
+});
+
+app.locals.withdrawalService = require('./routes/withdrawals').registerWithdrawalRoutes(app, {
+    resend, limiter: withdrawalLimiter, adminWriteLimiter, requireTrustedOrigin, requireCsrfToken,
+    sanitizeEmail, escapeHtml, renderBrandEmail, notificationEmail: INTERNAL_ORDER_NOTIFICATION_EMAIL, isAdmin
 });
 
 app.get('/api/admin/id-mapping', async (req, res) => {
