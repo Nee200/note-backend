@@ -25,7 +25,7 @@ function createCartService({ Product, resolveAutoduftItem, resolveSummerBundleIt
             const bundleMatch = item.id.match(/^SUMMERBUNDLE-(30|50)$/i);
             if (bundleMatch) {
                 const bundle = await resolveSummerBundleItem(item, Number(bundleMatch[1]));
-                for (const product of bundle.selectedProducts) add({ product, variant: bundle.size, quantity, unitAmountCents: bundle.pricePerBottleCents, description: `${product.name} (${bundle.size}ml) · Sommerbundle` });
+                for (const product of bundle.selectedProducts) add({ product, variant: bundle.size, quantity, unitAmountCents: bundle.pricePerBottleCents, description: `${product.name} (${bundle.size}ml) · Duft-Trio` });
                 continue;
             }
             const match = item.id.match(/^([A-Z0-9_-]{1,40})-(30|50|100)$/i);

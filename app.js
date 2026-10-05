@@ -1967,7 +1967,7 @@ async function resolveSummerBundleItem(item, size) {
         || new Set(selectionIds).size !== 3
         || selectionIds.some((id) => !/^[A-Z0-9_-]{1,32}$/.test(id))
     ) {
-        const error = new Error('Bitte wähle genau drei unterschiedliche Düfte für das Sommerbundle.');
+        const error = new Error('Bitte wähle genau drei unterschiedliche Düfte für das Duft-Trio.');
         error.statusCode = 400;
         throw error;
     }
