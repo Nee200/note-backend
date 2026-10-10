@@ -937,7 +937,7 @@ app.use('/api/admin', (req, res, next) => {
     if (!isAdmin(req) || ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || ['/login', '/logout'].includes(req.path)) return next();
     const Audit = require('./models/AdminAudit');
     const details = {};
-    for (const key of ['ids', 'applyToAll', 'price30', 'price50', 'originalPrice30', 'originalPrice50', 'status', 'bestseller', 'newArrival']) if (req.body[key] !== undefined) details[key] = req.body[key];
+    for (const key of ['ids', 'applyToAll', 'price6', 'price10', 'price14', 'price30', 'price50', 'originalPrice30', 'originalPrice50', 'status', 'bestseller', 'newArrival']) if (req.body[key] !== undefined) details[key] = req.body[key];
     Audit.create({ actor: req.adminSession.adminId, action: req.method + ' ' + req.path, target: req.path, details: { request: details, outcome: 'requested' } }).then(entry => {
         res.once('finish', () => Audit.updateOne({ _id: entry._id }, { $set: { 'details.httpStatus': res.statusCode, 'details.outcome': res.statusCode < 400 ? 'completed' : 'rejected' } }).catch(error => console.error('Audit completion:', error.message)));
         next();
@@ -1377,6 +1377,16 @@ app.put('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requ
 
     try {
         const { name, inspiredBy, description, category, price30, price50, originalPrice30, originalPrice50 } = req.body;
+        const existing = await Product.findOne({ id: req.params.id }, 'id category');
+        if (!existing) return res.status(404).json({ error: 'Produkt nicht gefunden' });
+        const isRoller = existing.category === 'duftroller';
+        if (isRoller && ([price30, price50, originalPrice30, originalPrice50].some(value => value !== undefined)
+            || (category !== undefined && category !== 'duftroller'))) {
+            return res.status(400).json({ error: 'Duftroller haben die Größen 6, 10 und 14 ml. Bitte die passenden Preisfelder verwenden.' });
+        }
+        if (!isRoller && ['price6', 'price10', 'price14'].some(field => req.body[field] !== undefined)) {
+            return res.status(400).json({ error: 'Diese Preisfelder sind nur für Duftroller vorgesehen.' });
+        }
 
         const updateData = {};
         if (name !== undefined) {
@@ -1387,7 +1397,7 @@ app.put('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requ
         if (inspiredBy !== undefined) updateData.inspiredBy = sanitizeText(inspiredBy, 160);
         if (description !== undefined) updateData.description = sanitizeText(description, 1200);
         if (category !== undefined) {
-            const safeCategory = sanitizeCategory(category);
+            const safeCategory = isRoller && category === 'duftroller' ? category : sanitizeCategory(category);
             if (!safeCategory) return res.status(400).json({ error: 'Kategorie ist ungültig.' });
             updateData.category = safeCategory;
         }
@@ -1398,6 +1408,12 @@ app.put('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requ
         if (req.body.newArrival !== undefined) updateData.newArrival = req.body.newArrival === true;
 
         // Variants
+        for (const size of ['6', '10', '14']) {
+            if (req.body[`price${size}`] === undefined) continue;
+            const parsed = parseMoneyValue(req.body[`price${size}`]);
+            if (parsed === undefined) return res.status(400).json({ error: `Preis ${size} ml ist ungültig.` });
+            updateData[`variants.${size}.price`] = parsed;
+        }
         if (price30 !== undefined) {
             const parsed = parseMoneyValue(price30);
             if (parsed === undefined) return res.status(400).json({ error: 'Preis 30ml ist ungültig.' });
@@ -1436,7 +1452,7 @@ app.put('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requ
     }
 });
 
-// Bulk price update – updates any subset of products (or ALL if ids array is empty/missing)
+// Bulk 30/50 ml prices apply to perfumes; accessory prices use their own sizes.
 app.put('/api/admin/products-bulk', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
     if (!isAdmin(req)) {
         return res.status(401).json({ error: 'Not authorized' });
@@ -1479,7 +1495,8 @@ app.put('/api/admin/products-bulk', adminWriteLimiter, requireTrustedOrigin, req
             return res.status(400).json({ error: 'Eine gültige Produktauswahl oder die ausdrückliche Aktion Alle Produkte ist erforderlich.' });
         }
         if (req.body.applyToAll === true && Array.isArray(ids) && ids.length) return res.status(400).json({ error: 'Gesamtauswahl und einzelne IDs dürfen nicht kombiniert werden.' });
-        const filter = req.body.applyToAll === true ? {} : { id: { $in: safeIds } };
+        if (safeIds.includes('DUFTROLLER')) return res.status(400).json({ error: 'Duftroller-Preise bitte einzeln für 6, 10 oder 14 ml bearbeiten.' });
+        const filter = req.body.applyToAll === true ? { category: { $in: ['men', 'women', 'unisex'] } } : { id: { $in: safeIds } };
 
         const result = await Product.updateMany(filter, { $set: updateData }, { runValidators: true });
         productCache = null; // Invalidate cache
@@ -1993,6 +2010,7 @@ async function resolveSummerBundleItem(item, size) {
 const checkoutService = require('./services/checkoutService').createCheckoutService({ stripe, onCompleted: session => webhookService.receive({ id: `reconcile:${session.id}:${session.payment_status}`, type: 'checkout.session.completed', created: Math.floor(Date.now() / 1000), livemode: session.livemode, data: { object: { id: session.id } } }) });
 const cartService = require('./services/cartService').createCartService({
     Product, resolveAutoduftItem, resolveSummerBundleItem, sanitizeQuantity,
+    resolveDuftrollerItem: require('./services/duftrollerService').createDuftrollerResolver({ Product }),
     mapSupplier: product => {
         const prefix = String(product.id || '').startsWith('G') ? 'M' : String(product.id || '').startsWith('L') ? 'W' : '';
         return prefix && product.inspiredBy ? findBestSupplierMatchByInspiredBy(product.inspiredBy, prefix)?.supplierId : '';

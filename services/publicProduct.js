@@ -6,7 +6,7 @@ function imagePath(value) {
 }
 function publicProduct(product, summary = { average: 0, count: 0 }) {
     const variants = {};
-    for (const size of ['30', '50', '100']) {
+    for (const size of product.category === 'duftroller' ? ['6', '10', '14'] : ['30', '50', '100']) {
         const value = product.variants?.[size];
         if (!value || !Number.isFinite(value.price) || value.price <= 0) continue;
         variants[size] = { price: value.price, ...(Number.isFinite(value.originalPrice) && value.originalPrice > value.price ? { originalPrice: value.originalPrice } : {}) };

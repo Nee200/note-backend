@@ -8,11 +8,13 @@ const Product = require('../models/Product');
 const PRICE_30 = 34.99;
 const PRICE_50 = 44.99;
 const applyChanges = process.argv.includes('--apply');
+const perfumeCategories = ['men', 'women', 'unisex'];
 
 function updateCatalog(products) {
     let changed = 0;
 
     products.forEach((product) => {
+        if (!perfumeCategories.includes(product.category)) return;
         let productChanged = false;
 
         if (product.variants?.['30']) {
@@ -48,6 +50,7 @@ async function run() {
 
     const databaseTotal = await Product.countDocuments({});
     const databaseNeedsUpdate = await Product.countDocuments({
+        category: { $in: perfumeCategories },
         $or: [
             { 'variants.30.price': { $ne: PRICE_30 } },
             { 'variants.50.price': { $ne: PRICE_50 } },
@@ -67,7 +70,7 @@ async function run() {
     fs.writeFileSync(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8');
 
     const result = await Product.updateMany(
-        {},
+        { category: { $in: perfumeCategories } },
         {
             $set: {
                 'variants.30.price': PRICE_30,
@@ -81,6 +84,7 @@ async function run() {
     );
 
     const remaining = await Product.countDocuments({
+        category: { $in: perfumeCategories },
         $or: [
             { 'variants.30.price': { $ne: PRICE_30 } },
             { 'variants.50.price': { $ne: PRICE_50 } },

@@ -8,7 +8,7 @@ const VariantSchema = new mongoose.Schema({
 const ProductSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true, match: /^[A-Z0-9_-]{1,40}$/ },
     name: { type: String, required: true, maxlength: 120 },
-    category: { type: String, enum: ['men', 'women', 'unisex', 'autoduft', 'car-fragrance'] },
+    category: { type: String, enum: ['men', 'women', 'unisex', 'autoduft', 'car-fragrance', 'duftroller'] },
     inspiredBy: String,
     description: String,
     longDescription: String,
@@ -21,6 +21,9 @@ const ProductSchema = new mongoose.Schema({
     bestseller: { type: Boolean, default: false },
     newArrival: { type: Boolean, default: false },
     variants: {
+        6: VariantSchema,
+        10: VariantSchema,
+        14: VariantSchema,
         30: VariantSchema,
         50: VariantSchema,
         100: VariantSchema
@@ -28,7 +31,10 @@ const ProductSchema = new mongoose.Schema({
 });
 
 ProductSchema.pre('validate', function () {
-    if (!['30', '50', '100'].some(size => this.variants?.[size]?.price > 0)) this.invalidate('variants', 'Mindestens eine gültige Variante ist erforderlich.');
+    const sizes = this.category === 'duftroller' ? ['6', '10', '14'] : ['30', '50', '100'];
+    if (!sizes.some(size => this.variants?.[size]?.price > 0)) this.invalidate('variants', 'Mindestens eine gültige Variante ist erforderlich.');
+    const otherSizes = this.category === 'duftroller' ? ['30', '50', '100'] : ['6', '10', '14'];
+    if (otherSizes.some(size => this.variants?.[size])) this.invalidate('variants', 'Die Flaschengrößen passen nicht zu dieser Produktkategorie.');
 });
 
 module.exports = mongoose.model('Product', ProductSchema);

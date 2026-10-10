@@ -1,0 +1,27 @@
+{
+  "id": "DUFTROLLER",
+  "name": "NØTE. Duftroller",
+  "category": "duftroller",
+  "description": "Dein Lieblingsduft im Roll-on – mit frei wählbarer Duftfüllung in 6, 10 oder 14 ml.",
+  "longDescription": "Der NØTE. Duftroller begleitet dich durch den Tag. Wähle deine Duftnote und die passende Größe: 6 ml mit weißem Deckel, 10 ml mit schwarzem Deckel oder 14 ml mit goldenem Deckel. Mit der Roll-on-Kugel lässt sich der Duft gezielt auftragen.",
+  "notes": {
+    "head": "Abhängig von der gewählten Duftfüllung",
+    "heart": "Abhängig von der gewählten Duftfüllung",
+    "base": "Abhängig von der gewählten Duftfüllung"
+  },
+  "images": [
+    "images_website/duftroller/note-duftroller-6-closed-v1.webp",
+    "images_website/duftroller/note-duftroller-6-open-v1.webp",
+    "images_website/duftroller/note-duftroller-10-closed-v1.webp",
+    "images_website/duftroller/note-duftroller-10-open-v1.webp",
+    "images_website/duftroller/note-duftroller-14-closed-v1.webp",
+    "images_website/duftroller/note-duftroller-14-open-v1.webp"
+  ],
+  "variants": {
+    "6": { "price": 12.5 },
+    "10": { "price": 16 },
+    "14": { "price": 19.5 }
+  },
+  "bestseller": false,
+  "newArrival": true
+}

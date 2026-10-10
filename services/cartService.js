@@ -1,22 +1,27 @@
-function createCartService({ Product, resolveAutoduftItem, resolveSummerBundleItem, sanitizeQuantity, mapSupplier }) {
+function createCartService({ Product, resolveAutoduftItem, resolveDuftrollerItem, resolveSummerBundleItem, sanitizeQuantity, mapSupplier }) {
     const fail = (message, statusCode = 400) => { throw Object.assign(new Error(message), { statusCode }); };
     async function calculate(items) {
         if (!Array.isArray(items) || !items.length || items.length > 50) fail('Warenkorb ist leer oder ungültig.');
         const lines = []; const quantities = new Map();
-        function add({ product, variant, quantity, unitAmountCents, description, productId, sku, supplierId }) {
+        function add({ product, variant, quantity, unitAmountCents, description, productId, sku, supplierId, imageUrl }) {
             if (!Number.isSafeInteger(unitAmountCents) || unitAmountCents <= 0) fail('Für dieses Produkt ist kein gültiger Preis hinterlegt.', 409);
             const id = productId || product.id;
             const stockKey = `${id}:${variant}`;
             const totalQuantity = (quantities.get(stockKey) || 0) + quantity;
             if (totalQuantity > 20) fail('Pro Produktvariante sind höchstens 20 Stück möglich.');
             quantities.set(stockKey, totalQuantity);
-            const line = { productId: id, sku: sku || `${id}-${variant}`, variant: String(variant), internalId: id, supplierId: supplierId || mapSupplier(product) || '', description, quantity, unitAmountCents, lineTotalCents: unitAmountCents * quantity, amount_total: unitAmountCents * quantity, currency: 'eur', imageUrl: product.images?.[0] || '' };
+            const line = { productId: id, sku: sku || `${id}-${variant}`, variant: String(variant), internalId: id, supplierId: supplierId || mapSupplier(product) || '', description, quantity, unitAmountCents, lineTotalCents: unitAmountCents * quantity, amount_total: unitAmountCents * quantity, currency: 'eur', imageUrl: imageUrl ?? product.images?.[0] ?? '' };
             lines.push(line);
         }
         for (const item of items) {
             if (!item || typeof item.id !== 'string' || item.id.length > 80) fail('Ungültige Produkt-ID.');
             const quantity = sanitizeQuantity(item.quantity);
             if (!quantity) fail('Ungültige Menge.');
+            const roller = await resolveDuftrollerItem(item);
+            if (roller) {
+                add({ product: roller.product, productId: 'DUFTROLLER', variant: `${roller.size}-${roller.scentId}`, quantity, unitAmountCents: roller.priceCents, description: roller.description, supplierId: mapSupplier(roller.scentProduct), imageUrl: roller.imageUrl });
+                continue;
+            }
             const autoduft = await resolveAutoduftItem(item);
             if (autoduft) {
                 add({ product: autoduft.product, productId: 'AUTODUFT', variant: autoduft.scentId, quantity, unitAmountCents: autoduft.priceCents, description: `${autoduft.checkoutName} · ${autoduft.checkoutDescription}` });
