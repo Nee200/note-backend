@@ -1,0 +1,95 @@
+NØTE. Duftroller – vorbereiteter Livegang, 16. Oktober 2026
+
+BILDUMFANG DIESES RELEASES
+Ersetzt das Vorbereitungspaket vom 15. Oktober 2026. Für den Livegang nur
+duftroller-release-2026-10-16-ohne-neue-parfuembilder verwenden.
+Die zusätzlich generierten Herren-/Damenduftbilder (G/L > 20, natural-v*)
+werden nicht veröffentlicht. Bestehende Livebilder G1–G20 und L1–L20 sowie
+Duftroller- und Herbstbilder bleiben enthalten. Die Originaldateien liegen weiter
+unverändert im Workspace. Kein Import der lokalen Parfüm-Bildzuordnungen.
+
+STATUS
+Dieses Paket ist lokal vorbereitet. Es wurde nichts hochgeladen, keine
+Produktionsdatenbank geändert und keine echte Zahlung ausgelöst.
+Frontend: Cloudflare Worker note-frontend mit Static Assets.
+Backend: Render, https://note-backend-5gy0.onrender.com.
+Öffentlicher Shop: https://www.note-fragrances.de.
+
+PAKET
+backend/: ausführbarer Backend-Stand, gesperrter Dependency-Lock und gezielter Import.
+frontend/: fertiger dist-Build samt Worker und wrangler.json OHNE erneuten Build.
+release-manifest.json: SHA-256 jeder Paketdatei, Quellstand und Git-Basisstände.
+Der freigegebene Quellstand liegt in beiden Git-Repositories auf dem Branch
+codex/duftroller-release-2026-10-16. Für einen Build aus Git im Frontend npm ci
+und npm run build ausführen. Die zurückgestellten Bilder sind nicht im Branch.
+Kein pauschales git add . im ursprünglichen Workspace; dort liegen zusätzlich
+zahlreiche unversionierte Bilddateien für eine spätere Veröffentlichung.
+Hosting-Secrets sind absichtlich nicht enthalten und bleiben im bisherigen Hosting.
+
+PRODUKT
+DUFTROLLER, Kategorie duftroller. Varianten: 6 ml = 12,50 EUR,
+10 ml = 16,00 EUR, 14 ml = 19,50 EUR. Duft wird separat gewählt.
+Der Import ändert ausschließlich den Produktdatensatz mit id DUFTROLLER.
+Er importiert keine Beispielprodukte, Kunden, Bestellungen oder sonstigen Kataloge.
+
+VOR DEM ECHTEN LIVE-SCHRITT
+1. Beabsichtigtes Render-Projekt und produktive MONGO_URI-Zuordnung im Hosting
+   kontrollieren. Lokale .env ist nicht automatisch ein Beleg für das Live-Ziel.
+2. Aktuelle Sicherung nach docs/BACKUP_RECOVERY.md im Workspace vorhalten.
+   Bisherige Backend-/Worker-Release-IDs für einen Rückweg festhalten.
+3. Node 24.20.x verwenden. Bestehende Provider-, Proxy-, Rechnungs- und Login-Secrets
+   unverändert übernehmen. LOCAL_DEV_SAFE_MODE und CHECKOUT_DRY_RUN dürfen live
+   nicht eingeschaltet sein. Keine Testskripte gegen Produktionsdaten starten.
+   server.js startet Hintergrundverarbeitung für Zahlungen und E-Mails; niemals
+   für einen lokalen Probelauf mit produktiven Zugangsdaten starten.
+
+VORBEREITETER ABLAUF – ERST BEIM AUTORISIERTEN LIVEGANG AUSFÜHREN
+A. Diesen Backend-Stand in Render bereitstellen (bisherigen Deploymentweg verwenden).
+   Install: npm ci --omit=dev
+   Start: node server.js
+   Readiness: GET https://note-backend-5gy0.onrender.com/ready muss HTTP 200 liefern.
+   Die Anwendung initialisiert ihre Indizes; das Importscript tut das bewusst nicht.
+B. Den zugehörigen vorbereiteten Frontend-Stand veröffentlichen.
+   Aus dem ORIGINAL-Frontend-Workspace (Wrangler ist dort installiert):
+   node node_modules/wrangler/bin/wrangler.js deploy --config <PAKET>/frontend/wrangler.json
+   <PAKET> durch den absoluten Releaseordner ersetzen. Kein deploy ohne --dry-run
+   während der Vorbereitung. Bestehendes PROXY_SHARED_SECRET im Worker beibehalten.
+   Dadurch sind die neuen Produktbilder bereits verfügbar, bevor der Import den
+   Roller im Katalog sichtbar macht. Bis zum Import ist er noch nicht kaufbar.
+C. In einer Shell des passenden Backend-Releases mit dessen bestehender MONGO_URI:
+   node scripts/upsert-duftroller.js
+   Das ist ein Trockenlauf. Ausgabe prüfen: Ziel-Datenbank, Produkt, drei Preise,
+   Bildpfade. Kein --apply bedeutet keine Produktänderung.
+   Alternativ lokal eine ausdrücklich ausgewählte geschützte Konfiguration:
+   node scripts/upsert-duftroller.js --env C:/Secure/note-production.env
+   Dieser Pfad ist ein Beispiel, keine vorhandene oder verifizierte Secret-Datei.
+D. Erst nach Zielkontrolle den Import durchführen:
+   node scripts/upsert-duftroller.js --apply --host <EXAKTER_HOST_AUS_MONGO_URI> --database <EXAKTER_DB_NAME>
+   Bei lokaler Ausführung denselben --env-Pfad aus C ergänzen. Die Platzhalter
+   müssen exakt mit der bestätigten URI übereinstimmen, sonst verweigert das Script
+   den Schreibzugriff. Keine Passwörter in Befehle oder Release-Dokumente kopieren.
+   Den Import einmal ausführen; Wiederholung ist für denselben Datensatz möglich.
+E. Nach 65 Sekunden den öffentlichen Katalog erneut abrufen. Die Abschlussprüfung
+   unten umgeht den HTTP-Cache; der Backend-Produktcache läuft nach 60 Sekunden ab.
+   Im öffentlichen /api/products müssen DUFTROLLER und alle drei Preise erscheinen.
+   B–E in einem abgestimmten Veröffentlichungsfenster durchführen.
+F. Nur lesende Abschlussprüfung aus dem Paket:
+   node verify-live.mjs --out live-verification.json
+   Prüft öffentliche Produktdaten, Preise, Seite und drei Hauptbilder. Exit 0
+   bestätigt diese GET-Prüfungen, NICHT Zahlung oder Rechnungsversand.
+   Danach im Browser alle Größen/Düfte wählen, Warenkorb und Summe prüfen.
+   Einen echten Zahlungs-/Webhook-/Mailtest nur als separat autorisierten Vorgang
+   durchführen; nicht durch Aufruf der synthetischen Testskripte in Produktion.
+
+RÜCKWEG
+Bei einem Fehler neue Verkäufe des Rollers zunächst kontrolliert stoppen und Ursache
+prüfen. Nicht die gesamte Datenbank zurückspielen oder neue Bestellungen löschen.
+Vorherige Frontend-/Backend-Releases nur abgestimmt zurücksetzen; bereits bezahlte
+Rollerbestellungen, Webhooks und Rechnungen müssen weiter verarbeitet werden können.
+Der neue Produktdatensatz allein rechtfertigt keine Rücksetzung anderer Geschäftsdaten.
+
+LOKALE NACHWEISE
+Die Duftroller-Integration nach Import-Härtung umfasst neun erfolgreiche Tests,
+einschließlich verbundenem Trockenlauf ohne Datenänderungen, wiederholtem Import,
+Checkout, simuliertem Zahlungsereignis und Rechnung. Weitere aktuelle Ergebnisse
+und Veröffentlichungstrockenlauf stehen im begleitenden preparation-report.json.
