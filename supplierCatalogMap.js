@@ -349,10 +349,18 @@ M347 Gucci Guilty Absolu
 M348 Xerjoff Louis XV 1722 Rose
 M349 Matiere Premiere Vanilla Powder
 M350 Dior Gris Dior
-M351 Marc Gebauer Orange Flamingo
+M351 Mery Perfume Orange Cream
 M352 Memo Paris African Leather
 M353 Louis Vuitton Ambre Levant
 M354 Louis Vuitton Attrape Reves
+M355 Hersh Lahab
+M356 Hersh Mehwar
+M357 Versace Eros Flame
+M358 Essential Parfums Bois Imperial
+M359 Marc Gebauer Orange Flamingo
+M360 Paco Rabanne One Million Black
+M361 Tiziana Terenzi Kirke Overdose
+M362 Le Labo Another 13
 W1 Escada Magnetisim
 W2 Dior Hypnotic Poison
 W3 Prada Candy
@@ -568,6 +576,10 @@ W212 Narciso Rodriguez for Her Pure Musc
 W213 Louis Vuitton Attrape Reves
 W214 Hermes Un Jardin Sur le Nil
 W215 Matiere Premiere Vanilla Powder
+W216 Amouage Guidance 46
+W217 Kayali Sparkling Lychee 39
+W218 Ajmal Silk Musk
+W219 Le Labo Another 13
 `;
 
 function normalizeComparableText(value) {

@@ -1,0 +1,354 @@
+[
+  {
+    "id": "G355",
+    "name": "No. G355",
+    "category": "men",
+    "inspiredBy": "Hersh Lahab",
+    "description": "Aromatische Frische mit Grapefruit, würzigem Basilikum und einer markanten Holznote.",
+    "longDescription": "Grüner Basilikum und schwarzer Pfeffer eröffnen eine klare, lebendige Komposition. Grapefruit bringt herbe Helligkeit, während Vetiver und Patchouli für einen trockenen, holzigen Ausklang sorgen.",
+    "notes": {
+      "head": "Basilikum, schwarzer Pfeffer, Vetiver",
+      "heart": "Grapefruit",
+      "base": "Patchouli"
+    },
+    "images": [
+      "images_website/new-arrivals/g355-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G356",
+    "name": "No. G356",
+    "category": "men",
+    "inspiredBy": "Hersh Mehwar",
+    "description": "Helle Blüten und sanfte Holztöne verbinden sich zu einer weichen, modernen Duftsignatur.",
+    "longDescription": "Lindenblüte und Sambac-Jasmin geben den Auftakt. Heliotrop und Orangenblüte bringen eine pudrige Wärme, Vetiver setzt einen grünen Akzent. Moderne Amber- und Holzakkorde lassen den Duft ruhig ausklingen.",
+    "notes": {
+      "head": "Lindenblüte, Sambac-Jasmin",
+      "heart": "Heliotrop, Orangenblüte, Vetiver",
+      "base": "Ambrofix, Georgywood"
+    },
+    "images": [
+      "images_website/new-arrivals/g356-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G357",
+    "name": "No. G357",
+    "category": "men",
+    "inspiredBy": "Versace Eros Flame",
+    "description": "Leuchtende Zitrusnoten treffen auf aromatische Würze und warme Vanillehölzer.",
+    "longDescription": "Zitrone und Mandarine eröffnen den Duft mit heller Frische. Pfeffer und Rosmarin verleihen ihm Charakter, begleitet von Geranie und Rose. Im Ausklang verbinden sich Zedernholz und Patchouli mit Vanille und Tonkabohne.",
+    "notes": {
+      "head": "Zitrone, Mandarine, schwarzer Pfeffer",
+      "heart": "Rosmarin, Geranie, Rose",
+      "base": "Zedernholz, Patchouli, Vanille, Tonkabohne"
+    },
+    "images": [
+      "images_website/new-arrivals/g357-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G358",
+    "name": "No. G358",
+    "category": "men",
+    "inspiredBy": "Essential Parfums Bois Impérial",
+    "description": "Ein klarer, würzig-grüner Holzduft mit Basilikum, Pfeffer und Vetiver.",
+    "longDescription": "Thai-Basilikum und Timut-Pfeffer setzen frische, zitrisch anmutende Akzente. Vetiver und moderne Holznoten geben der Komposition Kontur. Akigalawood, Patchouli und ein warmer Amberakkord bilden den trockenen Ausklang.",
+    "notes": {
+      "head": "Thai-Basilikum, Timut-Pfeffer",
+      "heart": "Vetiver, Georgywood",
+      "base": "Akigalawood, Patchouli, Ambrofix"
+    },
+    "images": [
+      "images_website/new-arrivals/g358-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G359",
+    "name": "No. G359",
+    "category": "men",
+    "inspiredBy": "Paco Rabanne One Million Black",
+    "description": "Warme Ananas, cremige Vanille und dunkles Ebenholz für einen ausdrucksstarken Auftritt.",
+    "longDescription": "Ein goldener Ananasakkord mit gerösteten Facetten eröffnet den Duft. Weiche Vanille verbindet die fruchtige Wärme mit einer dunklen, holzigen Basis. Ebenholz gibt der Komposition ihre markante Tiefe.",
+    "notes": {
+      "head": "Geröstete Ananas",
+      "heart": "Vanille",
+      "base": "Ebenholz"
+    },
+    "images": [
+      "images_website/new-arrivals/g359-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G360",
+    "name": "No. G360",
+    "category": "men",
+    "inspiredBy": "Tiziana Terenzi Kirke Overdose",
+    "description": "Saftige Früchte, opulente Blüten und eine weiche, warme Moschusbasis.",
+    "longDescription": "Passionsfrucht, Pfirsich und Himbeere eröffnen eine üppige, fruchtige Komposition. Jasmin und helle Blüten verleihen ihr eine florale Tiefe. Moschus, Sandelholz und Vanille runden den Duft weich ab, während Patchouli einen dunkleren Akzent setzt.",
+    "notes": {
+      "head": "Passionsfrucht, Pfirsich, Himbeere",
+      "heart": "Jasmin, Gardenie, Maiglöckchen",
+      "base": "Moschus, Sandelholz, Vanille, Patchouli"
+    },
+    "images": [
+      "images_website/new-arrivals/g360-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G361",
+    "name": "No. G361",
+    "category": "men",
+    "inspiredBy": "Le Labo Another 13",
+    "description": "Ein transparenter Moschusduft mit Jasmin, Ambroxid und einem sanft grünen Ausklang.",
+    "longDescription": "Zarte Jasminfacetten treffen auf einen klaren, hautnah wirkenden Moschusakkord. Ambroxid gibt dem Duft eine warme, moderne Präsenz, während Moos eine ruhige grüne Tiefe beisteuert. Eine reduzierte Duftsignatur mit weichem Charakter.",
+    "notes": {
+      "head": "Jasmin",
+      "heart": "Ambroxid, Moschusakkord",
+      "base": "Moos"
+    },
+    "images": [
+      "images_website/new-arrivals/g361-october-2026-v3.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "L216",
+    "name": "No. L216",
+    "category": "women",
+    "inspiredBy": "Amouage Guidance 46",
+    "description": "Ein vielschichtiger Blütenduft mit Birne, Haselnuss und cremigen Hölzern.",
+    "longDescription": "Birne, Haselnuss und Weihrauch eröffnen eine warme, facettenreiche Komposition. Rose, Jasmin und Osmanthus entfalten sich im Herzen, begleitet von einer feinen Safrannote. Sandelholz, Vanille und Amberakkorde lassen den Duft cremig ausklingen.",
+    "notes": {
+      "head": "Birne, Weihrauch, Haselnuss, Rosenwasser",
+      "heart": "Rose, Jasmin, Osmanthus, Safran",
+      "base": "Sandelholz, Vanille, Ambra, Akigalawood"
+    },
+    "images": [
+      "images_website/new-arrivals/l216-october-2026-v3.webp",
+      "images_parfume/parfume_frau_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "L217",
+    "name": "No. L217",
+    "category": "women",
+    "inspiredBy": "Kayali Sparkling Lychee 39",
+    "description": "Spritzige Litschi und saftige Früchte mit zarten Blüten und einer weichen Vanillebasis.",
+    "longDescription": "Litschi, schwarze Johannisbeere, Apfel und Zitrone bilden einen leuchtenden Auftakt. Rose, Veilchen und Jasmin geben dem Duft seine florale Mitte. Vanille, Moschus und sanfte Holznoten runden ihn warm und weich ab.",
+    "notes": {
+      "head": "Litschi, schwarze Johannisbeere, Apfel, Zitrone",
+      "heart": "Rose, Veilchen, Jasmin",
+      "base": "Vanille, Moschus, Amber, Sandelholz"
+    },
+    "images": [
+      "images_website/new-arrivals/l217-october-2026-v3.webp",
+      "images_parfume/parfume_frau_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "L218",
+    "name": "No. L218",
+    "category": "women",
+    "inspiredBy": "Ajmal Silk Musk",
+    "description": "Ein sanfter, blumiger Moschusduft mit warmer Ambernote.",
+    "longDescription": "Helle Blütennoten führen in ein weiches Moschusherz. Ein warmer Amberakkord rundet die ruhige, pudrige Duftidee ab. Silken Musk passt zu Momenten, in denen du eine sanfte Duftsignatur suchst.",
+    "notes": {
+      "head": "Helle Blüten",
+      "heart": "Moschus",
+      "base": "Amber, Moschus"
+    },
+    "images": [
+      "images_website/new-arrivals/l218-october-2026-v2.webp",
+      "images_parfume/parfume_frau_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "L219",
+    "name": "No. L219",
+    "category": "women",
+    "inspiredBy": "Le Labo Another 13",
+    "description": "Ein transparenter Moschusduft mit Jasmin, Ambroxid und einem sanft grünen Ausklang.",
+    "longDescription": "Zarte Jasminfacetten treffen auf einen klaren, hautnah wirkenden Moschusakkord. Ambroxid gibt dem Duft eine warme, moderne Präsenz, während Moos eine ruhige grüne Tiefe beisteuert. Eine reduzierte Duftsignatur mit weichem Charakter.",
+    "notes": {
+      "head": "Jasmin",
+      "heart": "Ambroxid, Moschusakkord",
+      "base": "Moos"
+    },
+    "images": [
+      "images_website/new-arrivals/l219-october-2026-v3.webp",
+      "images_parfume/parfume_frau_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  }
+]
