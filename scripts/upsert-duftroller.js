@@ -13,7 +13,8 @@ async function run() {
         return;
     }
     if (!process.env.MONGO_URI) throw new Error('MONGO_URI ist nicht konfiguriert.');
-    await mongoose.connect(process.env.MONGO_URI);
+    // A connected dry-run must not create collections or indexes as a side effect.
+    await mongoose.connect(process.env.MONGO_URI, { autoCreate: false, autoIndex: false, serverSelectionTimeoutMS: 10000 });
     const existing = await Product.findOne({ id: product.id }, 'id variants images').lean();
     if (!maintenance.apply) {
         console.log(JSON.stringify({ mode: 'dry-run', database: mongoose.connection.name, exists: !!existing, product }, null, 2));

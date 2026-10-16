@@ -91,7 +91,7 @@ test('server resolves every roller size, preserves size/scent/photos and ignores
     for (const [index, item] of quote.items.entries()) {
         const size = ['6', '10', '14'][index];
         assert.match(item.description, new RegExp(`NØTE\\. Duftroller \\(${size} ml\\)`));
-        assert.ok(item.imageUrl.endsWith(`note-duftroller-${size}-closed-v1.webp`));
+        assert.ok(item.imageUrl.endsWith(`note-duftroller-${size}-closed-v3.webp`));
         assert.equal(quote.stripeItems[index].price_data.product_data.metadata.variant, item.variant);
     }
 });
@@ -207,12 +207,23 @@ test('upsert defaults to a catalog-only dry-run, rejects unconfirmed writes and 
     const dryRun = spawnSync(process.execPath, [file], { env: childEnv, encoding: 'utf8', windowsHide: true });
     assert.equal(dryRun.status, 0, dryRun.stderr);
     assert.match(dryRun.stdout, /"database": "not-connected"/);
+    const emptyDatabaseName = 'note-test-duftroller-dry-run-empty';
+    const emptyDatabase = mongoose.connection.getClient().db(emptyDatabaseName);
+    assert.deepEqual(await emptyDatabase.listCollections({}, { nameOnly: true }).toArray(), []);
+    const connectedDryRun = spawnSync(process.execPath, [file], { env: { ...childEnv, MONGO_URI: database.getUri(emptyDatabaseName) }, encoding: 'utf8', windowsHide: true });
+    assert.equal(connectedDryRun.status, 0, connectedDryRun.stderr);
+    assert.match(connectedDryRun.stdout, /"exists": false/);
+    assert.deepEqual(await emptyDatabase.listCollections({}, { nameOnly: true }).toArray(), [], 'Connected dry-run must not create a collection or its indexes');
     const rejected = spawnSync(process.execPath, [file, '--apply'], { env: { ...childEnv, MONGO_URI: env.MONGO_URI }, encoding: 'utf8', windowsHide: true });
     assert.notEqual(rejected.status, 0);
     assert.match(rejected.stderr, /--database und --host/);
     const target = new URL(env.MONGO_URI);
     const count = await Product.countDocuments({});
     await Product.updateOne({ id: 'DUFTROLLER' }, { $set: { 'variants.6.price': 13 } });
+    const existingDryRun = spawnSync(process.execPath, [file], { env: { ...childEnv, MONGO_URI: env.MONGO_URI }, encoding: 'utf8', windowsHide: true });
+    assert.equal(existingDryRun.status, 0, existingDryRun.stderr);
+    assert.match(existingDryRun.stdout, /"exists": true/);
+    assert.equal((await Product.findOne({ id: 'DUFTROLLER' })).variants[6].price, 13, 'Dry-run must not change an existing product');
     for (let run = 0; run < 2; run++) {
         const applied = spawnSync(process.execPath, [file, '--apply', '--host', target.host, '--database', target.pathname.slice(1)], { env: { ...childEnv, MONGO_URI: env.MONGO_URI }, encoding: 'utf8', windowsHide: true });
         assert.equal(applied.status, 0, applied.stderr);
