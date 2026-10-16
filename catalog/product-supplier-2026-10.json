@@ -1,0 +1,4652 @@
+{
+  "version": "10.26",
+  "checkedAt": "2026-10-16",
+  "scope": "Abgleich der Originalduftbezeichnungen; keine Prüfung des tatsächlichen Flascheninhalts. Bestehende G/L-Nummern bleiben unverändert.",
+  "entries": [
+    {
+      "productId": "G1",
+      "expectedInspiredBy": "Abdul Samad Al Qurashi Rannat Khilkhal",
+      "expectedCategory": "men",
+      "supplierId": "M155",
+      "expectedSupplierName": "Abdul Samad Al Qurashi Rannat Khilkhal",
+      "status": "matched"
+    },
+    {
+      "productId": "G2",
+      "expectedInspiredBy": "Acqua Di Parma Fico di Amalfi",
+      "expectedCategory": "men",
+      "supplierId": "M271",
+      "expectedSupplierName": "Acqua Di Parma Fico di Amalfi",
+      "status": "matched"
+    },
+    {
+      "productId": "G3",
+      "expectedInspiredBy": "Acqua Di Parma Mandarino Di Sicilia",
+      "expectedCategory": "men",
+      "supplierId": "M325",
+      "expectedSupplierName": "Acqua Di Parma Mandarino Di Sicilia",
+      "status": "matched"
+    },
+    {
+      "productId": "G4",
+      "expectedInspiredBy": "Acqua Di Parma Mandorlo di Sicilia",
+      "expectedCategory": "men",
+      "supplierId": "M305",
+      "expectedSupplierName": "Acqua Di Parma Mandorlo di Sicilia",
+      "status": "matched"
+    },
+    {
+      "productId": "G5",
+      "expectedInspiredBy": "Ajmal Wisal",
+      "expectedCategory": "men",
+      "supplierId": "M185",
+      "expectedSupplierName": "Ajmal Wisal",
+      "status": "matched"
+    },
+    {
+      "productId": "G6",
+      "expectedInspiredBy": "Al Jaezeera Magic",
+      "expectedCategory": "men",
+      "supplierId": "M258",
+      "expectedSupplierName": "Al Jaezeera Magic",
+      "status": "matched"
+    },
+    {
+      "productId": "G7",
+      "expectedInspiredBy": "Al Wisam Rasai",
+      "expectedCategory": "men",
+      "supplierId": "M119",
+      "expectedSupplierName": "Al Wisam Rasai",
+      "status": "matched"
+    },
+    {
+      "productId": "G8",
+      "expectedInspiredBy": "Amir Al Oud",
+      "expectedCategory": "men",
+      "supplierId": "M219",
+      "expectedSupplierName": "Amir Al Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G9",
+      "expectedInspiredBy": "Amouage Bracken",
+      "expectedCategory": "men",
+      "supplierId": "M107",
+      "expectedSupplierName": "Amouage Bracken",
+      "status": "matched"
+    },
+    {
+      "productId": "G10",
+      "expectedInspiredBy": "Amouage Imitation",
+      "expectedCategory": "men",
+      "supplierId": "M204",
+      "expectedSupplierName": "Amouage Imitation",
+      "status": "matched"
+    },
+    {
+      "productId": "G11",
+      "expectedInspiredBy": "Amouage Interlude",
+      "expectedCategory": "men",
+      "supplierId": "M112",
+      "expectedSupplierName": "Amouage Interlude",
+      "status": "matched"
+    },
+    {
+      "productId": "G12",
+      "expectedInspiredBy": "Amouage Reflection",
+      "expectedCategory": "men",
+      "supplierId": "M66",
+      "expectedSupplierName": "Amouage Reflection",
+      "status": "matched"
+    },
+    {
+      "productId": "G13",
+      "expectedInspiredBy": "Arabian Oud Madawi",
+      "expectedCategory": "men",
+      "supplierId": "M149",
+      "expectedSupplierName": "Arabian Oud Madawi",
+      "status": "matched"
+    },
+    {
+      "productId": "G14",
+      "expectedInspiredBy": "Aramis",
+      "expectedCategory": "men",
+      "supplierId": "M99",
+      "expectedSupplierName": "Aramis",
+      "status": "matched"
+    },
+    {
+      "productId": "G15",
+      "expectedInspiredBy": "Aramis 900",
+      "expectedCategory": "men",
+      "supplierId": "M212",
+      "expectedSupplierName": "Aramis 900",
+      "status": "matched"
+    },
+    {
+      "productId": "G16",
+      "expectedInspiredBy": "Ard Al Khaleej Ghalah Zayed",
+      "expectedCategory": "men",
+      "supplierId": "M142",
+      "expectedSupplierName": "Ard Al Khaleej Ghalah Zayed",
+      "status": "matched"
+    },
+    {
+      "productId": "G17",
+      "expectedInspiredBy": "Ard Al Zaafaran Dirham",
+      "expectedCategory": "men",
+      "supplierId": "M143",
+      "expectedSupplierName": "Ard Al Zaafaran Dirham",
+      "status": "matched"
+    },
+    {
+      "productId": "G18",
+      "expectedInspiredBy": "Ard Al Zaafaran Oud Romance",
+      "expectedCategory": "men",
+      "supplierId": "M144",
+      "expectedSupplierName": "Ard Al Zaafaran Oud Romance",
+      "status": "matched"
+    },
+    {
+      "productId": "G19",
+      "expectedInspiredBy": "Armani Acqua Dio Gio Absolu",
+      "expectedCategory": "men",
+      "supplierId": "M197",
+      "expectedSupplierName": "Armani Acqua Dio Gio Absolu",
+      "status": "matched"
+    },
+    {
+      "productId": "G20",
+      "expectedInspiredBy": "Armani Acqua Dio Gio Essenza",
+      "expectedCategory": "men",
+      "supplierId": "M198",
+      "expectedSupplierName": "Aramni Acqua Dio Gio Essenza",
+      "status": "matched"
+    },
+    {
+      "productId": "G21",
+      "expectedInspiredBy": "Armani Acqua di Gio",
+      "expectedCategory": "men",
+      "supplierId": "M6",
+      "expectedSupplierName": "Armani Acqua di Gio",
+      "status": "matched"
+    },
+    {
+      "productId": "G22",
+      "expectedInspiredBy": "Armani Acqua di Gio Profumo",
+      "expectedCategory": "men",
+      "supplierId": "M74",
+      "expectedSupplierName": "Armani Acqua di Gio Profumo",
+      "status": "matched"
+    },
+    {
+      "productId": "G23",
+      "expectedInspiredBy": "Armani Code",
+      "expectedCategory": "men",
+      "supplierId": "M5",
+      "expectedSupplierName": "Armani Code",
+      "status": "matched"
+    },
+    {
+      "productId": "G24",
+      "expectedInspiredBy": "Armani Code Parfum",
+      "expectedCategory": "men",
+      "supplierId": "M246",
+      "expectedSupplierName": "Armani Code Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "G25",
+      "expectedInspiredBy": "Armani Code Profumo",
+      "expectedCategory": "men",
+      "supplierId": "M62",
+      "expectedSupplierName": "Armani Code Profumo",
+      "status": "matched"
+    },
+    {
+      "productId": "G26",
+      "expectedInspiredBy": "Armani He",
+      "expectedCategory": "men",
+      "supplierId": "M73",
+      "expectedSupplierName": "Armani He",
+      "status": "matched"
+    },
+    {
+      "productId": "G27",
+      "expectedInspiredBy": "Armani Prive Royal Oud",
+      "expectedCategory": "men",
+      "supplierId": "M256",
+      "expectedSupplierName": "Armani Prive Royal Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G28",
+      "expectedInspiredBy": "Armani Stronger with You",
+      "expectedCategory": "men",
+      "supplierId": "M87",
+      "expectedSupplierName": "Armani Stronger with you",
+      "status": "matched"
+    },
+    {
+      "productId": "G29",
+      "expectedInspiredBy": "Armani Stronger with You Absolutely",
+      "expectedCategory": "men",
+      "supplierId": "M301",
+      "expectedSupplierName": "Armani Stronger with You Absolutely",
+      "status": "matched"
+    },
+    {
+      "productId": "G30",
+      "expectedInspiredBy": "Armani Stronger with You Only",
+      "expectedCategory": "men",
+      "supplierId": "M213",
+      "expectedSupplierName": "Armani Stronger with You Only",
+      "status": "matched"
+    },
+    {
+      "productId": "G31",
+      "expectedInspiredBy": "Armani Stronger with You Oud",
+      "expectedCategory": "men",
+      "supplierId": "M240",
+      "expectedSupplierName": "Armani Stronger with You Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G32",
+      "expectedInspiredBy": "Armani You Intensly",
+      "expectedCategory": "men",
+      "supplierId": "M121",
+      "expectedSupplierName": "Armani You Intensly",
+      "status": "matched"
+    },
+    {
+      "productId": "G33",
+      "expectedInspiredBy": "Atkinson Oud Save the King",
+      "expectedCategory": "men",
+      "supplierId": "M70",
+      "expectedSupplierName": "Atkinson Oud Save the King",
+      "status": "matched"
+    },
+    {
+      "productId": "G34",
+      "expectedInspiredBy": "Azzaro Chrome",
+      "expectedCategory": "men",
+      "supplierId": "M130",
+      "expectedSupplierName": "Azzaro Chrome",
+      "status": "matched"
+    },
+    {
+      "productId": "G35",
+      "expectedInspiredBy": "Azzaro Pour Homme",
+      "expectedCategory": "men",
+      "supplierId": "M118",
+      "expectedSupplierName": "Azzaro Pour Homme",
+      "status": "matched"
+    },
+    {
+      "productId": "G36",
+      "expectedInspiredBy": "Azzaro Wanted",
+      "expectedCategory": "men",
+      "supplierId": "M59",
+      "expectedSupplierName": "Azzaro Wanted",
+      "status": "matched"
+    },
+    {
+      "productId": "G37",
+      "expectedInspiredBy": "Azzaro the Most Wanted",
+      "expectedCategory": "men",
+      "supplierId": "M190",
+      "expectedSupplierName": "Azzaro the Most Wanted",
+      "status": "matched"
+    },
+    {
+      "productId": "G38",
+      "expectedInspiredBy": "BLV Aqua",
+      "expectedCategory": "men",
+      "supplierId": "M46",
+      "expectedSupplierName": "BLV Aqua",
+      "status": "matched"
+    },
+    {
+      "productId": "G39",
+      "expectedInspiredBy": "BLV Man in Black",
+      "expectedCategory": "men",
+      "supplierId": "M45",
+      "expectedSupplierName": "BLV Man in Black",
+      "status": "matched"
+    },
+    {
+      "productId": "G40",
+      "expectedInspiredBy": "Baccarat Rouge 540 Extrait de Parfum",
+      "expectedCategory": "men",
+      "supplierId": "M241",
+      "expectedSupplierName": "Baccarat Rouge 540 Extrait de Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "G41",
+      "expectedInspiredBy": "Black Afghano",
+      "expectedCategory": "men",
+      "supplierId": "M67",
+      "expectedSupplierName": "Black Afghano",
+      "status": "matched"
+    },
+    {
+      "productId": "G42",
+      "expectedInspiredBy": "Bois 1920 Canabis",
+      "expectedCategory": "men",
+      "supplierId": "M243",
+      "expectedSupplierName": "Bois 1920 Canabis",
+      "status": "matched"
+    },
+    {
+      "productId": "G43",
+      "expectedInspiredBy": "Boss Bottled",
+      "expectedCategory": "men",
+      "supplierId": "M7",
+      "expectedSupplierName": "Boss Bottled",
+      "status": "matched"
+    },
+    {
+      "productId": "G44",
+      "expectedInspiredBy": "Boss Bottled Elixier",
+      "expectedCategory": "men",
+      "supplierId": "M294",
+      "expectedSupplierName": "Boss Bottled Elixier",
+      "status": "matched"
+    },
+    {
+      "productId": "G45",
+      "expectedInspiredBy": "Boss Bottled Night",
+      "expectedCategory": "men",
+      "supplierId": "M93",
+      "expectedSupplierName": "Boss Bottled Night",
+      "status": "matched"
+    },
+    {
+      "productId": "G46",
+      "expectedInspiredBy": "Boss Bottled Oud",
+      "expectedCategory": "men",
+      "supplierId": "M55",
+      "expectedSupplierName": "Boss Bottled Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G47",
+      "expectedInspiredBy": "Boss Orange",
+      "expectedCategory": "men",
+      "supplierId": "M8",
+      "expectedSupplierName": "Boss Orange",
+      "status": "matched"
+    },
+    {
+      "productId": "G48",
+      "expectedInspiredBy": "Boss Scent",
+      "expectedCategory": "men",
+      "supplierId": "M49",
+      "expectedSupplierName": "Boss Scent",
+      "status": "matched"
+    },
+    {
+      "productId": "G49",
+      "expectedInspiredBy": "Boss The Collection Magnetic Musk",
+      "expectedCategory": "men",
+      "supplierId": "M274",
+      "expectedSupplierName": "Boss The Collection Magnetic Musk",
+      "status": "matched"
+    },
+    {
+      "productId": "G50",
+      "expectedInspiredBy": "Burberry Hero",
+      "expectedCategory": "men",
+      "supplierId": "M314",
+      "expectedSupplierName": "Burberry Hero",
+      "status": "matched"
+    },
+    {
+      "productId": "G51",
+      "expectedInspiredBy": "Burberry London",
+      "expectedCategory": "men",
+      "supplierId": "M122",
+      "expectedSupplierName": "Burberry London",
+      "status": "matched"
+    },
+    {
+      "productId": "G52",
+      "expectedInspiredBy": "Byredo Oud Immortel",
+      "expectedCategory": "men",
+      "supplierId": "M131",
+      "expectedSupplierName": "Byredo Oud Immortel",
+      "status": "matched"
+    },
+    {
+      "productId": "G53",
+      "expectedInspiredBy": "CH 212",
+      "expectedCategory": "men",
+      "supplierId": "M26",
+      "expectedSupplierName": "CH 212",
+      "status": "matched"
+    },
+    {
+      "productId": "G54",
+      "expectedInspiredBy": "CH 212 Sexy Men",
+      "expectedCategory": "men",
+      "supplierId": "M35",
+      "expectedSupplierName": "CH 212 Sexy Men",
+      "status": "matched"
+    },
+    {
+      "productId": "G55",
+      "expectedInspiredBy": "CH 212 VIP",
+      "expectedCategory": "men",
+      "supplierId": "M21",
+      "expectedSupplierName": "CH 212 VIP",
+      "status": "matched"
+    },
+    {
+      "productId": "G56",
+      "expectedInspiredBy": "Calvin Klein Eternity Men",
+      "expectedCategory": "men",
+      "supplierId": "M60",
+      "expectedSupplierName": "Calvin Klein Eternity Men",
+      "status": "matched"
+    },
+    {
+      "productId": "G57",
+      "expectedInspiredBy": "Caronlina Herrera Bad Boy",
+      "expectedCategory": "men",
+      "supplierId": "M280",
+      "expectedSupplierName": "Caronlina Herrera Bad Boy",
+      "status": "matched"
+    },
+    {
+      "productId": "G58",
+      "expectedInspiredBy": "Cartier Decleration",
+      "expectedCategory": "men",
+      "supplierId": "M42",
+      "expectedSupplierName": "Cartier Decleration",
+      "status": "matched"
+    },
+    {
+      "productId": "G59",
+      "expectedInspiredBy": "Cartier Pasha",
+      "expectedCategory": "men",
+      "supplierId": "M230",
+      "expectedSupplierName": "Cartier Pasha",
+      "status": "matched"
+    },
+    {
+      "productId": "G60",
+      "expectedInspiredBy": "Chanel Allure Sport",
+      "expectedCategory": "men",
+      "supplierId": "M22",
+      "expectedSupplierName": "Chanel Allure Sport",
+      "status": "matched"
+    },
+    {
+      "productId": "G61",
+      "expectedInspiredBy": "Chanel Bleu",
+      "expectedCategory": "men",
+      "supplierId": "M30",
+      "expectedSupplierName": "Chanel Bleu",
+      "status": "matched"
+    },
+    {
+      "productId": "G62",
+      "expectedInspiredBy": "Chanel Egoist Platinum",
+      "expectedCategory": "men",
+      "supplierId": "M71",
+      "expectedSupplierName": "Chanel Egoist Platinum",
+      "status": "matched"
+    },
+    {
+      "productId": "G63",
+      "expectedInspiredBy": "Chopard Black Incense Malaki",
+      "expectedCategory": "men",
+      "supplierId": "M154",
+      "expectedSupplierName": "Chopard Black Incense Malaki",
+      "status": "matched"
+    },
+    {
+      "productId": "G64",
+      "expectedInspiredBy": "Chopard Oud Malaki",
+      "expectedCategory": "men",
+      "supplierId": "M113",
+      "expectedSupplierName": "Chopard Oud Malaki",
+      "status": "matched"
+    },
+    {
+      "productId": "G65",
+      "expectedInspiredBy": "Christian Clive No.1",
+      "expectedCategory": "men",
+      "supplierId": "M102",
+      "expectedSupplierName": "Christian Clive No.1",
+      "status": "matched"
+    },
+    {
+      "productId": "G66",
+      "expectedInspiredBy": "Clive Christian Blonde Amber",
+      "expectedCategory": "men",
+      "supplierId": "M321",
+      "expectedSupplierName": "Clive Christian Blonde Amber",
+      "status": "matched"
+    },
+    {
+      "productId": "G67",
+      "expectedInspiredBy": "Clive Christian Magnolia Rococo VIII",
+      "expectedCategory": "men",
+      "supplierId": "M285",
+      "expectedSupplierName": "Clive Christian Magnolia Rococo VIII",
+      "status": "matched"
+    },
+    {
+      "productId": "G68",
+      "expectedInspiredBy": "Collection Prestige Sultan No. 9",
+      "expectedCategory": "men",
+      "supplierId": "M302",
+      "expectedSupplierName": "Collection Prestige Sultan No. 9",
+      "status": "matched"
+    },
+    {
+      "productId": "G69",
+      "expectedInspiredBy": "Creed Aventus",
+      "expectedCategory": "men",
+      "supplierId": "M41",
+      "expectedSupplierName": "Creed Aventus",
+      "status": "matched"
+    },
+    {
+      "productId": "G70",
+      "expectedInspiredBy": "Creed Aventus Absolu",
+      "expectedCategory": "men",
+      "supplierId": "M290",
+      "expectedSupplierName": "Creed Aventus Absolu",
+      "status": "matched"
+    },
+    {
+      "productId": "G71",
+      "expectedInspiredBy": "Creed Green Irish Tweed",
+      "expectedCategory": "men",
+      "supplierId": "M116",
+      "expectedSupplierName": "Creed Green Irish Tweed",
+      "status": "matched"
+    },
+    {
+      "productId": "G72",
+      "expectedInspiredBy": "Creed Silver Mountain Water",
+      "expectedCategory": "men",
+      "supplierId": "M115",
+      "expectedSupplierName": "Creed Silver Mountain Water",
+      "status": "matched"
+    },
+    {
+      "productId": "G73",
+      "expectedInspiredBy": "Creed Viking",
+      "expectedCategory": "men",
+      "supplierId": "M157",
+      "expectedSupplierName": "Creed Viking",
+      "status": "matched"
+    },
+    {
+      "productId": "G74",
+      "expectedInspiredBy": "Davidoff Coolwater",
+      "expectedCategory": "men",
+      "supplierId": "M76",
+      "expectedSupplierName": "Davidoff Coolwater",
+      "status": "matched"
+    },
+    {
+      "productId": "G75",
+      "expectedInspiredBy": "Diesel Bad",
+      "expectedCategory": "men",
+      "supplierId": "M234",
+      "expectedSupplierName": "Diesel Bad",
+      "status": "matched"
+    },
+    {
+      "productId": "G76",
+      "expectedInspiredBy": "Diesel Fuel for Life",
+      "expectedCategory": "men",
+      "supplierId": "M96",
+      "expectedSupplierName": "Diesel Fuel for Life",
+      "status": "matched"
+    },
+    {
+      "productId": "G77",
+      "expectedInspiredBy": "Diesel Fuel for Life Spirit",
+      "expectedCategory": "men",
+      "supplierId": "M81",
+      "expectedSupplierName": "Diesel Fuel for Life Spirit",
+      "status": "matched"
+    },
+    {
+      "productId": "G78",
+      "expectedInspiredBy": "Diesel Only The Brave",
+      "expectedCategory": "men",
+      "supplierId": "M33",
+      "expectedSupplierName": "Diesel Only The Brave",
+      "status": "matched"
+    },
+    {
+      "productId": "G79",
+      "expectedInspiredBy": "Diesel Spirit of the Brave",
+      "expectedCategory": "men",
+      "supplierId": "M117",
+      "expectedSupplierName": "Diesel Spirit of the Brave",
+      "status": "matched"
+    },
+    {
+      "productId": "G80",
+      "expectedInspiredBy": "Dior Bois a´Argent",
+      "expectedCategory": "men",
+      "supplierId": "M183",
+      "expectedSupplierName": "Dior Bois a´Argent",
+      "status": "matched"
+    },
+    {
+      "productId": "G81",
+      "expectedInspiredBy": "Dior Fahrenheit",
+      "expectedCategory": "men",
+      "supplierId": "M19",
+      "expectedSupplierName": "Dior Fahrenheit",
+      "status": "matched"
+    },
+    {
+      "productId": "G82",
+      "expectedInspiredBy": "Dior Fahrenheit 32",
+      "expectedCategory": "men",
+      "supplierId": "M18",
+      "expectedSupplierName": "Dior Fahrenheit 32",
+      "status": "matched"
+    },
+    {
+      "productId": "G83",
+      "expectedInspiredBy": "Dior Homme",
+      "expectedCategory": "men",
+      "supplierId": "M31",
+      "expectedSupplierName": "Dior Homme",
+      "status": "matched"
+    },
+    {
+      "productId": "G84",
+      "expectedInspiredBy": "Dior Homme Cologne",
+      "expectedCategory": "men",
+      "supplierId": "M88",
+      "expectedSupplierName": "Dior Homme Cologne",
+      "status": "matched"
+    },
+    {
+      "productId": "G85",
+      "expectedInspiredBy": "Dior Homme Intense",
+      "expectedCategory": "men",
+      "supplierId": "M4",
+      "expectedSupplierName": "Dior Homme Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "G86",
+      "expectedInspiredBy": "Dior Homme Sport",
+      "expectedCategory": "men",
+      "supplierId": "M17",
+      "expectedSupplierName": "Dior Homme Sport",
+      "status": "matched"
+    },
+    {
+      "productId": "G87",
+      "expectedInspiredBy": "Dior Oud Ispahan",
+      "expectedCategory": "men",
+      "supplierId": "M166",
+      "expectedSupplierName": "Dior Oud Ispahan",
+      "status": "matched"
+    },
+    {
+      "productId": "G88",
+      "expectedInspiredBy": "Dior Prive Ambre Nuit",
+      "expectedCategory": "men",
+      "supplierId": "M83",
+      "expectedSupplierName": "Dior Prive Ambre Nuit",
+      "status": "matched"
+    },
+    {
+      "productId": "G89",
+      "expectedInspiredBy": "Dior Rouge Trafalgar",
+      "expectedCategory": "men",
+      "supplierId": "M140",
+      "expectedSupplierName": "Dior Rouge Trafalgar",
+      "status": "matched"
+    },
+    {
+      "productId": "G90",
+      "expectedInspiredBy": "Dior Sauvage",
+      "expectedCategory": "men",
+      "supplierId": "M47",
+      "expectedSupplierName": "Dior Sauvage",
+      "status": "matched"
+    },
+    {
+      "productId": "G91",
+      "expectedInspiredBy": "Dior Sauvage Elixir",
+      "expectedCategory": "men",
+      "supplierId": "M187",
+      "expectedSupplierName": "Dior Sauvage Elixir",
+      "status": "matched"
+    },
+    {
+      "productId": "G92",
+      "expectedInspiredBy": "Dior Vanilla Diorama",
+      "expectedCategory": "men",
+      "supplierId": "M247",
+      "expectedSupplierName": "Dior Vanilla Diorama",
+      "status": "matched"
+    },
+    {
+      "productId": "G93",
+      "expectedInspiredBy": "Dolce & Gabbana",
+      "expectedCategory": "men",
+      "supplierId": "M146",
+      "expectedSupplierName": "Dolce & Gabbana",
+      "status": "matched"
+    },
+    {
+      "productId": "G94",
+      "expectedInspiredBy": "Dolce & Gabbana Light Blue",
+      "expectedCategory": "men",
+      "supplierId": "M266",
+      "expectedSupplierName": "Dolce & Gabbana Light Blue",
+      "status": "matched"
+    },
+    {
+      "productId": "G95",
+      "expectedInspiredBy": "Drakkar Noir",
+      "expectedCategory": "men",
+      "supplierId": "M114",
+      "expectedSupplierName": "Drakkar Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "G96",
+      "expectedInspiredBy": "Dunhill Desire Red",
+      "expectedCategory": "men",
+      "supplierId": "M101",
+      "expectedSupplierName": "Dunhill Desire Red",
+      "status": "matched"
+    },
+    {
+      "productId": "G97",
+      "expectedInspiredBy": "Dunhill Fresh (Blue)",
+      "expectedCategory": "men",
+      "supplierId": "M54",
+      "expectedSupplierName": "Dunhill Fresh (Blue)",
+      "status": "matched"
+    },
+    {
+      "productId": "G98",
+      "expectedInspiredBy": "Ex Nihilo Blue Talisman",
+      "expectedCategory": "men",
+      "supplierId": "M331",
+      "expectedSupplierName": "Ex Nihilo Blue Talisman",
+      "status": "matched"
+    },
+    {
+      "productId": "G99",
+      "expectedInspiredBy": "Fendi Life Esseeence",
+      "expectedCategory": "men",
+      "supplierId": "M165",
+      "expectedSupplierName": "Fendi Life Esseeence",
+      "status": "matched"
+    },
+    {
+      "productId": "G100",
+      "expectedInspiredBy": "Franck Olivier Oud Touch",
+      "expectedCategory": "men",
+      "supplierId": "M162",
+      "expectedSupplierName": "Franck Olivier Oud Touch",
+      "status": "matched"
+    },
+    {
+      "productId": "G101",
+      "expectedInspiredBy": "Franco Ferre",
+      "expectedCategory": "men",
+      "supplierId": "M178",
+      "expectedSupplierName": "Franco Ferre",
+      "status": "matched"
+    },
+    {
+      "productId": "G102",
+      "expectedInspiredBy": "Frederic Malle Musc Ravageur",
+      "expectedCategory": "men",
+      "supplierId": "M205",
+      "expectedSupplierName": "Frederic Malle Musc Ravageur",
+      "status": "matched"
+    },
+    {
+      "productId": "G103",
+      "expectedInspiredBy": "Giorgo Armani Cuir Noir",
+      "expectedCategory": "men",
+      "supplierId": "M109",
+      "expectedSupplierName": "Giorgo Armani Cuir Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "G104",
+      "expectedInspiredBy": "Giorgo Armani Myrrhe Imperial",
+      "expectedCategory": "men",
+      "supplierId": "M108",
+      "expectedSupplierName": "Giorgo Armani Myrrhe Imperial",
+      "status": "matched"
+    },
+    {
+      "productId": "G105",
+      "expectedInspiredBy": "Gisada Ambassador",
+      "expectedCategory": "men",
+      "supplierId": "M164",
+      "expectedSupplierName": "Gisada Ambassador",
+      "status": "matched"
+    },
+    {
+      "productId": "G106",
+      "expectedInspiredBy": "Gisah Hudson Valley",
+      "expectedCategory": "men",
+      "supplierId": "M273",
+      "expectedSupplierName": "Gisah Hudson Valley",
+      "status": "matched"
+    },
+    {
+      "productId": "G107",
+      "expectedInspiredBy": "Givenchy Gentleman",
+      "expectedCategory": "men",
+      "supplierId": "M235",
+      "expectedSupplierName": "Givenchy Gentleman",
+      "status": "matched"
+    },
+    {
+      "productId": "G108",
+      "expectedInspiredBy": "Givenchy Pi",
+      "expectedCategory": "men",
+      "supplierId": "M24",
+      "expectedSupplierName": "Givenchy Pi",
+      "status": "matched"
+    },
+    {
+      "productId": "G109",
+      "expectedInspiredBy": "Golden Dust",
+      "expectedCategory": "men",
+      "supplierId": "M44",
+      "expectedSupplierName": "Golden Dust",
+      "status": "matched"
+    },
+    {
+      "productId": "G110",
+      "expectedInspiredBy": "Gucci Envy",
+      "expectedCategory": "men",
+      "supplierId": "M13",
+      "expectedSupplierName": "Gucci Envy",
+      "status": "matched"
+    },
+    {
+      "productId": "G111",
+      "expectedInspiredBy": "Gucci Guilty",
+      "expectedCategory": "men",
+      "supplierId": "M12",
+      "expectedSupplierName": "Gucci Guilty",
+      "status": "matched"
+    },
+    {
+      "productId": "G112",
+      "expectedInspiredBy": "Gucci II",
+      "expectedCategory": "men",
+      "supplierId": "M14",
+      "expectedSupplierName": "Gucci II",
+      "status": "matched"
+    },
+    {
+      "productId": "G113",
+      "expectedInspiredBy": "Gucci Intense Oud",
+      "expectedCategory": "men",
+      "supplierId": "M228",
+      "expectedSupplierName": "Gucci Intense Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G114",
+      "expectedInspiredBy": "Gucci by Gucci",
+      "expectedCategory": "men",
+      "supplierId": "M75",
+      "expectedSupplierName": "Gucci by Gucci",
+      "status": "matched"
+    },
+    {
+      "productId": "G115",
+      "expectedInspiredBy": "Guerlain Ideal L´Homme EDP",
+      "expectedCategory": "men",
+      "supplierId": "M91",
+      "expectedSupplierName": "Guerlain Ideal L´Homme EDP",
+      "status": "matched"
+    },
+    {
+      "productId": "G116",
+      "expectedInspiredBy": "Guerlain Spiritieuse Double Vanille",
+      "expectedCategory": "men",
+      "supplierId": "M245",
+      "expectedSupplierName": "Guerlain Spiritieuse Double Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "G117",
+      "expectedInspiredBy": "Hugo Boss Energise",
+      "expectedCategory": "men",
+      "supplierId": "M127",
+      "expectedSupplierName": "Hugo Boss Energise",
+      "status": "matched"
+    },
+    {
+      "productId": "G118",
+      "expectedInspiredBy": "Hugo Boss Extreme",
+      "expectedCategory": "men",
+      "supplierId": "M129",
+      "expectedSupplierName": "Hugo Boss Extreme",
+      "status": "matched"
+    },
+    {
+      "productId": "G119",
+      "expectedInspiredBy": "Hugo Boss Hugo",
+      "expectedCategory": "men",
+      "supplierId": "M103",
+      "expectedSupplierName": "Hugo Boss Hugo",
+      "status": "matched"
+    },
+    {
+      "productId": "G120",
+      "expectedInspiredBy": "Hummer",
+      "expectedCategory": "men",
+      "supplierId": "M214",
+      "expectedSupplierName": "Hummer",
+      "status": "matched"
+    },
+    {
+      "productId": "G121",
+      "expectedInspiredBy": "Initio Musk Therapy",
+      "expectedCategory": "men",
+      "supplierId": "M206",
+      "expectedSupplierName": "Initio Musk Therapy",
+      "status": "matched"
+    },
+    {
+      "productId": "G122",
+      "expectedInspiredBy": "Initio Oud 4 Greatness",
+      "expectedCategory": "men",
+      "supplierId": "M182",
+      "expectedSupplierName": "Initio Oud 4 Greatness",
+      "status": "matched"
+    },
+    {
+      "productId": "G123",
+      "expectedInspiredBy": "Initio Paragon",
+      "expectedCategory": "men",
+      "supplierId": "M259",
+      "expectedSupplierName": "Initio Paragon",
+      "status": "matched"
+    },
+    {
+      "productId": "G124",
+      "expectedInspiredBy": "Initio Side Effect",
+      "expectedCategory": "men",
+      "supplierId": "M252",
+      "expectedSupplierName": "Initio Side Effect",
+      "status": "matched"
+    },
+    {
+      "productId": "G125",
+      "expectedInspiredBy": "Issey Miake",
+      "expectedCategory": "men",
+      "supplierId": "M20",
+      "expectedSupplierName": "Issey Miake",
+      "status": "matched"
+    },
+    {
+      "productId": "G126",
+      "expectedInspiredBy": "JPG Le Male",
+      "expectedCategory": "men",
+      "supplierId": "M32",
+      "expectedSupplierName": "JPG Le Male",
+      "status": "matched"
+    },
+    {
+      "productId": "G127",
+      "expectedInspiredBy": "JPG Le Male Le Parfum",
+      "expectedCategory": "men",
+      "supplierId": "M161",
+      "expectedSupplierName": "JPG Le Male Le Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "G128",
+      "expectedInspiredBy": "JPG Scandal",
+      "expectedCategory": "men",
+      "supplierId": "M172",
+      "expectedSupplierName": "JPG Scandal",
+      "status": "matched"
+    },
+    {
+      "productId": "G129",
+      "expectedInspiredBy": "Jacques Bogart One Man Show",
+      "expectedCategory": "men",
+      "supplierId": "M248",
+      "expectedSupplierName": "Jacques Bogart One Man Show",
+      "status": "matched"
+    },
+    {
+      "productId": "G130",
+      "expectedInspiredBy": "Jacques Bogart Silver Scent",
+      "expectedCategory": "men",
+      "supplierId": "M106",
+      "expectedSupplierName": "Jacques Bogart Silver Scent",
+      "status": "matched"
+    },
+    {
+      "productId": "G131",
+      "expectedInspiredBy": "Jean Paul Gaultier 2",
+      "expectedCategory": "men",
+      "supplierId": "M3",
+      "expectedSupplierName": "Jean Paul Gaultier 2",
+      "status": "matched"
+    },
+    {
+      "productId": "G132",
+      "expectedInspiredBy": "Jean Paul Gaultier Le Beau",
+      "expectedCategory": "men",
+      "supplierId": "M275",
+      "expectedSupplierName": "Jean Paul Gaultier Le Beau",
+      "status": "matched"
+    },
+    {
+      "productId": "G133",
+      "expectedInspiredBy": "Jean Paul Gaultier Le Male Elixier",
+      "expectedCategory": "men",
+      "supplierId": "M276",
+      "expectedSupplierName": "Jean Paul Gaultier Le Male Elixier",
+      "status": "matched"
+    },
+    {
+      "productId": "G134",
+      "expectedInspiredBy": "Jean Paul Gaultier Paradise Garden",
+      "expectedCategory": "men",
+      "supplierId": "M312",
+      "expectedSupplierName": "Jean Paul Gaultier Paradise Garden",
+      "status": "matched"
+    },
+    {
+      "productId": "G135",
+      "expectedInspiredBy": "Jil Sander Sun Men",
+      "expectedCategory": "men",
+      "supplierId": "M43",
+      "expectedSupplierName": "Jil Sander Sun Men",
+      "status": "matched"
+    },
+    {
+      "productId": "G136",
+      "expectedInspiredBy": "Jo Malone London Myyrh & Tonka",
+      "expectedCategory": "men",
+      "supplierId": "M267",
+      "expectedSupplierName": "Jo Malone London Myyrh & Tonka",
+      "status": "matched"
+    },
+    {
+      "productId": "G137",
+      "expectedInspiredBy": "Joop Homme Wild",
+      "expectedCategory": "men",
+      "supplierId": "M68",
+      "expectedSupplierName": "Joop Homme Wild",
+      "status": "matched"
+    },
+    {
+      "productId": "G138",
+      "expectedInspiredBy": "Joop Wow",
+      "expectedCategory": "men",
+      "supplierId": "M86",
+      "expectedSupplierName": "Joop Wow",
+      "status": "matched"
+    },
+    {
+      "productId": "G139",
+      "expectedInspiredBy": "Joop! Homme",
+      "expectedCategory": "men",
+      "supplierId": "M40",
+      "expectedSupplierName": "Joop! Homme",
+      "status": "matched"
+    },
+    {
+      "productId": "G140",
+      "expectedInspiredBy": "Jpg Ultra Male",
+      "expectedCategory": "men",
+      "supplierId": "M85",
+      "expectedSupplierName": "Jpg Ultra Male",
+      "status": "matched"
+    },
+    {
+      "productId": "G141",
+      "expectedInspiredBy": "Kajal Almaz",
+      "expectedCategory": "men",
+      "supplierId": "M272",
+      "expectedSupplierName": "Kajal Almaz",
+      "status": "matched"
+    },
+    {
+      "productId": "G142",
+      "expectedInspiredBy": "KayAli Vanilla 28",
+      "expectedCategory": "men",
+      "supplierId": "M288",
+      "expectedSupplierName": "KayAli Vanilla 28",
+      "status": "matched"
+    },
+    {
+      "productId": "G143",
+      "expectedInspiredBy": "KayAli Yum Pistachio Gelato 33",
+      "expectedCategory": "men",
+      "supplierId": "M289",
+      "expectedSupplierName": "KayAli Yum Pistachio Gelato 33",
+      "status": "matched"
+    },
+    {
+      "productId": "G144",
+      "expectedInspiredBy": "Kenzo",
+      "expectedCategory": "men",
+      "supplierId": "M28",
+      "expectedSupplierName": "Kenzo",
+      "status": "matched"
+    },
+    {
+      "productId": "G145",
+      "expectedInspiredBy": "Kilian Angels Share",
+      "expectedCategory": "men",
+      "supplierId": "M189",
+      "expectedSupplierName": "Kilian Angels Share",
+      "status": "matched"
+    },
+    {
+      "productId": "G146",
+      "expectedInspiredBy": "Kilian Apple Brandy on the Rocks",
+      "expectedCategory": "men",
+      "supplierId": "M229",
+      "expectedSupplierName": "Killian Apple Brandy on the Rocks",
+      "status": "matched"
+    },
+    {
+      "productId": "G147",
+      "expectedInspiredBy": "Kilian Bambo Harmony",
+      "expectedCategory": "men",
+      "supplierId": "M82",
+      "expectedSupplierName": "Kilian Bambo Harmony",
+      "status": "matched"
+    },
+    {
+      "productId": "G148",
+      "expectedInspiredBy": "Kilian Black Phantom",
+      "expectedCategory": "men",
+      "supplierId": "M324",
+      "expectedSupplierName": "Kilian Black Phantom",
+      "status": "matched"
+    },
+    {
+      "productId": "G149",
+      "expectedInspiredBy": "Kilian Don't be Shy Extreme",
+      "expectedCategory": "men",
+      "supplierId": "M308",
+      "expectedSupplierName": "Kilian Don't be Shy Extreme",
+      "status": "matched"
+    },
+    {
+      "productId": "G150",
+      "expectedInspiredBy": "Kilian Don´t be Shy",
+      "expectedCategory": "men",
+      "supplierId": "M188",
+      "expectedSupplierName": "Kilian Don´t be Shy",
+      "status": "matched"
+    },
+    {
+      "productId": "G151",
+      "expectedInspiredBy": "Killian Good Girl Gone Bad",
+      "expectedCategory": "men",
+      "supplierId": "M313",
+      "expectedSupplierName": "Killian Good Girl Gone Bad",
+      "status": "matched"
+    },
+    {
+      "productId": "G152",
+      "expectedInspiredBy": "LB Roma",
+      "expectedCategory": "men",
+      "supplierId": "M27",
+      "expectedSupplierName": "LB Roma",
+      "status": "matched"
+    },
+    {
+      "productId": "G153",
+      "expectedInspiredBy": "Lacoste Eau de Lacoste L.12.12 Blanc",
+      "expectedCategory": "men",
+      "supplierId": "M105",
+      "expectedSupplierName": "Lacoste Eau de Lacoste L. 12. 12 Blanc",
+      "status": "matched"
+    },
+    {
+      "productId": "G154",
+      "expectedInspiredBy": "Lacoste Red",
+      "expectedCategory": "men",
+      "supplierId": "M104",
+      "expectedSupplierName": "Lacoste Red",
+      "status": "matched"
+    },
+    {
+      "productId": "G155",
+      "expectedInspiredBy": "Lattafa Sheik Al Shuyukh",
+      "expectedCategory": "men",
+      "supplierId": "M145",
+      "expectedSupplierName": "Lattafa Sheik Al Shuyukh",
+      "status": "matched"
+    },
+    {
+      "productId": "G156",
+      "expectedInspiredBy": "Lattfa Ana Abiyedh",
+      "expectedCategory": "men",
+      "supplierId": "M156",
+      "expectedSupplierName": "Lattfa Ana Abiyedh",
+      "status": "matched"
+    },
+    {
+      "productId": "G157",
+      "expectedInspiredBy": "Le Labo Santal 33",
+      "expectedCategory": "men",
+      "supplierId": "M319",
+      "expectedSupplierName": "Le Labo Santal 33",
+      "status": "matched"
+    },
+    {
+      "productId": "G158",
+      "expectedInspiredBy": "Louis Vuitton Afternoon Swim",
+      "expectedCategory": "men",
+      "supplierId": "M184",
+      "expectedSupplierName": "Louis Vuitton Afternoon Swim",
+      "status": "matched"
+    },
+    {
+      "productId": "G159",
+      "expectedInspiredBy": "Louis Vuitton Cactus Garden",
+      "expectedCategory": "men",
+      "supplierId": "M170",
+      "expectedSupplierName": "Louis Vuitton Cactus Garden",
+      "status": "matched"
+    },
+    {
+      "productId": "G160",
+      "expectedInspiredBy": "Louis Vuitton California Dream",
+      "expectedCategory": "men",
+      "supplierId": "M298",
+      "expectedSupplierName": "Louis Vuitton California Dream",
+      "status": "matched"
+    },
+    {
+      "productId": "G161",
+      "expectedInspiredBy": "Louis Vuitton City of Stars",
+      "expectedCategory": "men",
+      "supplierId": "M306",
+      "expectedSupplierName": "Louis Vuitton City of Stars",
+      "status": "matched"
+    },
+    {
+      "productId": "G162",
+      "expectedInspiredBy": "Louis Vuitton Fleur du Desert",
+      "expectedCategory": "men",
+      "supplierId": "M282",
+      "expectedSupplierName": "Louis Vuitton Fleur du Desert",
+      "status": "matched"
+    },
+    {
+      "productId": "G163",
+      "expectedInspiredBy": "Louis Vuitton Imagination",
+      "expectedCategory": "men",
+      "supplierId": "M255",
+      "expectedSupplierName": "Louis Vuitton Imagination",
+      "status": "matched"
+    },
+    {
+      "productId": "G164",
+      "expectedInspiredBy": "Louis Vuitton L`Immensite",
+      "expectedCategory": "men",
+      "supplierId": "M138",
+      "expectedSupplierName": "Louis Vuitton L`Immensite",
+      "status": "matched"
+    },
+    {
+      "productId": "G165",
+      "expectedInspiredBy": "Louis Vuitton Les Sables Rose",
+      "expectedCategory": "men",
+      "supplierId": "M139",
+      "expectedSupplierName": "Louis Vuitton Les Sables Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "G166",
+      "expectedInspiredBy": "Louis Vuitton Lovers",
+      "expectedCategory": "men",
+      "supplierId": "M309",
+      "expectedSupplierName": "Louis Vuitton Lovers",
+      "status": "matched"
+    },
+    {
+      "productId": "G167",
+      "expectedInspiredBy": "Louis Vuitton Meteore",
+      "expectedCategory": "men",
+      "supplierId": "M242",
+      "expectedSupplierName": "Louis Vouitton Meteore",
+      "status": "matched"
+    },
+    {
+      "productId": "G168",
+      "expectedInspiredBy": "Louis Vuitton Nuit de Feu",
+      "expectedCategory": "men",
+      "supplierId": "M225",
+      "expectedSupplierName": "Louis Vuitton Nuit de Feu",
+      "status": "matched"
+    },
+    {
+      "productId": "G169",
+      "expectedInspiredBy": "Louis Vuitton Ombre Nomade",
+      "expectedCategory": "men",
+      "supplierId": "M137",
+      "expectedSupplierName": "Louis Vuitton Ombre Nomade",
+      "status": "matched"
+    },
+    {
+      "productId": "G170",
+      "expectedInspiredBy": "Louis Vuitton Orage",
+      "expectedCategory": "men",
+      "supplierId": "M281",
+      "expectedSupplierName": "Louis Vuitton Orage",
+      "status": "matched"
+    },
+    {
+      "productId": "G171",
+      "expectedInspiredBy": "Louis Vuitton Pacific Chill",
+      "expectedCategory": "men",
+      "supplierId": "M300",
+      "expectedSupplierName": "Louis Vuitton Pacific Chill",
+      "status": "matched"
+    },
+    {
+      "productId": "G172",
+      "expectedInspiredBy": "Louis Vuitton Pure Oud",
+      "expectedCategory": "men",
+      "supplierId": "M224",
+      "expectedSupplierName": "Louis Vuitton Pure Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G173",
+      "expectedInspiredBy": "Louis Vuitton Spell on You",
+      "expectedCategory": "men",
+      "supplierId": "M226",
+      "expectedSupplierName": "Louis Vuitton Spell on You",
+      "status": "matched"
+    },
+    {
+      "productId": "G174",
+      "expectedInspiredBy": "Louis Vuitton Sun Song",
+      "expectedCategory": "men",
+      "supplierId": "M327",
+      "expectedSupplierName": "Louis Vuitton Sun Song",
+      "status": "matched"
+    },
+    {
+      "productId": "G175",
+      "expectedInspiredBy": "Louis Vuitton Symphony",
+      "expectedCategory": "men",
+      "supplierId": "M310",
+      "expectedSupplierName": "Louis Vuitton Symphony",
+      "status": "matched"
+    },
+    {
+      "productId": "G176",
+      "expectedInspiredBy": "MFK 724",
+      "expectedCategory": "men",
+      "supplierId": "M326",
+      "expectedSupplierName": "MFK 724",
+      "status": "matched"
+    },
+    {
+      "productId": "G177",
+      "expectedInspiredBy": "MFK Baccarat Rouge 540",
+      "expectedCategory": "men",
+      "supplierId": "M56",
+      "expectedSupplierName": "MFK Baccarat Rouge 540",
+      "status": "matched"
+    },
+    {
+      "productId": "G178",
+      "expectedInspiredBy": "MFK Gentle Fuluidity Silver",
+      "expectedCategory": "men",
+      "supplierId": "M177",
+      "expectedSupplierName": "MFK Gentle Fuluidity Silver",
+      "status": "matched"
+    },
+    {
+      "productId": "G179",
+      "expectedInspiredBy": "MFK Grand Soir",
+      "expectedCategory": "men",
+      "supplierId": "M176",
+      "expectedSupplierName": "MFK Grand Soir",
+      "status": "matched"
+    },
+    {
+      "productId": "G180",
+      "expectedInspiredBy": "MFK L´Homme a La Rose",
+      "expectedCategory": "men",
+      "supplierId": "M163",
+      "expectedSupplierName": "MFK L´Homme a La Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "G181",
+      "expectedInspiredBy": "MFK Oud Satin Mood",
+      "expectedCategory": "men",
+      "supplierId": "M57",
+      "expectedSupplierName": "MFK Oud Satin Mood",
+      "status": "matched"
+    },
+    {
+      "productId": "G182",
+      "expectedInspiredBy": "Maison Crivelli Hibiscus Mahajad",
+      "expectedCategory": "men",
+      "supplierId": "M323",
+      "expectedSupplierName": "Maison Crivelli Hibiscus Mahajad",
+      "status": "matched"
+    },
+    {
+      "productId": "G183",
+      "expectedInspiredBy": "Maison Crivelli Oud Maracuja",
+      "expectedCategory": "men",
+      "supplierId": "M315",
+      "expectedSupplierName": "Maison Crivelli Oud Maracuja",
+      "status": "matched"
+    },
+    {
+      "productId": "G184",
+      "expectedInspiredBy": "Malizia Uomo Vetyver Green",
+      "expectedCategory": "men",
+      "supplierId": "M249",
+      "expectedSupplierName": "Malizia Uomo Vetyver Green",
+      "status": "matched"
+    },
+    {
+      "productId": "G185",
+      "expectedInspiredBy": "Mancera Coco Vanille",
+      "expectedCategory": "men",
+      "supplierId": "M211",
+      "expectedSupplierName": "Mancera Coco Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "G186",
+      "expectedInspiredBy": "Mancera Instant Crush",
+      "expectedCategory": "men",
+      "supplierId": "M291",
+      "expectedSupplierName": "Mancera Instant Crush",
+      "status": "matched"
+    },
+    {
+      "productId": "G187",
+      "expectedInspiredBy": "Mancera Roses Vanille",
+      "expectedCategory": "men",
+      "supplierId": "M244",
+      "expectedSupplierName": "Mancera Roses Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "G188",
+      "expectedInspiredBy": "Mancera Tonka Cola",
+      "expectedCategory": "men",
+      "supplierId": "M277",
+      "expectedSupplierName": "Mancera Tonka Cola",
+      "status": "matched"
+    },
+    {
+      "productId": "G189",
+      "expectedInspiredBy": "Marc-Antonie Barrois Ganymende",
+      "expectedCategory": "men",
+      "supplierId": "M320",
+      "expectedSupplierName": "Marc-Antonie Barrois Ganymende",
+      "status": "matched"
+    },
+    {
+      "productId": "G190",
+      "expectedInspiredBy": "Memo Paris Marfa",
+      "expectedCategory": "men",
+      "supplierId": "M136",
+      "expectedSupplierName": "Memo Paris Marfa",
+      "status": "matched"
+    },
+    {
+      "productId": "G191",
+      "expectedInspiredBy": "Molecules Escentric 01",
+      "expectedCategory": "men",
+      "supplierId": "M80",
+      "expectedSupplierName": "Molecules Escentric 01",
+      "status": "matched"
+    },
+    {
+      "productId": "G192",
+      "expectedInspiredBy": "Molecules Escentric 02",
+      "expectedCategory": "men",
+      "supplierId": "M79",
+      "expectedSupplierName": "Molecules Escentric 02",
+      "status": "matched"
+    },
+    {
+      "productId": "G193",
+      "expectedInspiredBy": "Montale Arabians Tonka",
+      "expectedCategory": "men",
+      "supplierId": "M174",
+      "expectedSupplierName": "Montale Arabians Tonka",
+      "status": "matched"
+    },
+    {
+      "productId": "G194",
+      "expectedInspiredBy": "Montale Black Oud",
+      "expectedCategory": "men",
+      "supplierId": "M150",
+      "expectedSupplierName": "Montale Black Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G195",
+      "expectedInspiredBy": "Montale Choclate Greedy",
+      "expectedCategory": "men",
+      "supplierId": "M169",
+      "expectedSupplierName": "Montale Choclate Greedy",
+      "status": "matched"
+    },
+    {
+      "productId": "G196",
+      "expectedInspiredBy": "Montale Infinity",
+      "expectedCategory": "men",
+      "supplierId": "M292",
+      "expectedSupplierName": "Montale Infinity",
+      "status": "matched"
+    },
+    {
+      "productId": "G197",
+      "expectedInspiredBy": "Montale Intense Cafe",
+      "expectedCategory": "men",
+      "supplierId": "M151",
+      "expectedSupplierName": "Montale Intense Cafe",
+      "status": "matched"
+    },
+    {
+      "productId": "G198",
+      "expectedInspiredBy": "Montale Intense Cherry",
+      "expectedCategory": "men",
+      "supplierId": "M208",
+      "expectedSupplierName": "Montale Intense Cherry",
+      "status": "matched"
+    },
+    {
+      "productId": "G199",
+      "expectedInspiredBy": "Montale Kabul Aoud",
+      "expectedCategory": "men",
+      "supplierId": "M132",
+      "expectedSupplierName": "Montale Kabul Aoud",
+      "status": "matched"
+    },
+    {
+      "productId": "G200",
+      "expectedInspiredBy": "Montale Mukhallat",
+      "expectedCategory": "men",
+      "supplierId": "M123",
+      "expectedSupplierName": "Montale Mukhallat",
+      "status": "matched"
+    },
+    {
+      "productId": "G201",
+      "expectedInspiredBy": "Montale Ristretto Intense Cafe",
+      "expectedCategory": "men",
+      "supplierId": "M239",
+      "expectedSupplierName": "Montale Ristretto Intense Cafe",
+      "status": "matched"
+    },
+    {
+      "productId": "G202",
+      "expectedInspiredBy": "Montale Sensual Instinct",
+      "expectedCategory": "men",
+      "supplierId": "M227",
+      "expectedSupplierName": "Montale Sensual Instinct",
+      "status": "matched"
+    },
+    {
+      "productId": "G203",
+      "expectedInspiredBy": "Montale Vanille Absolu",
+      "expectedCategory": "men",
+      "supplierId": "M296",
+      "expectedSupplierName": "Montale Vanille Absolu",
+      "status": "matched"
+    },
+    {
+      "productId": "G204",
+      "expectedInspiredBy": "Montblanc Explorer",
+      "expectedCategory": "men",
+      "supplierId": "M307",
+      "expectedSupplierName": "Montblanc Explorer",
+      "status": "matched"
+    },
+    {
+      "productId": "G205",
+      "expectedInspiredBy": "Nautica Voyage",
+      "expectedCategory": "men",
+      "supplierId": "M98",
+      "expectedSupplierName": "Nautica Voyage",
+      "status": "matched"
+    },
+    {
+      "productId": "G206",
+      "expectedInspiredBy": "Nikos Sculpture",
+      "expectedCategory": "men",
+      "supplierId": "M9",
+      "expectedSupplierName": "Nikos Sculpture",
+      "status": "matched"
+    },
+    {
+      "productId": "G207",
+      "expectedInspiredBy": "Nishane Ani",
+      "expectedCategory": "men",
+      "supplierId": "M233",
+      "expectedSupplierName": "Nishane Ani",
+      "status": "matched"
+    },
+    {
+      "productId": "G208",
+      "expectedInspiredBy": "Nishane Hacivat",
+      "expectedCategory": "men",
+      "supplierId": "M231",
+      "expectedSupplierName": "Nishane Hacivat",
+      "status": "matched"
+    },
+    {
+      "productId": "G209",
+      "expectedInspiredBy": "Orlane Derreck",
+      "expectedCategory": "men",
+      "supplierId": "M95",
+      "expectedSupplierName": "Orlane Derreck",
+      "status": "matched"
+    },
+    {
+      "productId": "G210",
+      "expectedInspiredBy": "Orto Parisi Megamre",
+      "expectedCategory": "men",
+      "supplierId": "M232",
+      "expectedSupplierName": "Orto Parisi Megamre",
+      "status": "matched"
+    },
+    {
+      "productId": "G211",
+      "expectedInspiredBy": "PR One Million Elexier",
+      "expectedCategory": "men",
+      "supplierId": "M34",
+      "expectedSupplierName": "PR One Million Elexier",
+      "status": "matched"
+    },
+    {
+      "productId": "G212",
+      "expectedInspiredBy": "Paco Rabanne Black XS",
+      "expectedCategory": "men",
+      "supplierId": "M69",
+      "expectedSupplierName": "Paco Rabanne Black XS",
+      "status": "matched"
+    },
+    {
+      "productId": "G213",
+      "expectedInspiredBy": "Paco Rabanne Black XS L'exces",
+      "expectedCategory": "men",
+      "supplierId": "M218",
+      "expectedSupplierName": "Paco Rabanne Black XS L'exces",
+      "status": "matched"
+    },
+    {
+      "productId": "G214",
+      "expectedInspiredBy": "Paco Rabanne Invictus",
+      "expectedCategory": "men",
+      "supplierId": "M37",
+      "expectedSupplierName": "Paco Rabanne Invictus",
+      "status": "matched"
+    },
+    {
+      "productId": "G215",
+      "expectedInspiredBy": "Paco Rabanne Invictus Platinum",
+      "expectedCategory": "men",
+      "supplierId": "M238",
+      "expectedSupplierName": "Paco Rabbane Invictus Platinum",
+      "status": "matched"
+    },
+    {
+      "productId": "G216",
+      "expectedInspiredBy": "Paco Rabanne Invictus Victory",
+      "expectedCategory": "men",
+      "supplierId": "M171",
+      "expectedSupplierName": "Paco Rabanne Invictus Victory",
+      "status": "matched"
+    },
+    {
+      "productId": "G217",
+      "expectedInspiredBy": "Paco Rabanne One Million",
+      "expectedCategory": "men",
+      "supplierId": "M15",
+      "expectedSupplierName": "Paco Rabanne One Million",
+      "status": "matched"
+    },
+    {
+      "productId": "G218",
+      "expectedInspiredBy": "Paco Rabanne One Million Lucky",
+      "expectedCategory": "men",
+      "supplierId": "M100",
+      "expectedSupplierName": "Paco Rabanne One Million Lucky",
+      "status": "matched"
+    },
+    {
+      "productId": "G219",
+      "expectedInspiredBy": "Paco Rabanne One Million Prive",
+      "expectedCategory": "men",
+      "supplierId": "M90",
+      "expectedSupplierName": "Paco Rabanne One Million Prive",
+      "status": "matched"
+    },
+    {
+      "productId": "G220",
+      "expectedInspiredBy": "Paco Rabanne One Million Royale",
+      "expectedCategory": "men",
+      "supplierId": "M265",
+      "expectedSupplierName": "Paco Rabbane One Million Royale",
+      "status": "matched"
+    },
+    {
+      "productId": "G221",
+      "expectedInspiredBy": "Paco Rabanne Phantom",
+      "expectedCategory": "men",
+      "supplierId": "M179",
+      "expectedSupplierName": "Paco Rabanne Phantom",
+      "status": "matched"
+    },
+    {
+      "productId": "G222",
+      "expectedInspiredBy": "Paco Rabanne Ultraviolette",
+      "expectedCategory": "men",
+      "supplierId": "M38",
+      "expectedSupplierName": "Paco Rabanne Ultraviolette",
+      "status": "matched"
+    },
+    {
+      "productId": "G223",
+      "expectedInspiredBy": "Parfum De Marly Althair",
+      "expectedCategory": "men",
+      "supplierId": "M293",
+      "expectedSupplierName": "Parfum De Marly Althair",
+      "status": "matched"
+    },
+    {
+      "productId": "G224",
+      "expectedInspiredBy": "Parfum De Marly Castley",
+      "expectedCategory": "men",
+      "supplierId": "M328",
+      "expectedSupplierName": "Parfums De Marly Castley",
+      "status": "matched"
+    },
+    {
+      "productId": "G225",
+      "expectedInspiredBy": "Parfum De Marly Greenly",
+      "expectedCategory": "men",
+      "supplierId": "M322",
+      "expectedSupplierName": "Parfums De Marly Greenly",
+      "status": "matched"
+    },
+    {
+      "productId": "G226",
+      "expectedInspiredBy": "Parfum De Marly Haltana",
+      "expectedCategory": "men",
+      "supplierId": "M332",
+      "expectedSupplierName": "Parfums De Marly Haltane",
+      "status": "matched"
+    },
+    {
+      "productId": "G227",
+      "expectedInspiredBy": "Parfum De Marly Herod",
+      "expectedCategory": "men",
+      "supplierId": "M253",
+      "expectedSupplierName": "Parfum De Marly Herod",
+      "status": "matched"
+    },
+    {
+      "productId": "G228",
+      "expectedInspiredBy": "Parfum de Marly Leyton",
+      "expectedCategory": "men",
+      "supplierId": "M153",
+      "expectedSupplierName": "Parfum de Marly Leyton",
+      "status": "matched"
+    },
+    {
+      "productId": "G229",
+      "expectedInspiredBy": "Parfum de Marly Pegasus",
+      "expectedCategory": "men",
+      "supplierId": "M210",
+      "expectedSupplierName": "Parfum de Marly Pegasus",
+      "status": "matched"
+    },
+    {
+      "productId": "G230",
+      "expectedInspiredBy": "Parfums De Marly Oajan",
+      "expectedCategory": "men",
+      "supplierId": "M330",
+      "expectedSupplierName": "Parfums De Marly Oajan",
+      "status": "matched"
+    },
+    {
+      "productId": "G231",
+      "expectedInspiredBy": "Prada Luna Rossa",
+      "expectedCategory": "men",
+      "supplierId": "M128",
+      "expectedSupplierName": "Prada Luna Rossa",
+      "status": "matched"
+    },
+    {
+      "productId": "G232",
+      "expectedInspiredBy": "Prada Luna Rossa Black",
+      "expectedCategory": "men",
+      "supplierId": "M167",
+      "expectedSupplierName": "Prada Luna Rossa Black",
+      "status": "matched"
+    },
+    {
+      "productId": "G233",
+      "expectedInspiredBy": "Prada Luna Rossa Extreme",
+      "expectedCategory": "men",
+      "supplierId": "M64",
+      "expectedSupplierName": "Prada Luna Rossa Extreme",
+      "status": "matched"
+    },
+    {
+      "productId": "G234",
+      "expectedInspiredBy": "Prada Luna Rossa Ocean",
+      "expectedCategory": "men",
+      "supplierId": "M268",
+      "expectedSupplierName": "Prada Luna Rossa Ocean",
+      "status": "matched"
+    },
+    {
+      "productId": "G235",
+      "expectedInspiredBy": "Prada Luna Rossa Sport",
+      "expectedCategory": "men",
+      "supplierId": "M175",
+      "expectedSupplierName": "Prada Luna Rossa Sport",
+      "status": "matched"
+    },
+    {
+      "productId": "G236",
+      "expectedInspiredBy": "Prada Milano L´Homme",
+      "expectedCategory": "men",
+      "supplierId": "M92",
+      "expectedSupplierName": "Prada Milano L´Homme",
+      "status": "matched"
+    },
+    {
+      "productId": "G237",
+      "expectedInspiredBy": "Rasasi Junoon Satin",
+      "expectedCategory": "men",
+      "supplierId": "M254",
+      "expectedSupplierName": "Rasasi Junoon Satin",
+      "status": "matched"
+    },
+    {
+      "productId": "G238",
+      "expectedInspiredBy": "Rochas",
+      "expectedCategory": "men",
+      "supplierId": "M10",
+      "expectedSupplierName": "Rochas",
+      "status": "matched"
+    },
+    {
+      "productId": "G239",
+      "expectedInspiredBy": "Roja Amber Aoud",
+      "expectedCategory": "men",
+      "supplierId": "M158",
+      "expectedSupplierName": "Roja Amber Aoud",
+      "status": "matched"
+    },
+    {
+      "productId": "G240",
+      "expectedInspiredBy": "Roja Dove Oligarch",
+      "expectedCategory": "men",
+      "supplierId": "M251",
+      "expectedSupplierName": "Roja Dove Oligarch",
+      "status": "matched"
+    },
+    {
+      "productId": "G241",
+      "expectedInspiredBy": "Salvatore Ferragamo Intense Leather",
+      "expectedCategory": "men",
+      "supplierId": "M217",
+      "expectedSupplierName": "Salvatore Ferragamo Intense Leather",
+      "status": "matched"
+    },
+    {
+      "productId": "G242",
+      "expectedInspiredBy": "Shay Oud",
+      "expectedCategory": "men",
+      "supplierId": "M125",
+      "expectedSupplierName": "Shay Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G243",
+      "expectedInspiredBy": "Silver Dust",
+      "expectedCategory": "men",
+      "supplierId": "M50",
+      "expectedSupplierName": "Silver Dust",
+      "status": "matched"
+    },
+    {
+      "productId": "G244",
+      "expectedInspiredBy": "Sospiro Contralto",
+      "expectedCategory": "men",
+      "supplierId": "M261",
+      "expectedSupplierName": "Sospiro Contralto",
+      "status": "matched"
+    },
+    {
+      "productId": "G245",
+      "expectedInspiredBy": "Sospiro Vibrato",
+      "expectedCategory": "men",
+      "supplierId": "M262",
+      "expectedSupplierName": "Sospiro Vibrato",
+      "status": "matched"
+    },
+    {
+      "productId": "G246",
+      "expectedInspiredBy": "Stephane Humbert Lucas God Of Fire",
+      "expectedCategory": "men",
+      "supplierId": "M317",
+      "expectedSupplierName": "Stephane Humbert Lucas God Of Fire",
+      "status": "matched"
+    },
+    {
+      "productId": "G247",
+      "expectedInspiredBy": "T.F. Tobacco Vanille",
+      "expectedCategory": "men",
+      "supplierId": "M48",
+      "expectedSupplierName": "T.F. Tobacco Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "G248",
+      "expectedInspiredBy": "Ted Lapidus",
+      "expectedCategory": "men",
+      "supplierId": "M52",
+      "expectedSupplierName": "Ted Lapidus",
+      "status": "matched"
+    },
+    {
+      "productId": "G249",
+      "expectedInspiredBy": "Terre D´Hermés",
+      "expectedCategory": "men",
+      "supplierId": "M2",
+      "expectedSupplierName": "Terre D´Hermés",
+      "status": "matched"
+    },
+    {
+      "productId": "G250",
+      "expectedInspiredBy": "Thameen Patiala",
+      "expectedCategory": "men",
+      "supplierId": "M134",
+      "expectedSupplierName": "Thameen Patiala",
+      "status": "matched"
+    },
+    {
+      "productId": "G251",
+      "expectedInspiredBy": "Thierry Mugler Alien Men",
+      "expectedCategory": "men",
+      "supplierId": "M65",
+      "expectedSupplierName": "Thierry Mugler Alien Men",
+      "status": "matched"
+    },
+    {
+      "productId": "G252",
+      "expectedInspiredBy": "Thierry Mugler Alien Mirage",
+      "expectedCategory": "men",
+      "supplierId": "M147",
+      "expectedSupplierName": "Thierry Mugler Alien Mirage",
+      "status": "matched"
+    },
+    {
+      "productId": "G253",
+      "expectedInspiredBy": "Tiziana Terenzi Kirke",
+      "expectedCategory": "men",
+      "supplierId": "M159",
+      "expectedSupplierName": "Tiziana Terenzi Kirke",
+      "status": "matched"
+    },
+    {
+      "productId": "G254",
+      "expectedInspiredBy": "Tiziana Terenzi Orza",
+      "expectedCategory": "men",
+      "supplierId": "M216",
+      "expectedSupplierName": "Tiziana Terenzi Orza",
+      "status": "matched"
+    },
+    {
+      "productId": "G255",
+      "expectedInspiredBy": "Tiziana Terenzi Spirito Fiorentino",
+      "expectedCategory": "men",
+      "supplierId": "M207",
+      "expectedSupplierName": "Tiziana Terenzi Spirito Fiorentino",
+      "status": "matched"
+    },
+    {
+      "productId": "G256",
+      "expectedInspiredBy": "Tom Ford Beau de Jour",
+      "expectedCategory": "men",
+      "supplierId": "M148",
+      "expectedSupplierName": "Tom Ford Beau de Jour",
+      "status": "matched"
+    },
+    {
+      "productId": "G257",
+      "expectedInspiredBy": "Tom Ford Bitter Peach",
+      "expectedCategory": "men",
+      "supplierId": "M173",
+      "expectedSupplierName": "Tom Ford Bitter Peach",
+      "status": "matched"
+    },
+    {
+      "productId": "G258",
+      "expectedInspiredBy": "Tom Ford Cafe Rose",
+      "expectedCategory": "men",
+      "supplierId": "M283",
+      "expectedSupplierName": "Tom Ford Cafe Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "G259",
+      "expectedInspiredBy": "Tom Ford Costa Azzurra",
+      "expectedCategory": "men",
+      "supplierId": "M250",
+      "expectedSupplierName": "Tom Ford Costa Azzurra",
+      "status": "matched"
+    },
+    {
+      "productId": "G260",
+      "expectedInspiredBy": "Tom Ford Electric Cherry",
+      "expectedCategory": "men",
+      "supplierId": "M264",
+      "expectedSupplierName": "Tom Ford Electric Cherry",
+      "status": "matched"
+    },
+    {
+      "productId": "G261",
+      "expectedInspiredBy": "Tom Ford Extreme Noir",
+      "expectedCategory": "men",
+      "supplierId": "M72",
+      "expectedSupplierName": "Tom Ford Extreme Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "G262",
+      "expectedInspiredBy": "Tom Ford Fucking Fabulous",
+      "expectedCategory": "men",
+      "supplierId": "M94",
+      "expectedSupplierName": "Tom Ford Fucking Fabulous",
+      "status": "matched"
+    },
+    {
+      "productId": "G263",
+      "expectedInspiredBy": "Tom Ford Lost Cherry",
+      "expectedCategory": "men",
+      "supplierId": "M111",
+      "expectedSupplierName": "Tom Ford Lost Cherry",
+      "status": "matched"
+    },
+    {
+      "productId": "G264",
+      "expectedInspiredBy": "Tom Ford Mandarino di Amalfi",
+      "expectedCategory": "men",
+      "supplierId": "M199",
+      "expectedSupplierName": "Tom Ford Mandarino di Amalfi",
+      "status": "matched"
+    },
+    {
+      "productId": "G265",
+      "expectedInspiredBy": "Tom Ford Myrrhe Mystere",
+      "expectedCategory": "men",
+      "supplierId": "M295",
+      "expectedSupplierName": "Tom Ford Myrrhe Mystere",
+      "status": "matched"
+    },
+    {
+      "productId": "G266",
+      "expectedInspiredBy": "Tom Ford Neroli Portofino",
+      "expectedCategory": "men",
+      "supplierId": "M120",
+      "expectedSupplierName": "Tom Ford Neroli Portofino",
+      "status": "matched"
+    },
+    {
+      "productId": "G267",
+      "expectedInspiredBy": "Tom Ford Noir de Noir",
+      "expectedCategory": "men",
+      "supplierId": "M78",
+      "expectedSupplierName": "Tom Ford Noir de Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "G268",
+      "expectedInspiredBy": "Tom Ford Ombre Leather",
+      "expectedCategory": "men",
+      "supplierId": "M110",
+      "expectedSupplierName": "Tom Ford Ombre Leather",
+      "status": "matched"
+    },
+    {
+      "productId": "G269",
+      "expectedInspiredBy": "Tom Ford Oud Minerale",
+      "expectedCategory": "men",
+      "supplierId": "M124",
+      "expectedSupplierName": "Tom Ford Oud Minerale",
+      "status": "matched"
+    },
+    {
+      "productId": "G270",
+      "expectedInspiredBy": "Tom Ford Oud Wood",
+      "expectedCategory": "men",
+      "supplierId": "M77",
+      "expectedSupplierName": "Tom Ford Oud Wood",
+      "status": "matched"
+    },
+    {
+      "productId": "G271",
+      "expectedInspiredBy": "Tom Ford Patchouli Absolu",
+      "expectedCategory": "men",
+      "supplierId": "M135",
+      "expectedSupplierName": "Tom Ford Patchouli Absolu",
+      "status": "matched"
+    },
+    {
+      "productId": "G272",
+      "expectedInspiredBy": "Tom Ford Smoke Cherry",
+      "expectedCategory": "men",
+      "supplierId": "M263",
+      "expectedSupplierName": "Tom Ford Smoke Cherry",
+      "status": "matched"
+    },
+    {
+      "productId": "G273",
+      "expectedInspiredBy": "Tom Ford Soleil Blanc",
+      "expectedCategory": "men",
+      "supplierId": "M209",
+      "expectedSupplierName": "Tom Ford Soleil Blanc",
+      "status": "matched"
+    },
+    {
+      "productId": "G274",
+      "expectedInspiredBy": "Tom Ford Tuscan Leather",
+      "expectedCategory": "men",
+      "supplierId": "M39",
+      "expectedSupplierName": "Tom Ford Tuscan Leather",
+      "status": "matched"
+    },
+    {
+      "productId": "G275",
+      "expectedInspiredBy": "Tom Ford Vanilla Sex",
+      "expectedCategory": "men",
+      "supplierId": "M297",
+      "expectedSupplierName": "Tom Ford Vanilla Sex",
+      "status": "matched"
+    },
+    {
+      "productId": "G276",
+      "expectedInspiredBy": "Valentino Born in Roma",
+      "expectedCategory": "men",
+      "supplierId": "M200",
+      "expectedSupplierName": "Valentino Born in Roma",
+      "status": "matched"
+    },
+    {
+      "productId": "G277",
+      "expectedInspiredBy": "Valentino Uomo",
+      "expectedCategory": "men",
+      "supplierId": "M51",
+      "expectedSupplierName": "Valentino Uomo",
+      "status": "matched"
+    },
+    {
+      "productId": "G278",
+      "expectedInspiredBy": "Valentino Uomo Intense",
+      "expectedCategory": "men",
+      "supplierId": "M89",
+      "expectedSupplierName": "Valentino Uomo Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "G279",
+      "expectedInspiredBy": "Versace Eros",
+      "expectedCategory": "men",
+      "supplierId": "M61",
+      "expectedSupplierName": "Versace Eros",
+      "status": "matched"
+    },
+    {
+      "productId": "G280",
+      "expectedInspiredBy": "Versace Oud Noir",
+      "expectedCategory": "men",
+      "supplierId": "M97",
+      "expectedSupplierName": "Versace Oud Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "G281",
+      "expectedInspiredBy": "Vertus Sole Patchouli",
+      "expectedCategory": "men",
+      "supplierId": "M311",
+      "expectedSupplierName": "Vertus Sole Patchouli",
+      "status": "matched"
+    },
+    {
+      "productId": "G282",
+      "expectedInspiredBy": "Viktor Rolf Spicebomb Extreme",
+      "expectedCategory": "men",
+      "supplierId": "M278",
+      "expectedSupplierName": "Viktor Rolf Spicebomb Extreme",
+      "status": "matched"
+    },
+    {
+      "productId": "G283",
+      "expectedInspiredBy": "White Sandal",
+      "expectedCategory": "men",
+      "supplierId": "M186",
+      "expectedSupplierName": "White Sandal",
+      "status": "matched"
+    },
+    {
+      "productId": "G284",
+      "expectedInspiredBy": "Widian Black II",
+      "expectedCategory": "men",
+      "supplierId": "M220",
+      "expectedSupplierName": "Widian Black II",
+      "status": "matched"
+    },
+    {
+      "productId": "G285",
+      "expectedInspiredBy": "Widian Black IV",
+      "expectedCategory": "men",
+      "supplierId": "M221",
+      "expectedSupplierName": "Widian Black IV",
+      "status": "matched"
+    },
+    {
+      "productId": "G286",
+      "expectedInspiredBy": "Widian Black V",
+      "expectedCategory": "men",
+      "supplierId": "M222",
+      "expectedSupplierName": "Widian Black V",
+      "status": "matched"
+    },
+    {
+      "productId": "G287",
+      "expectedInspiredBy": "Widian Limited 71 Intense",
+      "expectedCategory": "men",
+      "supplierId": "M223",
+      "expectedSupplierName": "Widian Limited 71 Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "G288",
+      "expectedInspiredBy": "Widian Liwa",
+      "expectedCategory": "men",
+      "supplierId": "M133",
+      "expectedSupplierName": "Widian Liwa",
+      "status": "matched"
+    },
+    {
+      "productId": "G289",
+      "expectedInspiredBy": "Widian London",
+      "expectedCategory": "men",
+      "supplierId": "M318",
+      "expectedSupplierName": "Widian London",
+      "status": "matched"
+    },
+    {
+      "productId": "G290",
+      "expectedInspiredBy": "Xerjoff 1861 Renaissance",
+      "expectedCategory": "men",
+      "supplierId": "M195",
+      "expectedSupplierName": "Xerjoff 1861 Renaissance",
+      "status": "matched"
+    },
+    {
+      "productId": "G291",
+      "expectedInspiredBy": "Xerjoff Acento",
+      "expectedCategory": "men",
+      "supplierId": "M201",
+      "expectedSupplierName": "Xerjoff Acento",
+      "status": "matched"
+    },
+    {
+      "productId": "G292",
+      "expectedInspiredBy": "Xerjoff Alexandria 2",
+      "expectedCategory": "men",
+      "supplierId": "M196",
+      "expectedSupplierName": "Xerjoff Alexandria 2",
+      "status": "matched"
+    },
+    {
+      "productId": "G293",
+      "expectedInspiredBy": "Xerjoff Alexandria 3",
+      "expectedCategory": "men",
+      "supplierId": "M181",
+      "expectedSupplierName": "Xerjoff Alexandria 3",
+      "status": "matched"
+    },
+    {
+      "productId": "G294",
+      "expectedInspiredBy": "Xerjoff Casamorati 1888 Italica",
+      "expectedCategory": "men",
+      "supplierId": "M236",
+      "expectedSupplierName": "Xerjoff Casamorati 1888 Italica",
+      "status": "matched"
+    },
+    {
+      "productId": "G295",
+      "expectedInspiredBy": "Xerjoff Casamorati Bouquet Ideale",
+      "expectedCategory": "men",
+      "supplierId": "M191",
+      "expectedSupplierName": "Xerjoff Casamorati Bouquet Ideale",
+      "status": "matched"
+    },
+    {
+      "productId": "G296",
+      "expectedInspiredBy": "Xerjoff Casamorati Lira",
+      "expectedCategory": "men",
+      "supplierId": "M193",
+      "expectedSupplierName": "Xerjoff Casamorati Lira",
+      "status": "matched"
+    },
+    {
+      "productId": "G297",
+      "expectedInspiredBy": "Xerjoff Coro",
+      "expectedCategory": "men",
+      "supplierId": "M329",
+      "expectedSupplierName": "Xerjoff Coro",
+      "status": "matched"
+    },
+    {
+      "productId": "G298",
+      "expectedInspiredBy": "Xerjoff Erba Gold",
+      "expectedCategory": "men",
+      "supplierId": "M36",
+      "expectedSupplierName": "Xerjoff Erba Gold",
+      "status": "matched"
+    },
+    {
+      "productId": "G299",
+      "expectedInspiredBy": "Xerjoff Erba Pura",
+      "expectedCategory": "men",
+      "supplierId": "M160",
+      "expectedSupplierName": "Xerjoff Erba Pura",
+      "status": "matched"
+    },
+    {
+      "productId": "G300",
+      "expectedInspiredBy": "Xerjoff Gran Ballo",
+      "expectedCategory": "men",
+      "supplierId": "M203",
+      "expectedSupplierName": "Xerjoff Gran Ballo",
+      "status": "matched"
+    },
+    {
+      "productId": "G301",
+      "expectedInspiredBy": "Xerjoff Join The Club 40 Knots",
+      "expectedCategory": "men",
+      "supplierId": "M202",
+      "expectedSupplierName": "Xerjoff Join The Club 40 Knots",
+      "status": "matched"
+    },
+    {
+      "productId": "G302",
+      "expectedInspiredBy": "Xerjoff Laylati",
+      "expectedCategory": "men",
+      "supplierId": "M269",
+      "expectedSupplierName": "Xerjoff Laylati",
+      "status": "matched"
+    },
+    {
+      "productId": "G303",
+      "expectedInspiredBy": "Xerjoff Luxor",
+      "expectedCategory": "men",
+      "supplierId": "M215",
+      "expectedSupplierName": "Xerjoff Luxor",
+      "status": "matched"
+    },
+    {
+      "productId": "G304",
+      "expectedInspiredBy": "Xerjoff Mefisto",
+      "expectedCategory": "men",
+      "supplierId": "M192",
+      "expectedSupplierName": "Xerjoff Mefisto",
+      "status": "matched"
+    },
+    {
+      "productId": "G305",
+      "expectedInspiredBy": "Xerjoff More Than Words",
+      "expectedCategory": "men",
+      "supplierId": "M257",
+      "expectedSupplierName": "Xerjoff More Than Words",
+      "status": "matched"
+    },
+    {
+      "productId": "G306",
+      "expectedInspiredBy": "Xerjoff Muse",
+      "expectedCategory": "men",
+      "supplierId": "M260",
+      "expectedSupplierName": "Xerjoff Muse",
+      "status": "matched"
+    },
+    {
+      "productId": "G307",
+      "expectedInspiredBy": "Xerjoff Naxos",
+      "expectedCategory": "men",
+      "supplierId": "M180",
+      "expectedSupplierName": "Xerjoff Naxos",
+      "status": "matched"
+    },
+    {
+      "productId": "G308",
+      "expectedInspiredBy": "Xerjoff Nio",
+      "expectedCategory": "men",
+      "supplierId": "M237",
+      "expectedSupplierName": "Xerjoff Nio",
+      "status": "matched"
+    },
+    {
+      "productId": "G309",
+      "expectedInspiredBy": "Xerjoff Richwood",
+      "expectedCategory": "men",
+      "supplierId": "M194",
+      "expectedSupplierName": "Xerjoff Richwood",
+      "status": "matched"
+    },
+    {
+      "productId": "G310",
+      "expectedInspiredBy": "Xerjoff Tony Lommi Monkey Special",
+      "expectedCategory": "men",
+      "supplierId": "M286",
+      "expectedSupplierName": "Xerjoff Tony Lommi Monkey Special",
+      "status": "matched"
+    },
+    {
+      "productId": "G311",
+      "expectedInspiredBy": "Xerjoff Torino 21",
+      "expectedCategory": "men",
+      "supplierId": "M303",
+      "expectedSupplierName": "Xerjoff Torino 21",
+      "status": "matched"
+    },
+    {
+      "productId": "G312",
+      "expectedInspiredBy": "Xerjoff Torino 22",
+      "expectedCategory": "men",
+      "supplierId": "M270",
+      "expectedSupplierName": "Xerjoff Torino 22",
+      "status": "matched"
+    },
+    {
+      "productId": "G313",
+      "expectedInspiredBy": "YSL Kuros",
+      "expectedCategory": "men",
+      "supplierId": "M63",
+      "expectedSupplierName": "YSL Kuros",
+      "status": "matched"
+    },
+    {
+      "productId": "G314",
+      "expectedInspiredBy": "YSL La Nuit Intense",
+      "expectedCategory": "men",
+      "supplierId": "M84",
+      "expectedSupplierName": "YSL La Nuit Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "G315",
+      "expectedInspiredBy": "YSL La Nuit Le Parfum",
+      "expectedCategory": "men",
+      "supplierId": "M284",
+      "expectedSupplierName": "YSL La Nuit Le Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "G316",
+      "expectedInspiredBy": "YSL La´Nuit",
+      "expectedCategory": "men",
+      "supplierId": "M29",
+      "expectedSupplierName": "YSL La´Nuit",
+      "status": "matched"
+    },
+    {
+      "productId": "G317",
+      "expectedInspiredBy": "YSL Myslf",
+      "expectedCategory": "men",
+      "supplierId": "M287",
+      "expectedSupplierName": "YSL Myslf",
+      "status": "matched"
+    },
+    {
+      "productId": "G318",
+      "expectedInspiredBy": "YSL Supreme Bouqeut",
+      "expectedCategory": "men",
+      "supplierId": "M304",
+      "expectedSupplierName": "YSL Supreme Bouqeut",
+      "status": "matched"
+    },
+    {
+      "productId": "G319",
+      "expectedInspiredBy": "YSL Tuxedo",
+      "expectedCategory": "men",
+      "supplierId": "M316",
+      "expectedSupplierName": "YSL Tuxedo",
+      "status": "matched"
+    },
+    {
+      "productId": "G320",
+      "expectedInspiredBy": "YSL Y",
+      "expectedCategory": "men",
+      "supplierId": "M141",
+      "expectedSupplierName": "YSL Y",
+      "status": "matched"
+    },
+    {
+      "productId": "G321",
+      "expectedInspiredBy": "Zadig & Voltaire This is Him",
+      "expectedCategory": "men",
+      "supplierId": "M152",
+      "expectedSupplierName": "Zadig & Voltaire This is Him",
+      "status": "matched"
+    },
+    {
+      "productId": "G322",
+      "expectedInspiredBy": "Zarko Perfume The Muse",
+      "expectedCategory": "men",
+      "supplierId": "M299",
+      "expectedSupplierName": "Zarko Perfume The Muse",
+      "status": "matched"
+    },
+    {
+      "productId": "G333",
+      "expectedInspiredBy": "Guerlain Cherry Oud",
+      "expectedCategory": "men",
+      "supplierId": "M333",
+      "expectedSupplierName": "Guerlain Cherry Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "G334",
+      "expectedInspiredBy": "Prada Paradigme",
+      "expectedCategory": "men",
+      "supplierId": "M334",
+      "expectedSupplierName": "Prada Paradigme",
+      "status": "matched"
+    },
+    {
+      "productId": "G335",
+      "expectedInspiredBy": "Xerjoff Torino 25",
+      "expectedCategory": "men",
+      "supplierId": "M335",
+      "expectedSupplierName": "Xerjoff Torino 25",
+      "status": "matched"
+    },
+    {
+      "productId": "G336",
+      "expectedInspiredBy": "MFK Oud Silk Mood",
+      "expectedCategory": "men",
+      "supplierId": "M336",
+      "expectedSupplierName": "MFK Oud Silk Mood",
+      "status": "matched"
+    },
+    {
+      "productId": "G337",
+      "expectedInspiredBy": "Xerjoff La Capitale",
+      "expectedCategory": "men",
+      "supplierId": "M337",
+      "expectedSupplierName": "Xerjoff La Capitale",
+      "status": "matched"
+    },
+    {
+      "productId": "G338",
+      "expectedInspiredBy": "Penhaligon’s Changing Constance",
+      "expectedCategory": "men",
+      "supplierId": "M338",
+      "expectedSupplierName": "Penhalihons Changnig Constance",
+      "status": "matched"
+    },
+    {
+      "productId": "G339",
+      "expectedInspiredBy": "New Notes Caramelo Vanilla",
+      "expectedCategory": "men",
+      "supplierId": "M339",
+      "expectedSupplierName": "New Notes Carmelo Vanilla",
+      "status": "matched"
+    },
+    {
+      "productId": "G340",
+      "expectedInspiredBy": "Anfas Ishq",
+      "expectedCategory": "men",
+      "supplierId": "M340",
+      "expectedSupplierName": "Anfas Ishq",
+      "status": "matched"
+    },
+    {
+      "productId": "G341",
+      "expectedInspiredBy": "Xerjoff Duran Duran Black Moonlight",
+      "expectedCategory": "men",
+      "supplierId": "M341",
+      "expectedSupplierName": "Xerjoff Duran Black Moonlight",
+      "status": "matched"
+    },
+    {
+      "productId": "G342",
+      "expectedInspiredBy": "Armani Stronger With You Powerfully",
+      "expectedCategory": "men",
+      "supplierId": "M342",
+      "expectedSupplierName": "Armani Stronger With You Powerfully",
+      "status": "matched"
+    },
+    {
+      "productId": "G343",
+      "expectedInspiredBy": "Chanel Bleu de Chanel L’Exclusif",
+      "expectedCategory": "men",
+      "supplierId": "M343",
+      "expectedSupplierName": "Chanel Bleu de Chanel Exclusif",
+      "status": "matched"
+    },
+    {
+      "productId": "G344",
+      "expectedInspiredBy": "Xerjoff Gibeon",
+      "expectedCategory": "men",
+      "supplierId": "M344",
+      "expectedSupplierName": "Xerjoff Gibeon",
+      "status": "matched"
+    },
+    {
+      "productId": "G345",
+      "expectedInspiredBy": "JPG Scandal Pour Homme Intense",
+      "expectedCategory": "men",
+      "supplierId": "M345",
+      "expectedSupplierName": "JPG Scandal Intense",
+      "status": "review",
+      "note": "Die Händlerliste kürzt die Variante ab. Pour Homme Intense ist noch zu bestätigen."
+    },
+    {
+      "productId": "G346",
+      "expectedInspiredBy": "Tom Ford Amber Intrigue",
+      "expectedCategory": "men",
+      "supplierId": "M346",
+      "expectedSupplierName": "Tom Ford Amber Intrigue",
+      "status": "matched"
+    },
+    {
+      "productId": "G347",
+      "expectedInspiredBy": "Gucci Guilty Absolu de Parfum Pour Homme",
+      "expectedCategory": "men",
+      "supplierId": "M347",
+      "expectedSupplierName": "Gucci Guilty Absolu",
+      "status": "review",
+      "note": "Die Händlerliste kürzt die Variante ab. Absolu de Parfum Pour Homme ist noch zu bestätigen."
+    },
+    {
+      "productId": "G348",
+      "expectedInspiredBy": "Xerjoff Louis XV 1722 Rosé",
+      "expectedCategory": "men",
+      "supplierId": "M348",
+      "expectedSupplierName": "Xerjoff Louis XV 1722 Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "G349",
+      "expectedInspiredBy": "Matière Première Vanilla Powder",
+      "expectedCategory": "men",
+      "supplierId": "M349",
+      "expectedSupplierName": "Matiere Premiere Vanilla Powder",
+      "status": "matched"
+    },
+    {
+      "productId": "G350",
+      "expectedInspiredBy": "Dior Gris Dior",
+      "expectedCategory": "men",
+      "supplierId": "M350",
+      "expectedSupplierName": "Dior Gris Dior",
+      "status": "matched"
+    },
+    {
+      "productId": "G351",
+      "expectedInspiredBy": "Marc Gebauer Orange Flamingo",
+      "expectedCategory": "men",
+      "supplierId": "M359",
+      "expectedSupplierName": "Marc Gebauer Orange Flamingo",
+      "status": "matched"
+    },
+    {
+      "productId": "G352",
+      "expectedInspiredBy": "Memo Paris African Leather",
+      "expectedCategory": "men",
+      "supplierId": "M352",
+      "expectedSupplierName": "Memo Paris African Leather",
+      "status": "matched"
+    },
+    {
+      "productId": "G353",
+      "expectedInspiredBy": "Louis Vuitton Ambre Levant",
+      "expectedCategory": "men",
+      "supplierId": "M353",
+      "expectedSupplierName": "Louis Vuitton Ambre Lavant",
+      "status": "matched"
+    },
+    {
+      "productId": "G354",
+      "expectedInspiredBy": "Louis Vuitton Attrape-Rêves",
+      "expectedCategory": "men",
+      "supplierId": "M354",
+      "expectedSupplierName": "Louis Vuitton Attrape Reves",
+      "status": "matched"
+    },
+    {
+      "productId": "G355",
+      "expectedInspiredBy": "Hersh Lahab",
+      "expectedCategory": "men",
+      "supplierId": "M355",
+      "expectedSupplierName": "Hersh Lahab",
+      "status": "matched"
+    },
+    {
+      "productId": "G356",
+      "expectedInspiredBy": "Hersh Mehwar",
+      "expectedCategory": "men",
+      "supplierId": "M356",
+      "expectedSupplierName": "Hersh Mehwar",
+      "status": "matched"
+    },
+    {
+      "productId": "G357",
+      "expectedInspiredBy": "Versace Eros Flame",
+      "expectedCategory": "men",
+      "supplierId": "M357",
+      "expectedSupplierName": "Versace Eros Flame",
+      "status": "matched"
+    },
+    {
+      "productId": "G358",
+      "expectedInspiredBy": "Essential Parfums Bois Impérial",
+      "expectedCategory": "men",
+      "supplierId": "M358",
+      "expectedSupplierName": "Essentials Bois Imperial",
+      "status": "matched"
+    },
+    {
+      "productId": "G359",
+      "expectedInspiredBy": "Paco Rabanne One Million Black",
+      "expectedCategory": "men",
+      "supplierId": "M360",
+      "expectedSupplierName": "Paco Rabanne One Million Black",
+      "status": "matched"
+    },
+    {
+      "productId": "G360",
+      "expectedInspiredBy": "Tiziana Terenzi Kirke Overdose",
+      "expectedCategory": "men",
+      "supplierId": "M361",
+      "expectedSupplierName": "Tiziana Terenzi Kirke Overdose",
+      "status": "matched"
+    },
+    {
+      "productId": "G361",
+      "expectedInspiredBy": "Le Labo Another 13",
+      "expectedCategory": "men",
+      "supplierId": "M362",
+      "expectedSupplierName": "Le Labo Another 13",
+      "status": "matched"
+    },
+    {
+      "productId": "G362",
+      "expectedInspiredBy": "Dolce & Gabbana The One",
+      "expectedCategory": "men",
+      "supplierId": "M1",
+      "expectedSupplierName": "D&G The One",
+      "status": "matched",
+      "note": "Händlerbezeichnung ohne genaue Variante/Konzentration. Bild zeigt auf Nutzerwunsch nur den NØTE.-Flakon."
+    },
+    {
+      "productId": "G363",
+      "expectedInspiredBy": "D&G Homme",
+      "expectedCategory": "men",
+      "supplierId": "M11",
+      "expectedSupplierName": "D&G Homme",
+      "status": "matched",
+      "note": "Händlerbezeichnung ohne genaue Variante/Konzentration. Bild zeigt auf Nutzerwunsch nur den NØTE.-Flakon."
+    },
+    {
+      "productId": "G364",
+      "expectedInspiredBy": "Viktor & Rolf Spicebomb",
+      "expectedCategory": "men",
+      "supplierId": "M16",
+      "expectedSupplierName": "V&R Spicebomb",
+      "status": "matched"
+    },
+    {
+      "productId": "G365",
+      "expectedInspiredBy": "Calvin Klein CK One",
+      "expectedCategory": "men",
+      "supplierId": "M23",
+      "expectedSupplierName": "CK One",
+      "status": "matched"
+    },
+    {
+      "productId": "G366",
+      "expectedInspiredBy": "Mugler A*Men",
+      "expectedCategory": "men",
+      "supplierId": "M25",
+      "expectedSupplierName": "TM Amen",
+      "status": "matched"
+    },
+    {
+      "productId": "G367",
+      "expectedInspiredBy": "Mr. Burberry Indigo",
+      "expectedCategory": "men",
+      "supplierId": "M53",
+      "expectedSupplierName": "Mr Burberry Indigo",
+      "status": "matched"
+    },
+    {
+      "productId": "G368",
+      "expectedInspiredBy": "Acqua di Parma Colonia Oud",
+      "expectedCategory": "men",
+      "supplierId": "M58",
+      "expectedSupplierName": "Aqua di Parma Oud Colonia",
+      "status": "matched"
+    },
+    {
+      "productId": "G369",
+      "expectedInspiredBy": "Mancera Red Tobacco",
+      "expectedCategory": "men",
+      "supplierId": "M126",
+      "expectedSupplierName": "Mancera Red Tobacco",
+      "status": "matched"
+    },
+    {
+      "productId": "G370",
+      "expectedInspiredBy": "Montale Honey Aoud",
+      "expectedCategory": "men",
+      "supplierId": "M168",
+      "expectedSupplierName": "Montal Honey Aoud",
+      "status": "matched"
+    },
+    {
+      "productId": "L1",
+      "expectedInspiredBy": "Afnan Zahrat Al Khaleej",
+      "expectedCategory": "women",
+      "supplierId": "W125",
+      "expectedSupplierName": "Afnan Zahrat Al Khaleej",
+      "status": "matched"
+    },
+    {
+      "productId": "L2",
+      "expectedInspiredBy": "Ajmal 1001 Nights",
+      "expectedCategory": "women",
+      "supplierId": "W111",
+      "expectedSupplierName": "Ajmal 1001 Nights",
+      "status": "matched"
+    },
+    {
+      "productId": "L3",
+      "expectedInspiredBy": "Ana Wel Shook",
+      "expectedCategory": "women",
+      "supplierId": "W127",
+      "expectedSupplierName": "Ana Wel Shook",
+      "status": "matched"
+    },
+    {
+      "productId": "L4",
+      "expectedInspiredBy": "Armani Acqua di Gioia",
+      "expectedCategory": "women",
+      "supplierId": "W63",
+      "expectedSupplierName": "Armani Acqua di Gioia",
+      "status": "matched"
+    },
+    {
+      "productId": "L5",
+      "expectedInspiredBy": "Armani Because its You",
+      "expectedCategory": "women",
+      "supplierId": "W106",
+      "expectedSupplierName": "Armani Because its You",
+      "status": "matched"
+    },
+    {
+      "productId": "L6",
+      "expectedInspiredBy": "Armani Code",
+      "expectedCategory": "women",
+      "supplierId": "W28",
+      "expectedSupplierName": "Armani Code",
+      "status": "matched"
+    },
+    {
+      "productId": "L7",
+      "expectedInspiredBy": "Armani Code Cashmere",
+      "expectedCategory": "women",
+      "supplierId": "W165",
+      "expectedSupplierName": "Armani Code Cashmere",
+      "status": "matched"
+    },
+    {
+      "productId": "L8",
+      "expectedInspiredBy": "Armani Emporio She",
+      "expectedCategory": "women",
+      "supplierId": "W139",
+      "expectedSupplierName": "Armani Emporio She",
+      "status": "matched"
+    },
+    {
+      "productId": "L9",
+      "expectedInspiredBy": "Armani My Way",
+      "expectedCategory": "women",
+      "supplierId": "W118",
+      "expectedSupplierName": "Armani My Way",
+      "status": "matched"
+    },
+    {
+      "productId": "L10",
+      "expectedInspiredBy": "Armani My Way Floral",
+      "expectedCategory": "women",
+      "supplierId": "W144",
+      "expectedSupplierName": "Armani My Way Floral",
+      "status": "matched"
+    },
+    {
+      "productId": "L11",
+      "expectedInspiredBy": "Armani Si",
+      "expectedCategory": "women",
+      "supplierId": "W38",
+      "expectedSupplierName": "Armani Si",
+      "status": "matched"
+    },
+    {
+      "productId": "L12",
+      "expectedInspiredBy": "Armani Si Passion",
+      "expectedCategory": "women",
+      "supplierId": "W40",
+      "expectedSupplierName": "Armani Si Passion",
+      "status": "matched"
+    },
+    {
+      "productId": "L13",
+      "expectedInspiredBy": "Baccarat Rouge 540 Eau de Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W136",
+      "expectedSupplierName": "Baccarat Rouge 540 Eau de Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L14",
+      "expectedInspiredBy": "Baccarat Rouge 540 Extrait de Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W168",
+      "expectedSupplierName": "Baccarat Rouge 540 Extrait de Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L15",
+      "expectedInspiredBy": "Bon Bon Vanille",
+      "expectedCategory": "women",
+      "supplierId": "W31",
+      "expectedSupplierName": "Bon Bon Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "L16",
+      "expectedInspiredBy": "Boss Alive",
+      "expectedCategory": "women",
+      "supplierId": "W43",
+      "expectedSupplierName": "Boss Alive",
+      "status": "matched"
+    },
+    {
+      "productId": "L17",
+      "expectedInspiredBy": "Boss Mavie",
+      "expectedCategory": "women",
+      "supplierId": "W37",
+      "expectedSupplierName": "Boss Mavie",
+      "status": "matched"
+    },
+    {
+      "productId": "L18",
+      "expectedInspiredBy": "Boss Orange",
+      "expectedCategory": "women",
+      "supplierId": "W47",
+      "expectedSupplierName": "Boss Orange",
+      "status": "matched"
+    },
+    {
+      "productId": "L19",
+      "expectedInspiredBy": "Boss The Scent",
+      "expectedCategory": "women",
+      "supplierId": "W58",
+      "expectedSupplierName": "Boss The Scent",
+      "status": "matched"
+    },
+    {
+      "productId": "L20",
+      "expectedInspiredBy": "Bottega Veneta Femme",
+      "expectedCategory": "women",
+      "supplierId": "W71",
+      "expectedSupplierName": "Bottega Veneta Femme",
+      "status": "matched"
+    },
+    {
+      "productId": "L21",
+      "expectedInspiredBy": "Britney Spears Fantasy",
+      "expectedCategory": "women",
+      "supplierId": "W158",
+      "expectedSupplierName": "Britney Spears Fantasy",
+      "status": "matched"
+    },
+    {
+      "productId": "L22",
+      "expectedInspiredBy": "Bubble Gum",
+      "expectedCategory": "women",
+      "supplierId": "W30",
+      "expectedSupplierName": "Bubble Gum",
+      "status": "matched"
+    },
+    {
+      "productId": "L23",
+      "expectedInspiredBy": "Bulgari Bvlgari Le Gemme Tygar",
+      "expectedCategory": "women",
+      "supplierId": "W177",
+      "expectedSupplierName": "Bulgari Bvlgari Le Gemme Tygar",
+      "status": "matched"
+    },
+    {
+      "productId": "L24",
+      "expectedInspiredBy": "Bulgari Omnia Crystalline",
+      "expectedCategory": "women",
+      "supplierId": "W52",
+      "expectedSupplierName": "Bulgari Omnia Crystalline",
+      "status": "matched"
+    },
+    {
+      "productId": "L25",
+      "expectedInspiredBy": "Burberry Goddes",
+      "expectedCategory": "women",
+      "supplierId": "W178",
+      "expectedSupplierName": "Burberry Goddes",
+      "status": "matched"
+    },
+    {
+      "productId": "L26",
+      "expectedInspiredBy": "Burberry Her",
+      "expectedCategory": "women",
+      "supplierId": "W116",
+      "expectedSupplierName": "Burberry Her",
+      "status": "matched"
+    },
+    {
+      "productId": "L27",
+      "expectedInspiredBy": "Burberry London",
+      "expectedCategory": "women",
+      "supplierId": "W46",
+      "expectedSupplierName": "Burberry London",
+      "status": "matched"
+    },
+    {
+      "productId": "L28",
+      "expectedInspiredBy": "Cacharel Amor Amor",
+      "expectedCategory": "women",
+      "supplierId": "W73",
+      "expectedSupplierName": "Cacharel Amor Amor",
+      "status": "matched"
+    },
+    {
+      "productId": "L29",
+      "expectedInspiredBy": "Calvin Klein Eternity",
+      "expectedCategory": "women",
+      "supplierId": "W22",
+      "expectedSupplierName": "Calvin Klein Eternity",
+      "status": "matched"
+    },
+    {
+      "productId": "L30",
+      "expectedInspiredBy": "Calvin Klein Euphoria",
+      "expectedCategory": "women",
+      "supplierId": "W51",
+      "expectedSupplierName": "Calvin Klein Euphoria",
+      "status": "matched"
+    },
+    {
+      "productId": "L31",
+      "expectedInspiredBy": "Carolina Herrera 212 Sexy",
+      "expectedCategory": "women",
+      "supplierId": "W104",
+      "expectedSupplierName": "Carolina Herrera 212 Sexy",
+      "status": "matched"
+    },
+    {
+      "productId": "L32",
+      "expectedInspiredBy": "Carolina Herrera 212 VIP",
+      "expectedCategory": "women",
+      "supplierId": "W26",
+      "expectedSupplierName": "Carolina Herrera 212 VIP",
+      "status": "matched"
+    },
+    {
+      "productId": "L33",
+      "expectedInspiredBy": "Carolina Herrera Good Girl",
+      "expectedCategory": "women",
+      "supplierId": "W87",
+      "expectedSupplierName": "Carolina Herrera Good Girl",
+      "status": "matched"
+    },
+    {
+      "productId": "L34",
+      "expectedInspiredBy": "Carolina Herrera La Bomba",
+      "expectedCategory": "women",
+      "supplierId": "W198",
+      "expectedSupplierName": "Carolina Herrera La Bomba",
+      "status": "matched"
+    },
+    {
+      "productId": "L35",
+      "expectedInspiredBy": "Carolina Herrera Very Good Girl Glam",
+      "expectedCategory": "women",
+      "supplierId": "W156",
+      "expectedSupplierName": "Carolina Herrera Very Good Girl Glam",
+      "status": "matched"
+    },
+    {
+      "productId": "L36",
+      "expectedInspiredBy": "Chanel Chance Eau Fraiche",
+      "expectedCategory": "women",
+      "supplierId": "W15",
+      "expectedSupplierName": "Chanel Chance Eau Fraiche",
+      "status": "matched"
+    },
+    {
+      "productId": "L37",
+      "expectedInspiredBy": "Chanel Chance Eau Tendre",
+      "expectedCategory": "women",
+      "supplierId": "W39",
+      "expectedSupplierName": "Chanel Chance Eau Tendre",
+      "status": "matched"
+    },
+    {
+      "productId": "L38",
+      "expectedInspiredBy": "Chanel Chance Eau de Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W126",
+      "expectedSupplierName": "Chanel Chance Eau de Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L39",
+      "expectedInspiredBy": "Chanel Coco Madmoiselle",
+      "expectedCategory": "women",
+      "supplierId": "W14",
+      "expectedSupplierName": "Chanel Coco Madmoiselle",
+      "status": "matched"
+    },
+    {
+      "productId": "L40",
+      "expectedInspiredBy": "Chanel Coco Madmoiselle intense",
+      "expectedCategory": "women",
+      "supplierId": "W99",
+      "expectedSupplierName": "Chanel Coco Madmoiselle intense",
+      "status": "matched"
+    },
+    {
+      "productId": "L41",
+      "expectedInspiredBy": "Chanel Coco eau de Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W84",
+      "expectedSupplierName": "Chanel Coco eau de Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L42",
+      "expectedInspiredBy": "Chanel Gabrielle",
+      "expectedCategory": "women",
+      "supplierId": "W77",
+      "expectedSupplierName": "Chanel Gabrielle",
+      "status": "matched"
+    },
+    {
+      "productId": "L43",
+      "expectedInspiredBy": "Chanel Madmoiselle L'eau Prive",
+      "expectedCategory": "women",
+      "supplierId": "W122",
+      "expectedSupplierName": "Chanel Madmoiselle L'eau Prive",
+      "status": "matched"
+    },
+    {
+      "productId": "L44",
+      "expectedInspiredBy": "Chanel No. 5",
+      "expectedCategory": "women",
+      "supplierId": "W13",
+      "expectedSupplierName": "Chanel No. 5",
+      "status": "matched"
+    },
+    {
+      "productId": "L45",
+      "expectedInspiredBy": "Chloe",
+      "expectedCategory": "women",
+      "supplierId": "W6",
+      "expectedSupplierName": "Chloe",
+      "status": "matched"
+    },
+    {
+      "productId": "L46",
+      "expectedInspiredBy": "Chloe Love",
+      "expectedCategory": "women",
+      "supplierId": "W114",
+      "expectedSupplierName": "Chloe Love",
+      "status": "matched"
+    },
+    {
+      "productId": "L47",
+      "expectedInspiredBy": "Chloe Nomade",
+      "expectedCategory": "women",
+      "supplierId": "W112",
+      "expectedSupplierName": "Chloe Nomade",
+      "status": "matched"
+    },
+    {
+      "productId": "L48",
+      "expectedInspiredBy": "Creed Aventus For Her",
+      "expectedCategory": "women",
+      "supplierId": "W147",
+      "expectedSupplierName": "Creed Aventus For Her",
+      "status": "matched"
+    },
+    {
+      "productId": "L49",
+      "expectedInspiredBy": "Creed Wind Flowers Floral",
+      "expectedCategory": "women",
+      "supplierId": "W145",
+      "expectedSupplierName": "Creed Wind Flowers Floral",
+      "status": "matched"
+    },
+    {
+      "productId": "L50",
+      "expectedInspiredBy": "DKNY Be Delicious (Green)",
+      "expectedCategory": "women",
+      "supplierId": "W49",
+      "expectedSupplierName": "DKNY Be Delicious (Green)",
+      "status": "matched"
+    },
+    {
+      "productId": "L51",
+      "expectedInspiredBy": "Davidoff Cool Water",
+      "expectedCategory": "women",
+      "supplierId": "W163",
+      "expectedSupplierName": "Davidoff Cool Water",
+      "status": "matched"
+    },
+    {
+      "productId": "L52",
+      "expectedInspiredBy": "Diesel Fuel for Life",
+      "expectedCategory": "women",
+      "supplierId": "W91",
+      "expectedSupplierName": "Diesel Fuel for Life",
+      "status": "matched"
+    },
+    {
+      "productId": "L53",
+      "expectedInspiredBy": "Dior Addict",
+      "expectedCategory": "women",
+      "supplierId": "W19",
+      "expectedSupplierName": "Dior Addict",
+      "status": "matched"
+    },
+    {
+      "productId": "L54",
+      "expectedInspiredBy": "Dior Hypnotic Poison",
+      "expectedCategory": "women",
+      "supplierId": "W2",
+      "expectedSupplierName": "Dior Hypnotic Poison",
+      "status": "matched"
+    },
+    {
+      "productId": "L55",
+      "expectedInspiredBy": "Dior Jadore",
+      "expectedCategory": "women",
+      "supplierId": "W17",
+      "expectedSupplierName": "Dior Jadore",
+      "status": "matched"
+    },
+    {
+      "productId": "L56",
+      "expectedInspiredBy": "Dior Miss Dior",
+      "expectedCategory": "women",
+      "supplierId": "W18",
+      "expectedSupplierName": "Dior Miss Dior",
+      "status": "matched"
+    },
+    {
+      "productId": "L57",
+      "expectedInspiredBy": "Dior Miss Dior Rose",
+      "expectedCategory": "women",
+      "supplierId": "W190",
+      "expectedSupplierName": "Dior Miss Dior Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "L58",
+      "expectedInspiredBy": "Dior Poison (Cobra)",
+      "expectedCategory": "women",
+      "supplierId": "W117",
+      "expectedSupplierName": "Dior Poison (Cobra)",
+      "status": "matched"
+    },
+    {
+      "productId": "L59",
+      "expectedInspiredBy": "Dior Poison Girl",
+      "expectedCategory": "women",
+      "supplierId": "W48",
+      "expectedSupplierName": "Dior Poison Girl",
+      "status": "matched"
+    },
+    {
+      "productId": "L60",
+      "expectedInspiredBy": "Dior Rouge Trafalgar",
+      "expectedCategory": "women",
+      "supplierId": "W137",
+      "expectedSupplierName": "Dior Rouge Trafalgar",
+      "status": "matched"
+    },
+    {
+      "productId": "L61",
+      "expectedInspiredBy": "Dior Vanill Diorama",
+      "expectedCategory": "women",
+      "supplierId": "W166",
+      "expectedSupplierName": "Dior Vanill Diorama",
+      "status": "matched"
+    },
+    {
+      "productId": "L62",
+      "expectedInspiredBy": "Dolce & Gabbana Devotion",
+      "expectedCategory": "women",
+      "supplierId": "W187",
+      "expectedSupplierName": "Dolce & Gabbana Devotion",
+      "status": "matched"
+    },
+    {
+      "productId": "L63",
+      "expectedInspiredBy": "Dolce & Gabbana Garden",
+      "expectedCategory": "women",
+      "supplierId": "W115",
+      "expectedSupplierName": "Dolce & Gabbana Garden",
+      "status": "matched"
+    },
+    {
+      "productId": "L64",
+      "expectedInspiredBy": "Dolce & Gabbana Light Blue",
+      "expectedCategory": "women",
+      "supplierId": "W34",
+      "expectedSupplierName": "Dolce & Gabbana Light Blue",
+      "status": "matched"
+    },
+    {
+      "productId": "L65",
+      "expectedInspiredBy": "Dolce & Gabbana No 3",
+      "expectedCategory": "women",
+      "supplierId": "W64",
+      "expectedSupplierName": "Dolce & Gabbana No 3",
+      "status": "matched"
+    },
+    {
+      "productId": "L66",
+      "expectedInspiredBy": "Dolce & Gabbana The One",
+      "expectedCategory": "women",
+      "supplierId": "W4",
+      "expectedSupplierName": "Dolce & Gabbana The One",
+      "status": "matched"
+    },
+    {
+      "productId": "L67",
+      "expectedInspiredBy": "Elie Saab Le Parfume",
+      "expectedCategory": "women",
+      "supplierId": "W69",
+      "expectedSupplierName": "Elie Saab Le Parfume",
+      "status": "matched"
+    },
+    {
+      "productId": "L68",
+      "expectedInspiredBy": "Escada Especially",
+      "expectedCategory": "women",
+      "supplierId": "W78",
+      "expectedSupplierName": "Escada Especially",
+      "status": "matched"
+    },
+    {
+      "productId": "L69",
+      "expectedInspiredBy": "Escada Magnetisim",
+      "expectedCategory": "women",
+      "supplierId": "W1",
+      "expectedSupplierName": "Escada Magnetisim",
+      "status": "matched"
+    },
+    {
+      "productId": "L70",
+      "expectedInspiredBy": "Escada Sexy Graffiti",
+      "expectedCategory": "women",
+      "supplierId": "W72",
+      "expectedSupplierName": "Escada Sexy Graffiti",
+      "status": "matched"
+    },
+    {
+      "productId": "L71",
+      "expectedInspiredBy": "Giorgio Armani Cuir Noir",
+      "expectedCategory": "women",
+      "supplierId": "W96",
+      "expectedSupplierName": "Giorgio Armani Cuir Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "L72",
+      "expectedInspiredBy": "Giorgio Armani Myrrhe Imperiale",
+      "expectedCategory": "women",
+      "supplierId": "W95",
+      "expectedSupplierName": "Giorgio Armani Myrrhe Imperiale",
+      "status": "matched"
+    },
+    {
+      "productId": "L73",
+      "expectedInspiredBy": "Gisada Ambassadora",
+      "expectedCategory": "women",
+      "supplierId": "W132",
+      "expectedSupplierName": "Gisada Ambassadora",
+      "status": "matched"
+    },
+    {
+      "productId": "L74",
+      "expectedInspiredBy": "Givenchy Amarige",
+      "expectedCategory": "women",
+      "supplierId": "W92",
+      "expectedSupplierName": "Givenchy Amarige",
+      "status": "matched"
+    },
+    {
+      "productId": "L75",
+      "expectedInspiredBy": "Givenchy L'interdit",
+      "expectedCategory": "women",
+      "supplierId": "W107",
+      "expectedSupplierName": "Givenchy L'interdit",
+      "status": "matched"
+    },
+    {
+      "productId": "L76",
+      "expectedInspiredBy": "Givenchy L'interdit Angelique Rouge",
+      "expectedCategory": "women",
+      "supplierId": "W197",
+      "expectedSupplierName": "Givenchy L'interdit Angelique Rouge",
+      "status": "matched"
+    },
+    {
+      "productId": "L77",
+      "expectedInspiredBy": "Gucci Bamboo",
+      "expectedCategory": "women",
+      "supplierId": "W59",
+      "expectedSupplierName": "Gucci Bamboo",
+      "status": "matched"
+    },
+    {
+      "productId": "L78",
+      "expectedInspiredBy": "Gucci Bloom",
+      "expectedCategory": "women",
+      "supplierId": "W108",
+      "expectedSupplierName": "Gucci Bloom",
+      "status": "matched"
+    },
+    {
+      "productId": "L79",
+      "expectedInspiredBy": "Gucci Flora Gardenia",
+      "expectedCategory": "women",
+      "supplierId": "W103",
+      "expectedSupplierName": "",
+      "status": "historical",
+      "note": "Historische Zuordnung: W103 ist in der Händlerliste 10.26 leer. Daraus folgt keine bestätigte Abkündigung."
+    },
+    {
+      "productId": "L80",
+      "expectedInspiredBy": "Gucci Flora Gorgeous Gardenia",
+      "expectedCategory": "women",
+      "supplierId": "W148",
+      "expectedSupplierName": "Gucci Flora Gorgeous Gardenia",
+      "status": "matched"
+    },
+    {
+      "productId": "L81",
+      "expectedInspiredBy": "Gucci Guilty Absolute",
+      "expectedCategory": "women",
+      "supplierId": "W102",
+      "expectedSupplierName": "Gucci Guilty Absolute",
+      "status": "matched"
+    },
+    {
+      "productId": "L82",
+      "expectedInspiredBy": "Gucci Guilty Intense pour Femme",
+      "expectedCategory": "women",
+      "supplierId": "W36",
+      "expectedSupplierName": "Gucci Guilty Intense pour Femme",
+      "status": "matched"
+    },
+    {
+      "productId": "L83",
+      "expectedInspiredBy": "Gucci Rush",
+      "expectedCategory": "women",
+      "supplierId": "W35",
+      "expectedSupplierName": "Gucci Rush",
+      "status": "matched"
+    },
+    {
+      "productId": "L84",
+      "expectedInspiredBy": "Gucci by Gucci",
+      "expectedCategory": "women",
+      "supplierId": "W89",
+      "expectedSupplierName": "Gucci by Gucci",
+      "status": "matched"
+    },
+    {
+      "productId": "L85",
+      "expectedInspiredBy": "Guerlain L'instant Magic",
+      "expectedCategory": "women",
+      "supplierId": "W62",
+      "expectedSupplierName": "Guerlain L'instant Magic",
+      "status": "matched"
+    },
+    {
+      "productId": "L86",
+      "expectedInspiredBy": "Hareem Al Sultan Gold Khadlaj",
+      "expectedCategory": "women",
+      "supplierId": "W183",
+      "expectedSupplierName": "Hareem Al Sultan Gold Khadlaj",
+      "status": "matched"
+    },
+    {
+      "productId": "L87",
+      "expectedInspiredBy": "Hugo Boss pour Femme",
+      "expectedCategory": "women",
+      "supplierId": "W27",
+      "expectedSupplierName": "Hugo Boss pour Femme",
+      "status": "matched"
+    },
+    {
+      "productId": "L88",
+      "expectedInspiredBy": "Initio Side Effect",
+      "expectedCategory": "women",
+      "supplierId": "W171",
+      "expectedSupplierName": "Initio Side Effect",
+      "status": "matched"
+    },
+    {
+      "productId": "L89",
+      "expectedInspiredBy": "Issey Miyake L eau d Issey",
+      "expectedCategory": "women",
+      "supplierId": "W24",
+      "expectedSupplierName": "Issey Miyake L eau d Issey",
+      "status": "matched"
+    },
+    {
+      "productId": "L90",
+      "expectedInspiredBy": "Jean Paul Gaulter So Scandal",
+      "expectedCategory": "women",
+      "supplierId": "W81",
+      "expectedSupplierName": "Jean Paul Gaulter So Scandal",
+      "status": "matched"
+    },
+    {
+      "productId": "L91",
+      "expectedInspiredBy": "Jean Paul Gaultier Classique",
+      "expectedCategory": "women",
+      "supplierId": "W25",
+      "expectedSupplierName": "Jean Paul Gaultier Classique",
+      "status": "matched"
+    },
+    {
+      "productId": "L92",
+      "expectedInspiredBy": "Jean Paul Gaultier Divine",
+      "expectedCategory": "women",
+      "supplierId": "W194",
+      "expectedSupplierName": "Jean Paul Gaultier Divine",
+      "status": "matched"
+    },
+    {
+      "productId": "L93",
+      "expectedInspiredBy": "Jean Paul Gaultier La Belle",
+      "expectedCategory": "women",
+      "supplierId": "W42",
+      "expectedSupplierName": "Jean Paul Gaultier La Belle",
+      "status": "matched"
+    },
+    {
+      "productId": "L94",
+      "expectedInspiredBy": "Jean Paul Gaultier Scandal",
+      "expectedCategory": "women",
+      "supplierId": "W74",
+      "expectedSupplierName": "Jean Paul Gaultier Scandal",
+      "status": "matched"
+    },
+    {
+      "productId": "L95",
+      "expectedInspiredBy": "Jean Paul Gaultier Scandal Le Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W160",
+      "expectedSupplierName": "Jean Paul Gaultier Scandal Le Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L96",
+      "expectedInspiredBy": "Jil Sander Sun",
+      "expectedCategory": "women",
+      "supplierId": "W44",
+      "expectedSupplierName": "Jil Sander Sun",
+      "status": "matched"
+    },
+    {
+      "productId": "L97",
+      "expectedInspiredBy": "Joop Le Bain",
+      "expectedCategory": "women",
+      "supplierId": "W76",
+      "expectedSupplierName": "Joop Le Bain",
+      "status": "matched"
+    },
+    {
+      "productId": "L98",
+      "expectedInspiredBy": "Kalemat Arabian Oud",
+      "expectedCategory": "women",
+      "supplierId": "W113",
+      "expectedSupplierName": "Kalemat Arabian Oud",
+      "status": "matched"
+    },
+    {
+      "productId": "L99",
+      "expectedInspiredBy": "KayAli Pistachio Gelato 33",
+      "expectedCategory": "women",
+      "supplierId": "W182",
+      "expectedSupplierName": "KayAli Pistachio Gelato 33",
+      "status": "matched"
+    },
+    {
+      "productId": "L100",
+      "expectedInspiredBy": "KayAli Vanilla 28",
+      "expectedCategory": "women",
+      "supplierId": "W181",
+      "expectedSupplierName": "KayAli Vanilla 28",
+      "status": "matched"
+    },
+    {
+      "productId": "L101",
+      "expectedInspiredBy": "Kenzo Flower",
+      "expectedCategory": "women",
+      "supplierId": "W20",
+      "expectedSupplierName": "Kenzo Flower",
+      "status": "matched"
+    },
+    {
+      "productId": "L102",
+      "expectedInspiredBy": "Kilian Angels Share",
+      "expectedCategory": "women",
+      "supplierId": "W135",
+      "expectedSupplierName": "Kilian Angels Share",
+      "status": "matched"
+    },
+    {
+      "productId": "L103",
+      "expectedInspiredBy": "Kilian Bamboo Harmony",
+      "expectedCategory": "women",
+      "supplierId": "W82",
+      "expectedSupplierName": "Kilian Bamboo Harmony",
+      "status": "matched"
+    },
+    {
+      "productId": "L104",
+      "expectedInspiredBy": "Kilian Black to Black",
+      "expectedCategory": "women",
+      "supplierId": "W93",
+      "expectedSupplierName": "Kilian Black to Black",
+      "status": "matched"
+    },
+    {
+      "productId": "L105",
+      "expectedInspiredBy": "Kilian Dont be Shy",
+      "expectedCategory": "women",
+      "supplierId": "W134",
+      "expectedSupplierName": "Kilian Dont be Shy",
+      "status": "matched"
+    },
+    {
+      "productId": "L106",
+      "expectedInspiredBy": "Kilian Good Girl Gone Bad",
+      "expectedCategory": "women",
+      "supplierId": "W195",
+      "expectedSupplierName": "Kilian Good Girl Gone Bad",
+      "status": "matched"
+    },
+    {
+      "productId": "L107",
+      "expectedInspiredBy": "Lacoste pour Femme",
+      "expectedCategory": "women",
+      "supplierId": "W29",
+      "expectedSupplierName": "Lacoste pour Femme",
+      "status": "matched"
+    },
+    {
+      "productId": "L108",
+      "expectedInspiredBy": "Lancome Hypnose",
+      "expectedCategory": "women",
+      "supplierId": "W55",
+      "expectedSupplierName": "Lancome Hypnose",
+      "status": "matched"
+    },
+    {
+      "productId": "L109",
+      "expectedInspiredBy": "Lancome Idole",
+      "expectedCategory": "women",
+      "supplierId": "W109",
+      "expectedSupplierName": "Lancome Idole",
+      "status": "matched"
+    },
+    {
+      "productId": "L110",
+      "expectedInspiredBy": "Lancome La Nuit Tresor Intense",
+      "expectedCategory": "women",
+      "supplierId": "W143",
+      "expectedSupplierName": "Lancome La Nuit Tresor Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "L111",
+      "expectedInspiredBy": "Lancome La vie este Belle",
+      "expectedCategory": "women",
+      "supplierId": "W16",
+      "expectedSupplierName": "Lancome La vie este Belle",
+      "status": "matched"
+    },
+    {
+      "productId": "L112",
+      "expectedInspiredBy": "Lancome Midnight Rose",
+      "expectedCategory": "women",
+      "supplierId": "W65",
+      "expectedSupplierName": "Lancome Midnight Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "L113",
+      "expectedInspiredBy": "Lancome Miracle",
+      "expectedCategory": "women",
+      "supplierId": "W54",
+      "expectedSupplierName": "Lancome Miracle",
+      "status": "matched"
+    },
+    {
+      "productId": "L114",
+      "expectedInspiredBy": "Lancome Tresor",
+      "expectedCategory": "women",
+      "supplierId": "W53",
+      "expectedSupplierName": "Lancome Tresor",
+      "status": "matched"
+    },
+    {
+      "productId": "L115",
+      "expectedInspiredBy": "Lancome Tresor La Nuit",
+      "expectedCategory": "women",
+      "supplierId": "W66",
+      "expectedSupplierName": "Lancome Tresor La Nuit",
+      "status": "matched"
+    },
+    {
+      "productId": "L116",
+      "expectedInspiredBy": "Lattafa Ser Al Shulod Dubai",
+      "expectedCategory": "women",
+      "supplierId": "W41",
+      "expectedSupplierName": "Lattafa Ser Al Shulod Dubai",
+      "status": "matched"
+    },
+    {
+      "productId": "L117",
+      "expectedInspiredBy": "Louis Vuitton City of Stars",
+      "expectedCategory": "women",
+      "supplierId": "W192",
+      "expectedSupplierName": "Louis Vuitton City of Stars",
+      "status": "matched"
+    },
+    {
+      "productId": "L118",
+      "expectedInspiredBy": "Louis Vuitton Fleur du Desert",
+      "expectedCategory": "women",
+      "supplierId": "W180",
+      "expectedSupplierName": "Louis Vuitton Fleur du Desert",
+      "status": "matched"
+    },
+    {
+      "productId": "L119",
+      "expectedInspiredBy": "Louis Vuitton Rose des Vents",
+      "expectedCategory": "women",
+      "supplierId": "W123",
+      "expectedSupplierName": "Louis Vuitton Rose des Vents",
+      "status": "matched"
+    },
+    {
+      "productId": "L120",
+      "expectedInspiredBy": "Louis Vuitton Spell on You",
+      "expectedCategory": "women",
+      "supplierId": "W146",
+      "expectedSupplierName": "Louis Vuitton Spell on You",
+      "status": "matched"
+    },
+    {
+      "productId": "L121",
+      "expectedInspiredBy": "Louis Vuitton Symohony",
+      "expectedCategory": "women",
+      "supplierId": "W193",
+      "expectedSupplierName": "Louis Vuitton Symohony",
+      "status": "matched"
+    },
+    {
+      "productId": "L122",
+      "expectedInspiredBy": "Lv Coeuer Battant",
+      "expectedCategory": "women",
+      "supplierId": "W186",
+      "expectedSupplierName": "Lv Coeuer Battant",
+      "status": "matched"
+    },
+    {
+      "productId": "L123",
+      "expectedInspiredBy": "Mancera Coco Vanille",
+      "expectedCategory": "women",
+      "supplierId": "W142",
+      "expectedSupplierName": "Mancera Coco Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "L124",
+      "expectedInspiredBy": "Mancera Instant Crush",
+      "expectedCategory": "women",
+      "supplierId": "W184",
+      "expectedSupplierName": "Mancera Instant Crush",
+      "status": "matched"
+    },
+    {
+      "productId": "L125",
+      "expectedInspiredBy": "Mancera Roses Vanille",
+      "expectedCategory": "women",
+      "supplierId": "W167",
+      "expectedSupplierName": "Mancera Roses Vanille",
+      "status": "matched"
+    },
+    {
+      "productId": "L126",
+      "expectedInspiredBy": "Marc Jacobs Daisy",
+      "expectedCategory": "women",
+      "supplierId": "W85",
+      "expectedSupplierName": "Marc Jacobs Daisy",
+      "status": "matched"
+    },
+    {
+      "productId": "L127",
+      "expectedInspiredBy": "Marc Jacobs Decadence",
+      "expectedCategory": "women",
+      "supplierId": "W56",
+      "expectedSupplierName": "Marc Jacobs Decadence",
+      "status": "matched"
+    },
+    {
+      "productId": "L128",
+      "expectedInspiredBy": "Michael Kors Sexy Amber",
+      "expectedCategory": "women",
+      "supplierId": "W45",
+      "expectedSupplierName": "Michael Kors Sexy Amber",
+      "status": "matched"
+    },
+    {
+      "productId": "L129",
+      "expectedInspiredBy": "Milton Llyod Hawaii",
+      "expectedCategory": "women",
+      "supplierId": "W88",
+      "expectedSupplierName": "Milton Llyod Hawaii",
+      "status": "matched"
+    },
+    {
+      "productId": "L130",
+      "expectedInspiredBy": "Molecules 01",
+      "expectedCategory": "women",
+      "supplierId": "W80",
+      "expectedSupplierName": "Molecules 01",
+      "status": "matched"
+    },
+    {
+      "productId": "L131",
+      "expectedInspiredBy": "Mon Guerlain",
+      "expectedCategory": "women",
+      "supplierId": "W79",
+      "expectedSupplierName": "Mon Guerlain",
+      "status": "matched"
+    },
+    {
+      "productId": "L132",
+      "expectedInspiredBy": "Montale Infinity",
+      "expectedCategory": "women",
+      "supplierId": "W185",
+      "expectedSupplierName": "Montale Infinity",
+      "status": "matched"
+    },
+    {
+      "productId": "L133",
+      "expectedInspiredBy": "Montale Intense Tiare",
+      "expectedCategory": "women",
+      "supplierId": "W175",
+      "expectedSupplierName": "Montale Intense Tiare",
+      "status": "matched"
+    },
+    {
+      "productId": "L134",
+      "expectedInspiredBy": "Montale Rose Musk",
+      "expectedCategory": "women",
+      "supplierId": "W124",
+      "expectedSupplierName": "Montale Rose Musk",
+      "status": "matched"
+    },
+    {
+      "productId": "L135",
+      "expectedInspiredBy": "Montale Sensual Instinct",
+      "expectedCategory": "women",
+      "supplierId": "W149",
+      "expectedSupplierName": "Montale Sensual Instinct",
+      "status": "matched"
+    },
+    {
+      "productId": "L136",
+      "expectedInspiredBy": "Montale Sweet Vanilla",
+      "expectedCategory": "women",
+      "supplierId": "W94",
+      "expectedSupplierName": "Montale Sweet Vanilla",
+      "status": "matched"
+    },
+    {
+      "productId": "L137",
+      "expectedInspiredBy": "Montale Vanilla Absolu",
+      "expectedCategory": "women",
+      "supplierId": "W188",
+      "expectedSupplierName": "Montale Vanilla Absolu",
+      "status": "matched"
+    },
+    {
+      "productId": "L138",
+      "expectedInspiredBy": "Montale White Musk",
+      "expectedCategory": "women",
+      "supplierId": "W157",
+      "expectedSupplierName": "Montale White Musk",
+      "status": "matched"
+    },
+    {
+      "productId": "L139",
+      "expectedInspiredBy": "Narciso Rodriguez For Her",
+      "expectedCategory": "women",
+      "supplierId": "W57",
+      "expectedSupplierName": "Narciso Rodriguez For Her",
+      "status": "matched"
+    },
+    {
+      "productId": "L140",
+      "expectedInspiredBy": "Narciso Rodriguez For Her Black",
+      "expectedCategory": "women",
+      "supplierId": "W176",
+      "expectedSupplierName": "Narciso Rodriguez For Her Black",
+      "status": "matched"
+    },
+    {
+      "productId": "L141",
+      "expectedInspiredBy": "Paco Rabbane Black XS Pure",
+      "expectedCategory": "women",
+      "supplierId": "W98",
+      "expectedSupplierName": "Paco Rabbane Black XS Pure",
+      "status": "matched"
+    },
+    {
+      "productId": "L142",
+      "expectedInspiredBy": "Paco Rabbane Fame",
+      "expectedCategory": "women",
+      "supplierId": "W162",
+      "expectedSupplierName": "Paco Rabbane Fame",
+      "status": "matched"
+    },
+    {
+      "productId": "L143",
+      "expectedInspiredBy": "Paco Rabbane Lady Million",
+      "expectedCategory": "women",
+      "supplierId": "W5",
+      "expectedSupplierName": "Paco Rabbane Lady Million",
+      "status": "matched"
+    },
+    {
+      "productId": "L144",
+      "expectedInspiredBy": "Paco Rabbane Lady Million Lucky",
+      "expectedCategory": "women",
+      "supplierId": "W100",
+      "expectedSupplierName": "Paco Rabbane Lady Million Lucky",
+      "status": "matched"
+    },
+    {
+      "productId": "L145",
+      "expectedInspiredBy": "Paco Rabbane Olympea",
+      "expectedCategory": "women",
+      "supplierId": "W50",
+      "expectedSupplierName": "Paco Rabbane Olympea",
+      "status": "matched"
+    },
+    {
+      "productId": "L146",
+      "expectedInspiredBy": "Parfum De Marly Delina",
+      "expectedCategory": "women",
+      "supplierId": "W130",
+      "expectedSupplierName": "Parfum De Marly Delina",
+      "status": "matched"
+    },
+    {
+      "productId": "L147",
+      "expectedInspiredBy": "Parfum De Marly Valaya",
+      "expectedCategory": "women",
+      "supplierId": "W196",
+      "expectedSupplierName": "Parfum De Marly Valaya",
+      "status": "matched"
+    },
+    {
+      "productId": "L148",
+      "expectedInspiredBy": "Parfums De Marly Palatine",
+      "expectedCategory": "women",
+      "supplierId": "W199",
+      "expectedSupplierName": "Parfums De Marly Palatine",
+      "status": "matched"
+    },
+    {
+      "productId": "L149",
+      "expectedInspiredBy": "Parfums De Marly Valaya Exclusif",
+      "expectedCategory": "women",
+      "supplierId": "W201",
+      "expectedSupplierName": "Parfums De Marly Valaya Exclusif",
+      "status": "matched"
+    },
+    {
+      "productId": "L150",
+      "expectedInspiredBy": "Paris Hilton",
+      "expectedCategory": "women",
+      "supplierId": "W128",
+      "expectedSupplierName": "Paris Hilton",
+      "status": "matched"
+    },
+    {
+      "productId": "L151",
+      "expectedInspiredBy": "Prada Candy",
+      "expectedCategory": "women",
+      "supplierId": "W3",
+      "expectedSupplierName": "Prada Candy",
+      "status": "matched"
+    },
+    {
+      "productId": "L152",
+      "expectedInspiredBy": "Prada Infusion D'iris",
+      "expectedCategory": "women",
+      "supplierId": "W83",
+      "expectedSupplierName": "Prada Infusion D'iris",
+      "status": "matched"
+    },
+    {
+      "productId": "L153",
+      "expectedInspiredBy": "Prada Milano Femme",
+      "expectedCategory": "women",
+      "supplierId": "W86",
+      "expectedSupplierName": "Prada Milano Femme",
+      "status": "matched"
+    },
+    {
+      "productId": "L154",
+      "expectedInspiredBy": "Prada Paradox",
+      "expectedCategory": "women",
+      "supplierId": "W161",
+      "expectedSupplierName": "Prada Paradox",
+      "status": "matched"
+    },
+    {
+      "productId": "L155",
+      "expectedInspiredBy": "Prada Paradox Intense",
+      "expectedCategory": "women",
+      "supplierId": "W200",
+      "expectedSupplierName": "Prada Paradox Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "L156",
+      "expectedInspiredBy": "Priscilla Presley Indian Summer",
+      "expectedCategory": "women",
+      "supplierId": "W140",
+      "expectedSupplierName": "Priscilla Presley Indian Summer",
+      "status": "matched"
+    },
+    {
+      "productId": "L157",
+      "expectedInspiredBy": "Rasasi Junoon Satin",
+      "expectedCategory": "women",
+      "supplierId": "W173",
+      "expectedSupplierName": "Rasasi Junoon Satin",
+      "status": "matched"
+    },
+    {
+      "productId": "L158",
+      "expectedInspiredBy": "Roberto Cavalli EDP",
+      "expectedCategory": "women",
+      "supplierId": "W68",
+      "expectedSupplierName": "Roberto Cavalli EDP",
+      "status": "matched"
+    },
+    {
+      "productId": "L159",
+      "expectedInspiredBy": "Roberto Cavalli Just Cavalli",
+      "expectedCategory": "women",
+      "supplierId": "W105",
+      "expectedSupplierName": "Roberto Cavalli Just Cavalli",
+      "status": "matched"
+    },
+    {
+      "productId": "L160",
+      "expectedInspiredBy": "Thierry Mugler Alien",
+      "expectedCategory": "women",
+      "supplierId": "W11",
+      "expectedSupplierName": "Thierry Mugler Alien",
+      "status": "matched"
+    },
+    {
+      "productId": "L161",
+      "expectedInspiredBy": "Thierry Mugler Angel",
+      "expectedCategory": "women",
+      "supplierId": "W12",
+      "expectedSupplierName": "Thierry Mugler Angel",
+      "status": "matched"
+    },
+    {
+      "productId": "L162",
+      "expectedInspiredBy": "Thierry Mugler Aura",
+      "expectedCategory": "women",
+      "supplierId": "W90",
+      "expectedSupplierName": "Thierry Mugler Aura",
+      "status": "matched"
+    },
+    {
+      "productId": "L163",
+      "expectedInspiredBy": "Tom Ford Black Orchid",
+      "expectedCategory": "women",
+      "supplierId": "W21",
+      "expectedSupplierName": "Tom Ford Black Orchid",
+      "status": "matched"
+    },
+    {
+      "productId": "L164",
+      "expectedInspiredBy": "Tom Ford Cafe Rose",
+      "expectedCategory": "women",
+      "supplierId": "W179",
+      "expectedSupplierName": "Tom Ford Cafe Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "L165",
+      "expectedInspiredBy": "Tom Ford Cost Azzurra",
+      "expectedCategory": "women",
+      "supplierId": "W170",
+      "expectedSupplierName": "Tom Ford Cost Azzurra",
+      "status": "matched"
+    },
+    {
+      "productId": "L166",
+      "expectedInspiredBy": "Tom Ford Soleil Blanc",
+      "expectedCategory": "women",
+      "supplierId": "W141",
+      "expectedSupplierName": "Tom Ford Soleil Blanc",
+      "status": "matched"
+    },
+    {
+      "productId": "L167",
+      "expectedInspiredBy": "Tom Ford Vanilla Sex",
+      "expectedCategory": "women",
+      "supplierId": "W189",
+      "expectedSupplierName": "Tom Ford Vanilla Sex",
+      "status": "matched"
+    },
+    {
+      "productId": "L168",
+      "expectedInspiredBy": "Tom Ford Velvet Orchid",
+      "expectedCategory": "women",
+      "supplierId": "W159",
+      "expectedSupplierName": "Tom Ford Velvet Orchid",
+      "status": "matched"
+    },
+    {
+      "productId": "L169",
+      "expectedInspiredBy": "Tulip",
+      "expectedCategory": "women",
+      "supplierId": "W154",
+      "expectedSupplierName": "Tulip",
+      "status": "matched"
+    },
+    {
+      "productId": "L170",
+      "expectedInspiredBy": "Valentino Born in Roma",
+      "expectedCategory": "women",
+      "supplierId": "W131",
+      "expectedSupplierName": "Valentino Born in Roma",
+      "status": "matched"
+    },
+    {
+      "productId": "L171",
+      "expectedInspiredBy": "Valentino Donna",
+      "expectedCategory": "women",
+      "supplierId": "W32",
+      "expectedSupplierName": "Valentino Donna",
+      "status": "matched"
+    },
+    {
+      "productId": "L172",
+      "expectedInspiredBy": "Versace Bright Crystal",
+      "expectedCategory": "women",
+      "supplierId": "W23",
+      "expectedSupplierName": "Versace Bright Crystal",
+      "status": "matched"
+    },
+    {
+      "productId": "L173",
+      "expectedInspiredBy": "Versace Cristall Noir",
+      "expectedCategory": "women",
+      "supplierId": "W60",
+      "expectedSupplierName": "Versace Cristall Noir",
+      "status": "matched"
+    },
+    {
+      "productId": "L174",
+      "expectedInspiredBy": "Victor Rolf Flowerbomb La vie en Rose",
+      "expectedCategory": "women",
+      "supplierId": "W101",
+      "expectedSupplierName": "Victor Rolf Flowerbomb La vie en Rose",
+      "status": "matched"
+    },
+    {
+      "productId": "L175",
+      "expectedInspiredBy": "Victoria Secret Bombshell",
+      "expectedCategory": "women",
+      "supplierId": "W75",
+      "expectedSupplierName": "Victoria Secret Bombshell",
+      "status": "matched"
+    },
+    {
+      "productId": "L176",
+      "expectedInspiredBy": "Viktor Rolf Bonbon",
+      "expectedCategory": "women",
+      "supplierId": "W33",
+      "expectedSupplierName": "Viktor Rolf Bonbon",
+      "status": "matched"
+    },
+    {
+      "productId": "L177",
+      "expectedInspiredBy": "Viktor Rolf Flowerbomb",
+      "expectedCategory": "women",
+      "supplierId": "W7",
+      "expectedSupplierName": "Viktor Rolf Flowerbomb",
+      "status": "matched"
+    },
+    {
+      "productId": "L178",
+      "expectedInspiredBy": "W10",
+      "expectedCategory": "women",
+      "supplierId": "W10",
+      "expectedSupplierName": "YSL Black Opium",
+      "status": "review",
+      "note": "Im Shop ist nur W10 als Originalreferenz gespeichert. Die Händlerzeile nennt YSL Black Opium; der tatsächliche Originalduft ist noch zu bestätigen."
+    },
+    {
+      "productId": "L179",
+      "expectedInspiredBy": "Widian Black II",
+      "expectedCategory": "women",
+      "supplierId": "W150",
+      "expectedSupplierName": "Widian Black II",
+      "status": "matched"
+    },
+    {
+      "productId": "L180",
+      "expectedInspiredBy": "Widian Black IV",
+      "expectedCategory": "women",
+      "supplierId": "W151",
+      "expectedSupplierName": "Widian Black IV",
+      "status": "matched"
+    },
+    {
+      "productId": "L181",
+      "expectedInspiredBy": "Widian Black Limited 71 Intense",
+      "expectedCategory": "women",
+      "supplierId": "W153",
+      "expectedSupplierName": "Widian Black Limited 71 Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "L182",
+      "expectedInspiredBy": "Widian Black V",
+      "expectedCategory": "women",
+      "supplierId": "W152",
+      "expectedSupplierName": "Widian Black V",
+      "status": "matched"
+    },
+    {
+      "productId": "L183",
+      "expectedInspiredBy": "Xerjoff Acento",
+      "expectedCategory": "women",
+      "supplierId": "W133",
+      "expectedSupplierName": "Xerjoff Acento",
+      "status": "matched"
+    },
+    {
+      "productId": "L184",
+      "expectedInspiredBy": "Xerjoff Casamorati Dama Bianca",
+      "expectedCategory": "women",
+      "supplierId": "W129",
+      "expectedSupplierName": "Xerjoff Casamorati Dama Bianca",
+      "status": "matched"
+    },
+    {
+      "productId": "L185",
+      "expectedInspiredBy": "Xerjoff Coro",
+      "expectedCategory": "women",
+      "supplierId": "W172",
+      "expectedSupplierName": "Xerjoff Coro",
+      "status": "matched"
+    },
+    {
+      "productId": "L186",
+      "expectedInspiredBy": "Xerjoff Erba Pura",
+      "expectedCategory": "women",
+      "supplierId": "W138",
+      "expectedSupplierName": "Xerjoff Erba Pura",
+      "status": "matched"
+    },
+    {
+      "productId": "L187",
+      "expectedInspiredBy": "Xerjoff More Than Words",
+      "expectedCategory": "women",
+      "supplierId": "W174",
+      "expectedSupplierName": "Xerjoff More Than Words",
+      "status": "matched"
+    },
+    {
+      "productId": "L188",
+      "expectedInspiredBy": "Xerjoff Opera",
+      "expectedCategory": "women",
+      "supplierId": "W121",
+      "expectedSupplierName": "Xerjoff Opera",
+      "status": "matched"
+    },
+    {
+      "productId": "L189",
+      "expectedInspiredBy": "YSL Cinema",
+      "expectedCategory": "women",
+      "supplierId": "W169",
+      "expectedSupplierName": "YSL Cinema",
+      "status": "matched"
+    },
+    {
+      "productId": "L190",
+      "expectedInspiredBy": "YSL Libre",
+      "expectedCategory": "women",
+      "supplierId": "W110",
+      "expectedSupplierName": "YSL Libre",
+      "status": "matched"
+    },
+    {
+      "productId": "L191",
+      "expectedInspiredBy": "YSL Libre Intense",
+      "expectedCategory": "women",
+      "supplierId": "W120",
+      "expectedSupplierName": "YSL Libre Intense",
+      "status": "matched"
+    },
+    {
+      "productId": "L192",
+      "expectedInspiredBy": "YSL Libre Le Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W164",
+      "expectedSupplierName": "YSL Libre Le Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L193",
+      "expectedInspiredBy": "YSL Libre Vanille Couture",
+      "expectedCategory": "women",
+      "supplierId": "W202",
+      "expectedSupplierName": "YSL Libre Vanille Couture",
+      "status": "matched"
+    },
+    {
+      "productId": "L194",
+      "expectedInspiredBy": "YSL Manifesto",
+      "expectedCategory": "women",
+      "supplierId": "W8",
+      "expectedSupplierName": "YSL Manifesto",
+      "status": "matched"
+    },
+    {
+      "productId": "L195",
+      "expectedInspiredBy": "YSL Mon Paris",
+      "expectedCategory": "women",
+      "supplierId": "W67",
+      "expectedSupplierName": "YSL Mon Paris",
+      "status": "matched"
+    },
+    {
+      "productId": "L196",
+      "expectedInspiredBy": "YSL Opium",
+      "expectedCategory": "women",
+      "supplierId": "W61",
+      "expectedSupplierName": "YSL Opium",
+      "status": "matched"
+    },
+    {
+      "productId": "L197",
+      "expectedInspiredBy": "YSL Supreme Bouquet",
+      "expectedCategory": "women",
+      "supplierId": "W191",
+      "expectedSupplierName": "YSL Supreme Bouquet",
+      "status": "matched"
+    },
+    {
+      "productId": "L198",
+      "expectedInspiredBy": "Yasmin",
+      "expectedCategory": "women",
+      "supplierId": "W155",
+      "expectedSupplierName": "Yasmin",
+      "status": "matched"
+    },
+    {
+      "productId": "L199",
+      "expectedInspiredBy": "Yves Magnolia",
+      "expectedCategory": "women",
+      "supplierId": "W97",
+      "expectedSupplierName": "Yves Magnolia",
+      "status": "matched"
+    },
+    {
+      "productId": "L200",
+      "expectedInspiredBy": "Zadig & Voltaire This is Her",
+      "expectedCategory": "women",
+      "supplierId": "W119",
+      "expectedSupplierName": "Zadig & Voltaire This is Her",
+      "status": "matched"
+    },
+    {
+      "productId": "L201",
+      "expectedInspiredBy": "Zuckerwatte",
+      "expectedCategory": "women",
+      "supplierId": "W70",
+      "expectedSupplierName": "Zuckerwatte",
+      "status": "matched"
+    },
+    {
+      "productId": "L203",
+      "expectedInspiredBy": "Carolina Herrera Good Girl Blush",
+      "expectedCategory": "women",
+      "supplierId": "W203",
+      "expectedSupplierName": "Carolina Herrera Good Girl Blush",
+      "status": "matched"
+    },
+    {
+      "productId": "L204",
+      "expectedInspiredBy": "New Notes Caramelo Vanilla",
+      "expectedCategory": "women",
+      "supplierId": "W204",
+      "expectedSupplierName": "New Note Carmelo Vanilla",
+      "status": "matched"
+    },
+    {
+      "productId": "L205",
+      "expectedInspiredBy": "YSL Libre Berry Crush",
+      "expectedCategory": "women",
+      "supplierId": "W205",
+      "expectedSupplierName": "YSL Libre Berry Crush",
+      "status": "matched"
+    },
+    {
+      "productId": "L206",
+      "expectedInspiredBy": "Burberry Goddess Parfum",
+      "expectedCategory": "women",
+      "supplierId": "W206",
+      "expectedSupplierName": "Burberry Goddes Parfum",
+      "status": "matched"
+    },
+    {
+      "productId": "L207",
+      "expectedInspiredBy": "Kayali Freedom Musk Bouquet 27",
+      "expectedCategory": "women",
+      "supplierId": "W207",
+      "expectedSupplierName": "Kayali Freedom Musk Bouquet 27",
+      "status": "matched"
+    },
+    {
+      "productId": "L208",
+      "expectedInspiredBy": "Armani Power of You",
+      "expectedCategory": "women",
+      "supplierId": "W208",
+      "expectedSupplierName": "Armani Power of You",
+      "status": "matched"
+    },
+    {
+      "productId": "L209",
+      "expectedInspiredBy": "Valentino Born in Roma Ivory",
+      "expectedCategory": "women",
+      "supplierId": "W209",
+      "expectedSupplierName": "Valention Born in Roma Ivory",
+      "status": "matched"
+    },
+    {
+      "productId": "L210",
+      "expectedInspiredBy": "Gisada Ambassadora Gold",
+      "expectedCategory": "women",
+      "supplierId": "W210",
+      "expectedSupplierName": "Gisada Ambassadora Gold",
+      "status": "matched"
+    },
+    {
+      "productId": "L211",
+      "expectedInspiredBy": "Versace Dylan Blush Pink",
+      "expectedCategory": "women",
+      "supplierId": "W211",
+      "expectedSupplierName": "Versace Dylan Blush Pink",
+      "status": "matched"
+    },
+    {
+      "productId": "L212",
+      "expectedInspiredBy": "Narciso Rodriguez For Her Pure Musc",
+      "expectedCategory": "women",
+      "supplierId": "W212",
+      "expectedSupplierName": "Narciso Rodriguez for Her Pure Musc",
+      "status": "matched"
+    },
+    {
+      "productId": "L213",
+      "expectedInspiredBy": "Louis Vuitton Attrape-Rêves",
+      "expectedCategory": "women",
+      "supplierId": "W213",
+      "expectedSupplierName": "Louis Vuitton Attrape Reves",
+      "status": "matched"
+    },
+    {
+      "productId": "L214",
+      "expectedInspiredBy": "Hermès Un Jardin sur le Nil",
+      "expectedCategory": "women",
+      "supplierId": "W214",
+      "expectedSupplierName": "Hermes Un Jardin Sur le Nil",
+      "status": "matched"
+    },
+    {
+      "productId": "L215",
+      "expectedInspiredBy": "Matière Première Vanilla Powder",
+      "expectedCategory": "women",
+      "supplierId": "W215",
+      "expectedSupplierName": "Matiere Premiere Vanilla Powder",
+      "status": "matched"
+    },
+    {
+      "productId": "L216",
+      "expectedInspiredBy": "Amouage Guidance 46",
+      "expectedCategory": "women",
+      "supplierId": "W216",
+      "expectedSupplierName": "Amouage Guidance 46",
+      "status": "matched"
+    },
+    {
+      "productId": "L217",
+      "expectedInspiredBy": "Kayali Sparkling Lychee 39",
+      "expectedCategory": "women",
+      "supplierId": "W217",
+      "expectedSupplierName": "Kayali Sparkling Lychee 39",
+      "status": "matched"
+    },
+    {
+      "productId": "L218",
+      "expectedInspiredBy": "Ajmal Silk Musk",
+      "expectedCategory": "women",
+      "supplierId": "W218",
+      "expectedSupplierName": "Ajmal Silk Musk",
+      "status": "matched"
+    },
+    {
+      "productId": "L219",
+      "expectedInspiredBy": "Le Labo Another 13",
+      "expectedCategory": "women",
+      "supplierId": "W219",
+      "expectedSupplierName": "Le Labo Another 13",
+      "status": "matched"
+    }
+  ],
+  "crossReferences": [
+    {
+      "supplierId": "M279",
+      "expectedSupplierName": "Bulgari Bvlgari Le Gemme Tygar",
+      "productId": "L23",
+      "primarySupplierId": "W177",
+      "note": "Gleiche Duftbezeichnung unter L23 / W177. M279 steht in der Herrenliste; die Identität der beiden Händleröle ist damit nicht bestätigt."
+    }
+  ],
+  "excluded": [
+    {
+      "supplierId": "M351",
+      "note": "Orange Cream auf Nutzerwunsch ausgelassen: Originalduft nicht eindeutig identifiziert. Orange Flamingo steht jetzt unter M359 / G351."
+    }
+  ]
+}
