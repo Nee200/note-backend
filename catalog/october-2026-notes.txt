@@ -1,0 +1,49 @@
+Oktober-Neuheiten, Stand 16.10.2026
+
+Umfang: G355-G361 und L216-L219. Elf Einträge, zehn Duftreferenzen;
+Le Labo Another 13 bleibt entsprechend der Lieferantenliste bei G und L.
+M351 Mery Perfume Orange Cream ist auf Nutzerwunsch ausgeschlossen.
+G351 Marc Gebauer Orange Flamingo bleibt unverändert und gehört jetzt zu M359.
+
+Der Import ist standardmäßig ein Trockenlauf. Er validiert alle elf Produkte,
+die öffentlichen Namen und exakten Lieferantenzuordnungen. Ein Schreiblauf
+verlangt ausdrücklich --env, --host, --database, --apply und --backup mit
+absolutem, neuem Dateipfad. Er prüft zuerst die veröffentlichten Bilder,
+sichert den Produktbestand und fügt fehlende IDs in einer Transaktion ein.
+Abweichende bestehende IDs führen zum Abbruch, niemals zum Überschreiben.
+Wiederholungen sind bei identischen Daten ohne Änderungen möglich.
+
+Reihenfolge: Frontend-Bilder und Backend-Namen/Zuordnung veröffentlichen,
+Live-Assets und /health-Version prüfen, dann den gezielten Import ausführen.
+Anschließend den öffentlichen Katalog nach Ablauf seines 60-Sekunden-Caches
+mit allen elf Datensätzen und unverändertem Altbestand vergleichen.
+
+Die Dufttexte sind eigenständig formulierte Beschreibungen der Duftidee.
+Duftnoten sind redaktionell zusammengefasste Akkorde; insbesondere bei
+Another 13 und Bois Imperial ist die Aufteilung keine veröffentlichte
+vollständige Herstellerpyramide. Keine Originalrezeptur, Konzentration
+oder Haltbarkeitsangabe wird auf das NØTE.-Produkt übertragen.
+Ajmal Silk Musk: genaue Originalvariante nicht bestätigt, daher allgemeiner
+blumiger Moschus-/Ambercharakter und auf Nutzerwunsch nur NØTE.-Flakon.
+
+Quellen:
+Hersh Lahab: https://alezz-oud.com/en/-/p2082548628
+Hersh Mehwar: https://alezz-oud.com/en/عطر-هيرش-محور-100-مل/p359133523
+Eros Flame: https://www.versace.com/us/en/men/accessories/fragrances-body-care/eros-flame/SET_Fragrances_ErosFlame.html
+Bois Imperial: https://www.essentialparfums.com/en/products/bois-imperial-eau-de-parfum-refillable-spray-100-ml
+1 Million Black: https://www.rabanne.com/ww/en/fragrance/p/1-million-black--000000000065246128
+Kirke Overdose: https://tizianaterenzi.com/tiziana-terenzi-cannes-2025-le-novita-tiziana-terenzi-e-i-10-anni-di-kirke/
+Kirke Overdose Produktbeschreibung: https://www.nicchialuxury.com/en-eu/products/tiziana-terenzi-kirke-overdose-extrait-de-parfum
+Another 13: https://www.lelabofragrances.com/another-13-463.html?size=50ml
+Guidance 46: https://amouage.com/en-uk/products/new-guidance-46
+Sparkling Lychee 39: https://kayali.com/en-ae/products/eden-sparkling-lychee-39
+Ajmal Musk Silk: https://sa.ajmal.com/en/blogs/news/top-10-musk-attars-that-last-all-day
+
+Bilder: built-in image_gen, elf einzeln erzeugte Motive. Zehn Motive wurden
+nach Nutzerkorrektur zu eigenständigen Begleitflakons umgestaltet. Form,
+Verschluss und prägende Zeichen weichen bewusst von den Originalen ab.
+L218 zeigt ausschließlich NØTE. Unabhängige gestalterische Gegenprüfung,
+Prompts und Dateihashes liegen im Frontend unter
+campaigns/october-2026/image-generation.json.
+Dies ist keine Schutzrechtsprüfung oder rechtliche Freigabe. Es gibt keinen
+pauschalen rechtlichen Abstand durch eine Veränderung um 20 bis 30 Prozent.
