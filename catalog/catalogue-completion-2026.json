@@ -1,0 +1,290 @@
+[
+  {
+    "id": "G362",
+    "name": "No. G362",
+    "category": "men",
+    "inspiredBy": "Dolce & Gabbana The One",
+    "description": "The Singular One ergänzt die NØTE. Herrenkollektion.",
+    "longDescription": "The Singular One ist in 30, 50 und 100 ml erhältlich. Wähle die Größe, die zu deinem Alltag passt.",
+    "notes": {
+      "head": "",
+      "heart": "",
+      "base": ""
+    },
+    "images": [
+      "images_website/new-arrivals/g362-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G363",
+    "name": "No. G363",
+    "category": "men",
+    "inspiredBy": "D&G Homme",
+    "description": "Gentleman's Signature ergänzt die NØTE. Herrenkollektion.",
+    "longDescription": "Gentleman's Signature ist in 30, 50 und 100 ml erhältlich. Wähle die Größe, die zu deinem Alltag passt.",
+    "notes": {
+      "head": "",
+      "heart": "",
+      "base": ""
+    },
+    "images": [
+      "images_website/new-arrivals/g363-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G364",
+    "name": "No. G364",
+    "category": "men",
+    "inspiredBy": "Viktor & Rolf Spicebomb",
+    "description": "Frische Zitrusnoten, lebendige Gewürze und ein warmer Tabak-Leder-Akkord.",
+    "longDescription": "Bergamotte und Grapefruit treffen auf rosa Pfeffer und Elemi. Zimt und Safran verleihen der Komposition Wärme, während Leder, Tabak und Vetiver einen trockenen, markanten Ausklang bilden.",
+    "notes": {
+      "head": "Bergamotte, Grapefruit, rosa Pfeffer, Elemi",
+      "heart": "Zimt, Safran, Paprika",
+      "base": "Leder, Tabak, Vetiver"
+    },
+    "images": [
+      "images_website/new-arrivals/g364-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G365",
+    "name": "No. G365",
+    "category": "men",
+    "inspiredBy": "Calvin Klein CK One",
+    "description": "Helle Bergamotte, grüner Tee und sanfte Blüten mit einer weichen Moschusbasis.",
+    "longDescription": "Grüner Tee und Bergamotte eröffnen eine klare, frische Komposition. Rose und Veilchen geben ihr eine zarte florale Mitte. Moschus und Amber sorgen für einen sanften Ausklang.",
+    "notes": {
+      "head": "grüner Tee, Bergamotte",
+      "heart": "Rose, Veilchen",
+      "base": "Moschus, Amber"
+    },
+    "images": [
+      "images_website/new-arrivals/g365-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G366",
+    "name": "No. G366",
+    "category": "men",
+    "inspiredBy": "Mugler A*Men",
+    "description": "Aromatischer Lavendel trifft auf gerösteten Kaffee, Patchouli und Vanille.",
+    "longDescription": "Lavendel bringt einen aromatischen Auftakt, bevor gerösteter Arabica-Kaffee seine warme, dunkle Seite entfaltet. Patchouli und Bourbonvanille verbinden sich zu einem süßen, erdigen Abschluss.",
+    "notes": {
+      "head": "Lavendel",
+      "heart": "gerösteter Arabica-Kaffee",
+      "base": "Patchouli, Bourbonvanille"
+    },
+    "images": [
+      "images_website/new-arrivals/g366-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G367",
+    "name": "No. G367",
+    "category": "men",
+    "inspiredBy": "Mr. Burberry Indigo",
+    "description": "Zitrone, kühle Minze und grüne Kräuter auf einer weichen Amber-Moos-Basis.",
+    "longDescription": "Zitrone, Rosmarin und Veilchenblatt geben Indigo Gentleman seinen grünen, frischen Charakter. Spearmint setzt einen kühlen Akzent; Amber und Eichenmoos runden die Komposition ab.",
+    "notes": {
+      "head": "",
+      "heart": "",
+      "base": ""
+    },
+    "images": [
+      "images_website/new-arrivals/g367-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G368",
+    "name": "No. G368",
+    "category": "men",
+    "inspiredBy": "Acqua di Parma Colonia Oud",
+    "description": "Lebendige Zitrusfrische und dunkles Oud, begleitet von trockenen Hölzern und Leder.",
+    "longDescription": "Bergamotte und Orange verbinden sich mit Oud, Amyris und Koriander. Zedernholz, Patchouli und Sandelholz verleihen der Komposition Tiefe. Leder und Moschus sorgen für einen weichen, warmen Ausklang.",
+    "notes": {
+      "head": "",
+      "heart": "",
+      "base": ""
+    },
+    "images": [
+      "images_website/new-arrivals/g368-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G369",
+    "name": "No. G369",
+    "category": "men",
+    "inspiredBy": "Mancera Red Tobacco",
+    "description": "Würziger Tabak mit fruchtigen Akzenten, dunklen Hölzern und warmer Vanille.",
+    "longDescription": "Safran, Zimt und Weihrauch treffen auf Apfel, weißen Pfirsich und Oud. Patchouli und Jasmin bilden die Mitte. Tabak, Amber, Vetiver und Vanille geben dem Duft seinen warmen, kräftigen Charakter.",
+    "notes": {
+      "head": "Safran, Zimt, Weihrauch, Muskat, weißer Pfirsich, grüner Apfel, nepalesisches Oud",
+      "heart": "Patchouliblätter, Jasmin",
+      "base": "Tabak, Amber, holzige Noten, Vetiver, Vanille, weißer Moschus"
+    },
+    "images": [
+      "images_website/new-arrivals/g369-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  },
+  {
+    "id": "G370",
+    "name": "No. G370",
+    "category": "men",
+    "inspiredBy": "Montale Honey Aoud",
+    "description": "Goldener Honig und Zimt treffen auf Oud, Patchouli und weiche Vanille.",
+    "longDescription": "Honig und Zimt eröffnen Honeywood mit süßer Wärme. Patchouliblätter geben eine erdige Tiefe, gefolgt von Oud, Leder und Amber. Vanille und weißer Moschus runden die Komposition weich ab.",
+    "notes": {
+      "head": "Zimt, Honig",
+      "heart": "Patchouliblätter",
+      "base": "Amber, Leder, Oud, Vanille, weißer Moschus"
+    },
+    "images": [
+      "images_website/new-arrivals/g370-catalogue-2026-v1.webp",
+      "images_parfume/parfume_mann_webp.webp",
+      "images_website/product-details/note-product-infographic-v1.webp"
+    ],
+    "bestseller": false,
+    "newArrival": true,
+    "variants": {
+      "30": {
+        "price": 34.99
+      },
+      "50": {
+        "price": 44.99
+      },
+      "100": {
+        "price": 44.99,
+        "originalPrice": 65.99
+      }
+    }
+  }
+]

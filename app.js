@@ -52,11 +52,7 @@ const { MongoRateStore } = require('./middleware/mongoRateStore');
 const adminAuthenticator = require('./services/adminAuth').createAdminAuthenticator(env);
 const adminEnrollment = require('./services/adminEnrollment').createAdminEnrollment({ secret: env.JWT_SECRET, reserved: adminAuthenticator.hasAccount });
 const adminCredentialVersion = name => adminAuthenticator.hasAccount(name) ? Promise.resolve(adminAuthenticator.fingerprint(name)) : adminEnrollment.fingerprint(name);
-const {
-    supplierEntries,
-    findSupplierEntryById,
-    findBestSupplierMatchByInspiredBy
-} = require('./supplierCatalogMap');
+const { parseId, lookupProductMapping, lookupIdMapping, buildSupplierCatalogue } = require('./services/productSupplierMapping');
 
 const JWT_SECRET = env.JWT_SECRET;
 const sessionService = require('./services/sessionService').createSessionService(JWT_SECRET);
@@ -651,33 +647,6 @@ async function loadCatalog() {
 
 function isAdmin(req) { return req.adminSession?.role === 'admin'; }
 
-function normalizeInternalExternalProductId(rawValue) {
-    return String(rawValue || '')
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '')
-        .replace(/[^A-Z0-9]/g, '');
-}
-
-function parseInternalOrSupplierId(rawValue) {
-    const normalized = normalizeInternalExternalProductId(rawValue);
-    const match = normalized.match(/^([GLMW])(\d{1,4})$/);
-    if (!match) return null;
-
-    const prefix = match[1];
-    const number = parseInt(match[2], 10);
-    if (!Number.isFinite(number) || number <= 0) return null;
-
-    return {
-        normalized,
-        prefix,
-        number,
-        internalId: (prefix === 'G' || prefix === 'L') ? `${prefix}${number}` : `${prefix === 'M' ? 'G' : 'L'}${number}`,
-        supplierId: (prefix === 'M' || prefix === 'W') ? `${prefix}${number}` : null,
-        direction: (prefix === 'G' || prefix === 'L') ? 'internal-to-supplier' : 'supplier-to-internal'
-    };
-}
-
 function extractInternalIdFromOrderItemDescription(description) {
     const raw = String(description || '').toUpperCase();
     if (!raw) return '';
@@ -694,27 +663,10 @@ function extractInternalIdFromOrderItemDescription(description) {
 }
 
 function buildSupplierMappingForInternalId(internalId, productMapById) {
-    const parsed = parseInternalOrSupplierId(internalId);
-    if (!parsed || parsed.direction !== 'internal-to-supplier') {
-        return null;
-    }
-
-    const expectedSupplierPrefix = parsed.prefix === 'G' ? 'M' : 'W';
-    const product = productMapById.get(parsed.internalId) || null;
-    if (!product || !String(product.inspiredBy || '').trim()) {
-        return null;
-    }
-
-    const best = findBestSupplierMatchByInspiredBy(product.inspiredBy, expectedSupplierPrefix);
-    if (!best || !best.supplierId) {
-        return null;
-    }
-
-    return {
-        supplierId: best.supplierId,
-        confidence: Number(best.confidence) || 0,
-        matchedBy: best.matchedBy || 'fuzzy'
-    };
+    const parsed = parseId(internalId);
+    const product = parsed && parsed.direction === 'internal-to-supplier' ? productMapById.get(parsed.id) : null;
+    const match = product && lookupProductMapping(product);
+    return match?.confirmed ? { supplierId: match.supplierId, confidence: 1, matchedBy: 'reviewed-name-crosswalk' } : null;
 }
 
 // Cookie names are client-controlled. A null-prototype map prevents special
@@ -1211,145 +1163,20 @@ app.locals.withdrawalService = require('./routes/withdrawals').registerWithdrawa
     sanitizeEmail, escapeHtml, renderBrandEmail, notificationEmail: INTERNAL_ORDER_NOTIFICATION_EMAIL, isAdmin
 });
 
+async function refreshMappingProducts() {
+    if (!Array.isArray(productCache) || Date.now() - catalogLoadedAt > 60000) await refreshProductCache();
+    return Array.isArray(productCache) ? productCache : [];
+}
 app.get('/api/admin/id-mapping', async (req, res) => {
-    if (!isAdmin(req)) {
-        return res.status(401).json({ error: 'Not authorized' });
-    }
-
-    const inputId = normalizeInternalExternalProductId(req.query.id || '');
-    if (!inputId) {
-        return res.status(400).json({ error: 'Bitte eine Produkt-ID uebergeben (z.B. G122 oder M122).' });
-    }
-
-    const parsed = parseInternalOrSupplierId(inputId);
-    if (!parsed) {
-        return res.status(400).json({ error: 'Ungueltiges ID-Format. Erlaubt: G/L/M/W + Zahl (z.B. G122).' });
-    }
-
-    try {
-        if (!Array.isArray(productCache) || Date.now() - catalogLoadedAt > 60000) {
-            await refreshProductCache();
-        }
-    } catch (error) {
-        // keep response resilient even if cache refresh fails
-    }
-
-    const products = Array.isArray(productCache) ? productCache : [];
-    const warnings = [];
-
-    if (parsed.direction === 'internal-to-supplier') {
-        const product = products.find(p => String(p.id || '').toUpperCase() === parsed.internalId) || null;
-        const expectedSupplierPrefix = parsed.prefix === 'G' ? 'M' : 'W';
-        let supplierMatch = null;
-
-        if (product && product.inspiredBy) {
-            supplierMatch = findBestSupplierMatchByInspiredBy(product.inspiredBy, expectedSupplierPrefix);
-        }
-
-        if (!product) {
-            warnings.push(`Interne Produkt-ID ${parsed.internalId} wurde im aktuellen Katalog nicht gefunden.`);
-        }
-        if (product && !supplierMatch) {
-            warnings.push(`Kein sicherer Match in der Referenzliste fuer "${product.inspiredBy || '-'}" gefunden.`);
-        }
-
-        return res.json({
-            query: inputId,
-            direction: parsed.direction,
-            internalId: parsed.internalId,
-            supplierId: supplierMatch ? supplierMatch.supplierId : null,
-            supplierLine: supplierMatch ? supplierMatch.supplierId : null,
-            number: parsed.number,
-            matchedBy: supplierMatch ? supplierMatch.matchedBy : null,
-            confidence: supplierMatch ? supplierMatch.confidence : null,
-            alternatives: supplierMatch && Array.isArray(supplierMatch.alternatives) ? supplierMatch.alternatives : [],
-            product: product ? {
-                id: product.id,
-                name: product.name,
-                inspiredBy: product.inspiredBy || '',
-                category: product.category || ''
-            } : null,
-            supplierReference: supplierMatch ? {
-                inspiredBy: supplierMatch.inspiredBy
-            } : null,
-            warnings
-        });
-    }
-
-    const supplierEntry = findSupplierEntryById(parsed.supplierId);
-    if (!supplierEntry) {
-        warnings.push(`Listen-ID ${parsed.supplierId} wurde in der Referenzliste nicht gefunden.`);
-    }
-
-    const expectedInternalPrefix = parsed.prefix === 'M' ? 'G' : 'L';
-    const candidateProducts = products
-        .filter(p => String(p.id || '').toUpperCase().startsWith(expectedInternalPrefix))
-        .map((product) => {
-            const match = findBestSupplierMatchByInspiredBy(product.inspiredBy || '', parsed.prefix);
-            return {
-                product,
-                match
-            };
-        })
-        .filter(item => item.match && item.match.supplierId === parsed.supplierId)
-        .sort((a, b) => (Number(b.match.confidence) || 0) - (Number(a.match.confidence) || 0))
-        .slice(0, 5)
-        .map(item => ({
-            id: item.product.id,
-            name: item.product.name,
-            inspiredBy: item.product.inspiredBy || '',
-            confidence: item.match.confidence,
-            matchedBy: item.match.matchedBy
-        }));
-
-    if (!candidateProducts.length) {
-        warnings.push(`Kein internes Produkt mit passender inspiredBy-Zuordnung fuer ${parsed.supplierId} gefunden.`);
-    }
-
-    return res.json({
-        query: inputId,
-        direction: parsed.direction,
-        internalId: parsed.internalId,
-        supplierId: parsed.supplierId,
-        supplierLine: parsed.supplierId,
-        number: parsed.number,
-        matchedBy: null,
-        confidence: null,
-        product: candidateProducts[0] || null,
-        candidates: candidateProducts,
-        supplierReference: supplierEntry ? {
-            supplierId: supplierEntry.supplierId,
-            inspiredBy: supplierEntry.inspiredBy
-        } : null,
-        warnings
-    });
+    if (!isAdmin(req)) return res.status(401).json({ error: 'Not authorized' });
+    if (!parseId(req.query.id)) return res.status(400).json({ error: 'Ungültiges ID-Format. Erlaubt: G/L/M/W + Zahl (z.B. G1 oder M155).' });
+    res.set('Cache-Control', 'no-store');
+    return res.json(lookupIdMapping(req.query.id, await refreshMappingProducts()));
 });
-
-app.get('/api/admin/id-mapping/catalog', (req, res) => {
-    if (!isAdmin(req)) {
-        return res.status(401).json({ error: 'Not authorized' });
-    }
-
-    const men = [];
-    const women = [];
-
-    const source = Array.isArray(supplierEntries) ? supplierEntries : [];
-    source.forEach((entry) => {
-        const payload = {
-            supplierId: entry.supplierId,
-            inspiredBy: entry.inspiredBy || ''
-        };
-        if (entry.prefix === 'M') {
-            men.push(payload);
-        } else if (entry.prefix === 'W') {
-            women.push(payload);
-        }
-    });
-
-    men.sort((a, b) => Number(a.supplierId.slice(1)) - Number(b.supplierId.slice(1)));
-    women.sort((a, b) => Number(a.supplierId.slice(1)) - Number(b.supplierId.slice(1)));
-
-    return res.json({ men, women });
+app.get('/api/admin/id-mapping/catalog', async (req, res) => {
+    if (!isAdmin(req)) return res.status(401).json({ error: 'Not authorized' });
+    res.set('Cache-Control', 'no-store');
+    return res.json(buildSupplierCatalogue(await refreshMappingProducts()));
 });
 
 app.delete('/api/admin/products/:id', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
@@ -2012,8 +1839,8 @@ const cartService = require('./services/cartService').createCartService({
     Product, resolveAutoduftItem, resolveSummerBundleItem, sanitizeQuantity,
     resolveDuftrollerItem: require('./services/duftrollerService').createDuftrollerResolver({ Product }),
     mapSupplier: product => {
-        const prefix = String(product.id || '').startsWith('G') ? 'M' : String(product.id || '').startsWith('L') ? 'W' : '';
-        return prefix && product.inspiredBy ? findBestSupplierMatchByInspiredBy(product.inspiredBy, prefix)?.supplierId : '';
+        const match = lookupProductMapping(product);
+        return match.confirmed ? match.supplierId : '';
     }
 });
 require('./routes/checkout').registerCheckoutRoutes(app, {
