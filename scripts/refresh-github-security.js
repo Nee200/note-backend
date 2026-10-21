@@ -4,6 +4,17 @@ const fs = require('node:fs/promises');
 const { saveSource } = require('../services/securityMonitor');
 const SecurityStatus = require('../models/SecurityStatus');
 const REPOSITORIES = ['note-backend', 'note-frontend'];
+const REQUIRED_CODEQL_LANGUAGES = ['actions', 'javascript-typescript'];
+
+function codeqlCoverage(codeql, analyses, revision) {
+    const configured = new Set((codeql.languages || []).map(language => ['javascript', 'typescript'].includes(language) ? 'javascript-typescript' : language));
+    const required = [...new Set([...REQUIRED_CODEQL_LANGUAGES, ...configured])];
+    const recent = [...analyses].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+    return required.map(language => {
+        const latest = recent.find(row => row.commit_sha === revision && row.tool === 'CodeQL' && row.category === '/language:' + language);
+        return { label: `CodeQL ${language} für aktuellen main-Commit`, ok: configured.has(language) && Boolean(latest) && !latest.error };
+    });
+}
 
 function api(endpoint, jq = '.', paginate = false) {
     try {
@@ -18,7 +29,7 @@ function readGitHub(repository, call = api) {
     const revision = call(base + '/commits/main', '{sha}').sha;
     const fixes = call(base + '/automated-security-fixes');
     const codeql = call(base + '/code-scanning/default-setup');
-    const analyses = call(base + '/code-scanning/analyses?ref=refs/heads/main&per_page=30', 'map({commit_sha,created_at,error,tool:.tool.name})');
+    const analyses = call(base + '/code-scanning/analyses?ref=refs/heads/main&per_page=30', 'map({commit_sha,created_at,error,category,tool:.tool.name})');
     const dependabot = call(base + '/dependabot/alerts?state=open&per_page=100', 'map({number,html_url,package:.dependency.package.name,scope:.dependency.scope,summary:.security_advisory.summary,severity:.security_advisory.severity,ghsa:.security_advisory.ghsa_id,cve:.security_advisory.cve_id,fix:.security_vulnerability.first_patched_version.identifier})', true);
     const code = call(base + '/code-scanning/alerts?state=open&per_page=100', 'map({number,html_url,rule:.rule.id,severity:.rule.security_severity_level,description:.rule.description,path:.most_recent_instance.location.path,line:.most_recent_instance.location.start_line,commit:.most_recent_instance.commit_sha})', true);
     // Only these fields leave gh. In particular: never collect the exposed secret itself.
@@ -33,7 +44,7 @@ function readGitHub(repository, call = api) {
         { label: 'Dependabot-Warnungen lesbar', ok: true },
         { label: 'Dependabot-Sicherheitsupdates aktiviert', ok: fixes.enabled === true && !fixes.paused },
         { label: 'CodeQL aktiviert', ok: codeql.state === 'configured' },
-        { label: 'CodeQL-Analyse für aktuellen main-Commit', ok: analyses.some(row => row.commit_sha === revision && !row.error) },
+        ...codeqlCoverage(codeql, analyses, revision),
         { label: 'Secret Scanning aktiviert', ok: repo.security_and_analysis?.secret_scanning?.status === 'enabled' },
         { label: 'Push-Schutz für Secrets aktiviert', ok: repo.security_and_analysis?.secret_scanning_push_protection?.status === 'enabled' }
     ];
@@ -74,4 +85,4 @@ async function main() {
     } finally { if (write) await require('mongoose').disconnect(); }
 }
 if (require.main === module) main().catch(error => { console.error(error.code === 'GITHUB_SOURCE' ? error.message : 'Sicherheitsabgleich fehlgeschlagen. Zugang und Quellen prüfen; keine Freigabe erteilt.'); process.exitCode = 1; });
-module.exports = { readGitHub };
+module.exports = { readGitHub, codeqlCoverage };
