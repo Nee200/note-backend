@@ -105,6 +105,7 @@ function createAdminEnrollment({ secret, reserved = () => false }) {
         return accepted.modifiedCount ? username : null;
     }
     async function fingerprint(username) {
+        if (!validName(username)) return '';
         return (await Account.findOne({ username, status: 'active' }).select('credentialVersion').lean())?.credentialVersion || '';
     }
     const list = () => Account.find().select('username status invitationExpiresAt setupExpiresAt activatedAt createdAt').sort({ createdAt: -1 }).lean();
