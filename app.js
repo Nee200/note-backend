@@ -427,7 +427,7 @@ function sanitizeQuantity(value) {
     return quantity;
 }
 
-function csrfSubject(req) { return [req?.userSession?.jti || '', req?.adminSession?.jti || '', crypto.createHash('sha256').update(String(parseCookies(req).admin_setup || '')).digest('hex')].join(':'); }
+function csrfSubject(req) { return [req?.userSession?.jti || '', req?.adminSession?.jti || '', crypto.createHash('sha256').update(String(parseCookies(req).get('admin_setup') || '')).digest('hex')].join(':'); }
 function generateCsrfToken(req) {
     const nonce = crypto.randomBytes(24).toString('hex');
     return nonce + '.' + crypto.createHmac('sha256', JWT_SECRET).update(nonce + ':' + csrfSubject(req)).digest('hex');
@@ -669,10 +669,10 @@ function buildSupplierMappingForInternalId(internalId, productMapById) {
     return match?.confirmed ? { supplierId: match.supplierId, confidence: 1, matchedBy: 'reviewed-name-crosswalk' } : null;
 }
 
-// Cookie names are client-controlled. A null-prototype map prevents special
-// names such as "__proto__" or "constructor" from affecting object state.
+// Cookie names are client-controlled. Store them as Map entries instead of
+// writing request-controlled names to object properties.
 const parseCookies = (request) => {
-    const list = Object.create(null);
+    const list = new Map();
     const rawCookies = request && request.headers ? request.headers.cookie : '';
 
     if (!rawCookies) return list;
@@ -684,9 +684,9 @@ const parseCookies = (request) => {
 
         const rawValue = parts.join('=');
         try {
-            list[name] = decodeURIComponent(rawValue);
+            list.set(name, decodeURIComponent(rawValue));
         } catch (error) {
-            list[name] = rawValue;
+            list.set(name, rawValue);
         }
     });
 
@@ -694,12 +694,12 @@ const parseCookies = (request) => {
 }
 
 function getUserTokenFromRequest(req) {
-    return req.userSession ? String(parseCookies(req)[USER_TOKEN_COOKIE] || '') : '';
+    return req.userSession ? String(parseCookies(req).get(USER_TOKEN_COOKIE) || '') : '';
 }
 
 function ensureCsrfCookie(req, res, next) {
     if (['/health', '/ready', '/webhook'].includes(req.path)) return next();
-    let token = parseCookies(req)[CSRF_TOKEN_COOKIE];
+    let token = parseCookies(req).get(CSRF_TOKEN_COOKIE);
     if (!validCsrfToken(token, req)) {
         token = generateCsrfToken(req);
         res.cookie(CSRF_TOKEN_COOKIE, token, getCsrfCookieOptions());
@@ -708,7 +708,7 @@ function ensureCsrfCookie(req, res, next) {
     next();
 }
 function requireCsrfToken(req, res, next) {
-    const cookie = String(parseCookies(req)[CSRF_TOKEN_COOKIE] || '');
+    const cookie = String(parseCookies(req).get(CSRF_TOKEN_COOKIE) || '');
     const header = String(req.headers['x-csrf-token'] || '');
     if (!cookie || cookie !== header || !validCsrfToken(header, req)) return res.status(403).json({ error: 'CSRF-Token ungültig.', code: 'CSRF_INVALID' });
     next();
@@ -751,7 +751,7 @@ app.use(globalLimiter);
 app.use((req, res, next) => {
     if (['/health', '/ready', '/webhook'].includes(req.path)) return next();
     const cookies = parseCookies(req);
-    Promise.all([sessionService.resolve(cookies[USER_TOKEN_COOKIE]), sessionService.resolve(cookies[ADMIN_TOKEN_COOKIE])])
+    Promise.all([sessionService.resolve(cookies.get(USER_TOKEN_COOKIE)), sessionService.resolve(cookies.get(ADMIN_TOKEN_COOKIE))])
         .then(async ([user, admin]) => { req.userSession = user?.role !== 'admin' ? user : null; req.adminSession = admin?.role === 'admin' && admin.credentialVersion && admin.credentialVersion === await adminCredentialVersion(admin.adminId) ? admin : null; next(); }).catch(next);
 });
 app.use(ensureCsrfCookie);
