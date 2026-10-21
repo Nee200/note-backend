@@ -8,7 +8,7 @@ const Account = require('../models/AdminAccount');
 let database, server, base, service;
 const env = { NODE_ENV: 'test', JWT_SECRET: 'synthetic-enrollment-key-with-at-least-32-bytes', ADMIN_PASSWORD: 'synthetic-administrator-password', FRONTEND_PUBLIC_URL: 'http://localhost:5500', INVOICES_ENABLED: 'false', STRIPE_SECRET_KEY: 'sk_test_synthetic', STRIPE_WEBHOOK_SECRET: 'whsec_synthetic' };
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.2.6' }, instance: { ip: '127.0.0.1', dbName: 'note-test-enrollment' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-enrollment' }, spawn: { windowsHide: true } });
     env.MONGO_URI = database.getUri('note-test-enrollment'); await mongoose.connect(env.MONGO_URI);
     const app = require('../app').createApp({ env, stripe: { webhooks: {}, checkout: { sessions: {} } }, mailProvider: { emails: { send: async () => ({ data: { id: 'test' } }) } } });
     await Promise.all(Object.values(mongoose.models).map(model => model.init()));

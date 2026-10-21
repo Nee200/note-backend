@@ -6,7 +6,7 @@ const Product = require('../models/Product');
 const entries = require('../catalog/product-supplier-2026-10.json').entries;
 let database, server, base, app;
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.2.6' }, instance: { ip: '127.0.0.1', dbName: 'note-test-mapping' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-mapping' }, spawn: { windowsHide: true } });
     const env = { NODE_ENV: 'test', MONGO_URI: database.getUri('note-test-mapping'), JWT_SECRET: 'synthetic-mapping-secret-at-least-32-bytes', ADMIN_PASSWORD: 'synthetic-mapping-password', FRONTEND_PUBLIC_URL: 'http://localhost:5500', BACKEND_PUBLIC_URL: 'http://localhost:4242', INVOICES_ENABLED: 'false', STRIPE_SECRET_KEY: 'sk_test_synthetic', STRIPE_WEBHOOK_SECRET: 'whsec_synthetic' };
     await mongoose.connect(env.MONGO_URI);
     app = require('../app').createApp({ env, stripe: { checkout: { sessions: {} }, webhooks: {}, coupons: {}, charges: {}, disputes: {} }, mailProvider: { emails: { send: async () => ({ data: { id: 'synthetic' } }) } } });

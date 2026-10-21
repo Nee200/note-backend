@@ -4,13 +4,13 @@ Stand: 5. September 2026. Quelle: `https://github.com/Nee200/note-backend.git`. 
 
 ## Installation und Start
 
-- Runtime: Node.js **24.20.0 oder eine neuere 24.x-Version**; Produktionsstart mit älterer oder anderer Hauptversion wird abgewiesen.
+- Runtime: Node.js **24.22.1 oder eine neuere 24.x-Version**; Produktionsstart mit älterer oder anderer Hauptversion wird abgewiesen.
 - Installationsbefehl: `npm ci --omit=dev`.
 - Startbefehl: `node server.js`.
 - Readiness im Hosting: `/ready`; `/health` bestätigt den laufenden Prozess und enthält den DB-Verbindungsstatus.
 - Beim Start werden Modellindizes initialisiert, bevor der HTTP-Port geöffnet wird. Ein Indexfehler muss behoben werden; nicht durch Abschalten der Eindeutigkeitsregeln umgehen.
 
-In Render ausdrücklich `NODE_VERSION=24.20.0` setzen. Eine bereits konfigurierte Variable hat Vorrang vor `.node-version` und `package.json`. Das entspricht der [Render-Dokumentation zur Node-Version](https://render.com/docs/node-version).
+In Render ausdrücklich `NODE_VERSION=24.22.1` setzen. Eine bereits konfigurierte Variable hat Vorrang vor `.node-version` und `package.json`. Das entspricht der [Render-Dokumentation zur Node-Version](https://render.com/docs/node-version).
 
 ## Produktionskonfiguration
 
@@ -85,9 +85,13 @@ Im Admin-Monitoring werden Datenbankzustand und tatsächliche Rückstände angez
 
 Historische Bestellungen erhalten keine pauschale Besitzerzuordnung und keine erfundenen Versanddaten. Alte E-Mail-Bestätigungen werden beim erneuten Stripe-Ereignis nicht blind nochmals versendet. Bestehende Rechnungen werden bei fehlender Verknüpfung wieder zugeordnet; eine Rechnung wird dafür nicht neu ausgestellt. Unbekannte Alt-Gutscheinreservierungen, externe Kassenbelege und Erstattungsbelege benötigen einen konkreten Datenabgleich.
 
-Die Kategorie `car-fragrance` des bestehenden Autoduft-Katalogs bleibt gültig; `autoduft` wird ebenfalls akzeptiert. Eine Katalogmigration ist hierfür nicht erforderlich. Die eindeutigen Sparse-Indizes für Stripe-Sessions und Gutscheincodes haben die ausdrücklichen Namen `stripe_session_unique_sparse` und `subscriber_code_unique_sparse`. Damit kollidieren sie nicht mit den früheren Definitionen `stripeSessionId_1` und `code_1`. Die alten Indizes werden nicht automatisch gelöscht. Beim ersten Start legt die Anwendung die noch fehlenden neuen Indizes an; doppelte Werte müssen vorher geprüft sein. Dieser Übergang ist mit synthetischen Datensätzen und den bisherigen Indexdefinitionen unter MongoDB 8.2.6 getestet.
+Die Kategorie `car-fragrance` des bestehenden Autoduft-Katalogs bleibt gültig; `autoduft` wird ebenfalls akzeptiert. Eine Katalogmigration ist hierfür nicht erforderlich. Die eindeutigen Sparse-Indizes für Stripe-Sessions und Gutscheincodes haben die ausdrücklichen Namen `stripe_session_unique_sparse` und `subscriber_code_unique_sparse`. Damit kollidieren sie nicht mit den früheren Definitionen `stripeSessionId_1` und `code_1`. Die alten Indizes werden nicht automatisch gelöscht. Beim ersten Start legt die Anwendung die noch fehlenden neuen Indizes an; doppelte Werte müssen vorher geprüft sein. Dieser Übergang ist mit synthetischen Datensätzen und den bisherigen Indexdefinitionen unter MongoDB 8.0.34 getestet.
 
 ## Wartung und Rückweg
+
+Sicherheitsstand vom 21. Oktober 2026: Node.js 24.22.1 ist der Mindeststand. Vor dem Deployment muss die Render-Variable `NODE_VERSION` auf 24.22.1 gesetzt sein, da sie die Repository-Vorgabe überschreibt. Tests und CI nutzen MongoDB 8.0.34.
+
+Neue Kundenkonten entstehen erst nach einem E-Mail-Link und dem anschließenden Setzen des Passworts über `/api/register/confirm`. `/api/register` beantwortet jede gültige Adresse gleich und stellt keine Sitzung aus. Die zusätzliche Collection `registrationrequests` speichert nur Token-Hashes; abgelaufene Einträge werden per TTL-Index entfernt. Bestehende Konten und ihr Verifizierungs-/Passwortreset-Ablauf bleiben erhalten. Das Frontend muss den neuen Registrierungsablauf enthalten.
 
 Die Import-/Preisskripte arbeiten standardmäßig als Trockenlauf. Ein Schreibaufruf benötigt ausdrücklich `--apply` oder beim alten Rechnungsskript `--execute` sowie `--database <exakter-name>` und `--host <exakter-host>`. Die Skripte laden keine beliebige `.env` nebenbei. Vor Schreibläufen das Ziel und die ausgegebenen Änderungen prüfen.
 

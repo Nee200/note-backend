@@ -5,7 +5,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 let database, connection, Order, Subscriber;
 
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.2.6' }, instance: { ip: '127.0.0.1', dbName: 'note-test-release-compatibility' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-release-compatibility' }, spawn: { windowsHide: true } });
     connection = await mongoose.createConnection(database.getUri('note-test-release-compatibility'), { autoIndex: false, autoCreate: false }).asPromise();
     Order = connection.model('ReleaseOrder', require('../models/Order').schema.clone(), 'orders');
     Subscriber = connection.model('ReleaseSubscriber', require('../models/Subscriber').schema.clone(), 'subscribers');
