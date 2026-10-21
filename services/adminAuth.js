@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const { verify } = require('otplib');
+const scrypt = require('node:util').promisify(crypto.scrypt);
 const AdminState = require('../models/AdminState');
 function createAdminAuthenticator(env) {
     const accounts = env.ADMIN_ACCOUNTS_JSON ? JSON.parse(env.ADMIN_ACCOUNTS_JSON) : [{ username: env.ADMIN_USERNAME || 'owner', password: env.ADMIN_PASSWORD, totpSecret: env.ADMIN_TOTP_SECRET }];
@@ -18,15 +19,18 @@ function createAdminAuthenticator(env) {
             totpSecrets.add(account.totpSecret);
         }
     }
-    const prehash = value => crypto.createHash('sha256').update(value).digest('base64url');
-    const passwordHashes = new Map(accounts.map(account => [account.username, account.passwordHash || bcrypt.hashSync(prehash(String(account.password)), 12)]));
+    const derivedCredentials = new Map(accounts.filter(account => !account.passwordHash).map(account => {
+        const salt = crypto.randomBytes(16);
+        return [account.username, { salt, key: crypto.scryptSync(String(account.password), salt, 64) }];
+    }));
     async function authenticate({ username, password, otp }) {
         const name = username || (env.NODE_ENV === 'production' ? '' : 'owner');
         if (typeof name !== 'string' || !/^[a-zA-Z0-9._-]{3,64}$/.test(name)) return null;
         const account = accounts.find(item => item.username === name);
         if (!account || typeof password !== 'string' || Buffer.byteLength(password) > 256) return null;
         if (account.passwordHash && Buffer.byteLength(password) > 72) return null;
-        const matches = await bcrypt.compare(account.passwordHash ? password : prehash(password), passwordHashes.get(name));
+        const derived = derivedCredentials.get(name);
+        const matches = account.passwordHash ? await bcrypt.compare(password, account.passwordHash) : crypto.timingSafeEqual(await scrypt(password, derived.salt, 64), derived.key);
         if (!matches) return null;
         if (account.totpSecret) {
             if (!/^\d{6}$/.test(String(otp || ''))) return null;

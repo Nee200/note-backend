@@ -23,6 +23,7 @@ function publicSource(key, label, row, now = Date.now()) {
 }
 
 async function saveSource(key, run, { model = SecurityStatus, now = () => new Date() } = {}) {
+    if (typeof key !== 'string' || !/^[a-z][a-z0-9-]{0,79}$/.test(key)) throw Error('Ungültige Prüfquelle.');
     const at = now();
     try {
         const data = await run();
