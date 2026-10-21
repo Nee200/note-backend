@@ -18,11 +18,15 @@ function createAdminAuthenticator(env) {
             totpSecrets.add(account.totpSecret);
         }
     }
+    const prehash = value => crypto.createHash('sha256').update(value).digest('base64url');
+    const passwordHashes = new Map(accounts.map(account => [account.username, account.passwordHash || bcrypt.hashSync(prehash(String(account.password)), 12)]));
     async function authenticate({ username, password, otp }) {
         const name = username || (env.NODE_ENV === 'production' ? '' : 'owner');
+        if (typeof name !== 'string' || !/^[a-zA-Z0-9._-]{3,64}$/.test(name)) return null;
         const account = accounts.find(item => item.username === name);
         if (!account || typeof password !== 'string' || Buffer.byteLength(password) > 256) return null;
-        const matches = account.passwordHash ? await bcrypt.compare(password, account.passwordHash) : crypto.timingSafeEqual(crypto.createHash('sha256').update(password).digest(), crypto.createHash('sha256').update(String(account.password || '')).digest());
+        if (account.passwordHash && Buffer.byteLength(password) > 72) return null;
+        const matches = await bcrypt.compare(account.passwordHash ? password : prehash(password), passwordHashes.get(name));
         if (!matches) return null;
         if (account.totpSecret) {
             if (!/^\d{6}$/.test(String(otp || ''))) return null;

@@ -28,6 +28,7 @@ const stripe = options.stripe || require('./integrations/providers').createStrip
 const resend = require('./services/mailService').createMailService({ env, provider: options.mailProvider });
 const app = express();
 require('./middleware/asyncRoutes').installAsyncRoutes(app);
+const securityMonitor = options.securityMonitor || require('./services/securityMonitor').createSecurityMonitor({ env, database: mongoose.connection });
 const LOCAL_DEV_SAFE_MODE = env.LOCAL_DEV_SAFE_MODE === 'true';
 const CHECKOUT_DRY_RUN = LOCAL_DEV_SAFE_MODE || env.CHECKOUT_DRY_RUN === 'true';
 const IS_PRODUCTION = env.NODE_ENV === 'production';
@@ -285,7 +286,7 @@ function escapeHtml(value) {
 
 function sanitizeEmail(value) {
     const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    if (normalized.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
         return '';
     }
     return normalized;
@@ -298,9 +299,7 @@ function sanitizeHeaderText(value) {
 function sanitizeText(value, maxLength = 200) {
     if (typeof value !== 'string') return '';
     return value
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/javascript:/gi, ' ')
-        .replace(/on\w+\s*=/gi, ' ')
+        .slice(0, maxLength * 4)
         .replace(/[\u0000-\u001F\u007F]/g, ' ')
         .replace(/[<>`]/g, '')
         .replace(/\s+/g, ' ')
@@ -386,9 +385,10 @@ function sanitizeProductId(value) {
 function sanitizeAssetPath(value) {
     const normalized = sanitizeText(value, 300);
     if (!normalized) return '';
-    const lowered = normalized.toLowerCase();
-    if (lowered.startsWith('javascript:') || lowered.startsWith('data:')) return '';
-    return normalized;
+    try {
+        const parsed = new URL(normalized, FRONTEND_PUBLIC_URL);
+        return ['https:', 'http:'].includes(parsed.protocol) ? normalized : '';
+    } catch { return ''; }
 }
 
 function parseMoneyValue(value, { allowNull = false } = {}) {
@@ -680,7 +680,7 @@ const parseCookies = (request) => {
     rawCookies.split(';').forEach((cookie) => {
         const parts = cookie.split('=');
         const name = String(parts.shift() || '').trim();
-        if (!name) return;
+        if (!name || ['__proto__', 'prototype', 'constructor'].includes(name)) return;
 
         const rawValue = parts.join('=');
         try {
@@ -1149,7 +1149,14 @@ app.get('/api/admin/email-templates', (req, res) => {
 
 app.get('/api/admin/security-status', async (req, res) => {
     if (!isAdmin(req)) return res.status(401).json({ error: 'Bitte anmelden.' });
-    res.json(await require('./services/operationsStatus').operationsStatus(env));
+    res.set('Cache-Control', 'no-store');
+    const [operations, security] = await Promise.all([require('./services/operationsStatus').operationsStatus(env), securityMonitor.status()]);
+    res.json({ ...operations, security });
+});
+app.post('/api/admin/security-scan', adminWriteLimiter, requireTrustedOrigin, requireCsrfToken, async (req, res) => {
+    if (!isAdmin(req)) return res.status(401).json({ error: 'Bitte anmelden.' });
+    const result = await securityMonitor.request();
+    res.set('Cache-Control', 'no-store').status(result.accepted ? 202 : result.reason === 'disabled' ? 409 : 429).json(result);
 });
 app.get('/api/admin/audit', async (req, res) => {
     if (!isAdmin(req)) return res.status(401).json({ error: 'Bitte anmelden.' });
@@ -1875,6 +1882,7 @@ app.locals.notificationService = require('./services/notificationService').creat
     builders: { shipping: buildShippingEmailPayload, order: buildOrderConfirmationEmailPayload, pickup: buildPickupOrderConfirmationEmailPayload, pickupInternal: buildPickupOrderInternalEmailPayload }
 });
 app.locals.mailService = resend;
+app.locals.securityMonitor = securityMonitor;
 app.locals.webhookService = webhookService;
 app.locals.checkoutService = checkoutService;
 app.locals.invoiceRepairService = require('./services/invoiceRepairService').createInvoiceRepairService({ stripe, enabled: INVOICES_ENABLED });

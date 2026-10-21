@@ -150,7 +150,9 @@ async function main() {
         if (!result.invoice || result.status !== 'generated') {
             throw new Error(`Rechnung für ${target.orderDate} wurde nicht neu erzeugt (${result.status}).`);
         }
-        const pdfPath = path.join(outputDirectory, `${result.invoice.pdfFileName}`);
+        const fileName = String(result.invoice.pdfFileName || '');
+        const pdfPath = path.resolve(outputDirectory, fileName);
+        if (path.basename(fileName) !== fileName || !pdfPath.startsWith(outputDirectory + path.sep) || !fileName.endsWith('.pdf')) throw new Error('Ungültiger Rechnungsdateiname.');
         fs.writeFileSync(pdfPath, Buffer.from(result.invoice.pdfData));
         issued.push({
             orderNumber: order.orderNumber,
