@@ -32,12 +32,19 @@ async function start() {
     const jobs = setInterval(runJobs, 30000);
     jobs.unref();
     runJobs();
+    // Independent queue: advisory services must never delay checkout or mail jobs.
+    const runSecurity = () => app.locals.securityMonitor.tick().catch(() => console.error('Security-Monitor: Hintergrundprüfung fehlgeschlagen.'));
+    const securityJobs = setInterval(runSecurity, 60000);
+    securityJobs.unref();
+    runSecurity();
     async function shutdown() {
         if (stopping) return;
         stopping = true;
         clearInterval(jobs);
+        clearInterval(securityJobs);
         await new Promise(resolve => server.close(resolve));
         if (activeJob) await activeJob;
+        await app.locals.securityMonitor.wait();
         await mongoose.disconnect();
     }
     process.once('SIGTERM', shutdown);
