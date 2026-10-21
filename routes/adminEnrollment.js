@@ -1,7 +1,7 @@
 function registerAdminEnrollment(app, { enrollment, limiter, isAdmin, requireTrustedOrigin, requireCsrfToken, parseCookies, cookieOptions, issueAdmin }) {
     const cookie = 'admin_setup';
     const write = [requireTrustedOrigin, requireCsrfToken];
-    const token = req => parseCookies(req)[cookie];
+    const token = req => parseCookies(req).get(cookie);
     const guard = (req, res, next) => isAdmin(req) ? next() : res.status(401).json({ error: 'Bitte als Admin anmelden.' });
     app.get('/api/admin/access', guard, async (req, res) => res.json({ accounts: await enrollment.list() }));
     app.post('/api/admin/access/invite', limiter, ...write, guard, async (req, res) => {

@@ -55,6 +55,19 @@ test('legacy admin route returns 410 and leaves the actual HTTP process alive', 
     assert.equal((await fetch(base + '/health')).status, 200);
 });
 
+test('untrusted cookie names and malformed escapes cannot bypass sessions or break CSRF login', async () => {
+    const browser = client();
+    for (const name of ['__proto__', 'prototype', 'constructor', 'get', 'set']) browser.cookies.set(name, 'admin');
+    browser.cookies.set('broken_escape', '%E0%A4%A');
+    assert.equal((await browser.call('/api/admin/check')).status, 401);
+    assert.equal((await browser.call('/api/user')).status, 401);
+    assert.equal((await browser.call('/api/admin/login', { password: env.ADMIN_PASSWORD })).status, 200);
+    assert.equal((await browser.call('/api/admin/check')).status, 200);
+    assert.equal((await browser.call('/api/admin/logout', {})).status, 200);
+    assert.equal((await browser.call('/api/admin/check')).status, 401);
+    assert.equal(Object.prototype.admin, undefined);
+});
+
 test('legacy unverified accounts cannot claim guest orders; verified owner can, another account cannot', async () => {
     await Order.create({ email: 'guest@example.test', name: 'Synthetic Guest', amount: 950, address: { line1: 'Selbstabholung' }, items: [{ description: 'Example', quantity: 1, amount_total: 950 }] });
     const account = client();
