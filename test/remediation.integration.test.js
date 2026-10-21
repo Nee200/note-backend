@@ -16,7 +16,7 @@ const CheckoutRequest = require('../models/CheckoutRequest');
 const WebhookEvent = require('../models/WebhookEvent');
 
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.2.6' }, instance: { ip: '127.0.0.1', dbName: 'note-test-remediation' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-remediation' }, spawn: { windowsHide: true } });
     env.MONGO_URI = database.getUri('note-test-remediation');
     await mongoose.connect(env.MONGO_URI);
     app = require('../app').createApp({ env, stripe, mailProvider: { emails: { send: async () => ({ data: { id: 'synthetic-mail' } }) } } });
@@ -55,13 +55,14 @@ test('legacy admin route returns 410 and leaves the actual HTTP process alive', 
     assert.equal((await fetch(base + '/health')).status, 200);
 });
 
-test('unverified registration cannot claim guest orders; verified owner can, another account cannot', async () => {
+test('legacy unverified accounts cannot claim guest orders; verified owner can, another account cannot', async () => {
     await Order.create({ email: 'guest@example.test', name: 'Synthetic Guest', amount: 950, address: { line1: 'Selbstabholung' }, items: [{ description: 'Example', quantity: 1, amount_total: 950 }] });
     const account = client();
-    const registration = await account.call('/api/register', { email: 'guest@example.test', password: 'synthetic-password-123', name: 'Synthetic' });
-    assert.equal(registration.status, 201); assert.equal(registration.body.authToken, undefined);
+    await User.create({ email: 'guest@example.test', password: await require('bcryptjs').hash('synthetic-password-123', 12), name: 'Synthetic' });
+    assert.equal((await account.call('/api/login', { email: 'guest@example.test', password: 'synthetic-password-123' })).status, 200);
     assert.equal((await account.call('/api/user/orders')).status, 403);
     assert.equal((await account.call('/api/user/orders/claim', {})).status, 403);
+    assert.equal((await account.call('/api/user/verification', {})).status, 200);
     const mail = await MailJob.findOne({ key: /^verify:/ }).select('+payload');
     const token = mail.payload.html.match(/#verify=([a-f0-9]{64})/)[1];
     assert.equal((await client().call('/api/user/verify-email', { token })).status, 401);
@@ -73,7 +74,8 @@ test('unverified registration cannot claim guest orders; verified owner can, ano
     assert.equal(orders.body.orders[0].items[0].amount_total, 950);
     assert.equal(orders.body.orders[0].stripeSessionId, undefined);
     const second = client();
-    await second.call('/api/register', { email: 'other@example.test', password: 'synthetic-password-456' });
+    await User.create({ email: 'other@example.test', password: await require('bcryptjs').hash('synthetic-password-456', 12) });
+    assert.equal((await second.call('/api/login', { email: 'other@example.test', password: 'synthetic-password-456' })).status, 200);
     assert.equal((await second.call('/api/user/verify-email', { token })).status, 400);
     assert.equal((await second.call('/api/user/orders')).status, 403);
     const stolen = account.cookies.get('auth_token');

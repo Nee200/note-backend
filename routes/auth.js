@@ -1,8 +1,10 @@
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const Session = require('../models/Session');
+const RegistrationRequest = require('../models/RegistrationRequest');
 const { publicOrder } = require('../services/orderData');
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
+const unknownUserPasswordHash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 12);
 function fail(message, status = 400) { throw Object.assign(new Error(message), { status }); }
 function validatePassword(value) {
     if (typeof value !== 'string' || value.length < 12 || Buffer.byteLength(value) > 72) fail('Das Passwort muss mindestens 12 Zeichen lang sein und darf 72 Bytes nicht überschreiten.');
@@ -35,19 +37,40 @@ function registerAuthRoutes(app, deps) {
     app.post('/api/register', authLimiter, ...write, async (req, res) => {
         const email = sanitizeEmail(req.body.email);
         if (!email || email.length > 254) fail('Bitte gib eine gültige E-Mail-Adresse ein.');
+        // Use the same work, response and cookie behavior for every valid address.
+        // No account or usable password exists until the mailbox owner confirms.
+        const token = crypto.randomBytes(32).toString('hex');
+        await RegistrationRequest.create({ email, name: sanitizeText(req.body.name, 120), tokenHash: hash(token), expiresAt: new Date(Date.now() + 86400000) });
+        const link = new URL(`account.html#register=${token}`, frontendUrl).toString();
+        await resend.enqueue(`register:${hash(token)}`, { from: 'NØTE. <info@note-fragrances.de>', to: email, subject: 'Dein Zugang zu NØTE.', html: `<p>Du hast einen Link für ein NØTE.-Konto angefordert.</p><p><a href="${escapeHtml(link)}">Konto einrichten</a></p><p>Über den Link kannst du ein neues Konto erstellen. Falls bereits ein Konto besteht, melde dich an oder nutze „Passwort vergessen“.</p><p>Der Link gilt 24 Stunden. Wenn du dies nicht angefordert hast, ignoriere diese Nachricht.</p>` });
+        res.status(202).json({ success: true, message: 'Prüfe dein E-Mail-Postfach. Dort erhältst du die nächsten Schritte für deinen Zugang. Falls du bereits ein Konto hast, kannst du dich anmelden oder dein Passwort zurücksetzen.' });
+    });
+    app.post('/api/register/confirm', authLimiter, ...write, async (req, res) => {
         validatePassword(req.body.password);
-        if (await User.exists({ email })) fail('Ein Konto mit dieser Adresse existiert bereits. Bitte anmelden oder Passwort zurücksetzen.');
-        const user = await User.create({ email, password: await bcrypt.hash(req.body.password, 12), name: sanitizeText(req.body.name, 120), emailVerifiedAt: null });
-        await verification(user);
+        const token = req.body.token;
+        if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) fail('Der Link ist ungültig oder abgelaufen.');
+        const request = await RegistrationRequest.findOneAndDelete({ tokenHash: hash(token), expiresAt: { $gt: new Date() } });
+        if (!request) fail('Der Link ist ungültig oder abgelaufen.');
+        const existingAccount = () => fail('Du hast bereits ein Konto. Bitte melde dich an oder nutze „Passwort vergessen“.', 409);
+        // This response is only available to someone holding the mailbox token.
+        if (await User.exists({ email: request.email })) return existingAccount();
+        let user;
+        try {
+            user = await User.create({ email: request.email, password: await bcrypt.hash(req.body.password, 12), name: request.name, emailVerifiedAt: new Date() });
+        } catch (error) {
+            if (error.code === 11000) return existingAccount();
+            throw error;
+        }
         await login(res, user);
-        res.status(201).json({ success: true, requiresVerification: true, user: userDto(user), message: 'Konto erstellt. Bitte bestätige deine E-Mail-Adresse.' });
+        res.status(201).json({ success: true, user: userDto(user) });
     });
     app.post('/api/login', authLimiter, ...write, async (req, res) => {
         const email = sanitizeEmail(req.body.email);
         const password = req.body.password;
         if (!email || typeof password !== 'string' || Buffer.byteLength(password) > 72) fail('Ungültige Anmeldedaten.', 401);
         const user = await User.findOne({ email });
-        if (!user || !await bcrypt.compare(password, user.password)) fail('Ungültige Anmeldedaten.', 401);
+        const passwordMatches = await bcrypt.compare(password, user ? user.password : unknownUserPasswordHash);
+        if (!user || !passwordMatches) fail('Ungültige Anmeldedaten.', 401);
         await login(res, user);
         res.json({ success: true, user: userDto(user) });
     });

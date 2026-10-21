@@ -34,7 +34,7 @@ const stripe = {
 let database, server, base, cart;
 
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.2.6' }, instance: { ip: '127.0.0.1', dbName: 'note-test-duftroller' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-duftroller' }, spawn: { windowsHide: true } });
     env.MONGO_URI = database.getUri('note-test-duftroller');
     await mongoose.connect(env.MONGO_URI);
     const app = require('../app').createApp({ env, stripe });

@@ -12,8 +12,8 @@ function assertLocalTestDatabase(uri) {
 }
 
 function validateEnvironment(env) {
-    const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
-    if (env.NODE_ENV === 'production' && (nodeMajor !== 24 || nodeMinor < 20)) throw new Error('Produktion erfordert Node.js 24.20.0 oder einen neueren Patchstand der 24er-Version.');
+    const [nodeMajor, nodeMinor, nodePatch] = process.versions.node.split('.').map(Number);
+    if (env.NODE_ENV === 'production' && (nodeMajor !== 24 || (nodeMinor < 22 || (nodeMinor === 22 && nodePatch < 1)))) throw new Error('Produktion erfordert Node.js 24.22.1 oder einen neueren Patchstand der 24er-Version.');
     const safe = env.LOCAL_DEV_SAFE_MODE === 'true' || env.NODE_ENV === 'test';
     if (safe) {
         if (env.NODE_ENV === 'production') throw new Error('Testmodus und Produktion dürfen nicht kombiniert werden.');

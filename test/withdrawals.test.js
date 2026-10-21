@@ -9,7 +9,7 @@ let database, server, app, base, failMail = false;
 const sent = [];
 const env = { NODE_ENV: 'test', JWT_SECRET: 'synthetic-withdrawal-secret-at-least-32-bytes', ADMIN_PASSWORD: 'synthetic-withdrawal-admin-password', FRONTEND_PUBLIC_URL: 'http://localhost:5500', INVOICES_ENABLED: 'false', STRIPE_SECRET_KEY: 'sk_test_synthetic', STRIPE_WEBHOOK_SECRET: 'whsec_synthetic' };
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.2.6' }, instance: { ip: '127.0.0.1', dbName: 'note-test-withdrawals' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-withdrawals' }, spawn: { windowsHide: true } });
     env.MONGO_URI = database.getUri('note-test-withdrawals'); await mongoose.connect(env.MONGO_URI);
     app = require('../app').createApp({ env, stripe: { webhooks: {}, checkout: { sessions: {} } }, mailProvider: { emails: { send: async (payload, options) => { if (failMail) throw new Error('synthetic-provider-outage'); sent.push({ payload, options }); return { data: { id: 'synthetic-' + sent.length } }; } } } });
     await Promise.all(Object.values(mongoose.models).map(model => model.init()));
