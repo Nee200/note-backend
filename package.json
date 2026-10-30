@@ -33,7 +33,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.4",
     "otplib": "13.5.0",
-    "pdfkit": "^0.17.2",
+    "pdfkit": "^0.20.2",
     "qrcode": "1.5.4",
     "resend": "^6.37.0",
     "semver": "7.8.5",
