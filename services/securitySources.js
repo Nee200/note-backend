@@ -8,6 +8,7 @@ const BACKEND = 'https://note-backend-5gy0.onrender.com';
 const HOSTS = new Set(['www.note-fragrances.de', 'note-backend-5gy0.onrender.com', 'raw.githubusercontent.com', 'registry.npmjs.org', 'api.osv.dev', 'nodejs.org', 'downloads.mongodb.org', 'services.nvd.nist.gov']);
 const cut = (value, limit = 500) => String(value ?? '').slice(0, limit);
 const levels = new Set(['critical', 'high', 'moderate', 'medium', 'low']);
+const atlasSatelliteReviews = new Map([['8.0.34', '21.10.2026'], ['8.0.36', '30.10.2026']]);
 const severity = value => levels.has(String(value).toLowerCase()) ? String(value).toLowerCase().replace('moderate', 'medium') : 'unknown';
 
 // Fixed origins only. No browser input, credentials or customer data are sent to scanners.
@@ -163,8 +164,9 @@ async function nvdMatches(product, version, read, { atlas = false } = {}) {
             // This reviewed historical CVE requires MongoDB inside Red Hat Satellite 6.
             // Atlas is a different server deployment. Keep the assessment visible and
             // restrict it to the verified version; a changed environment needs review.
-            if (product === 'mongodb' && version === '8.0.34' && atlas && cve.id === 'CVE-2014-8180' && matches.some(match => match.vulnerable === false && match.criteria?.startsWith('cpe:2.3:a:redhat:satellite:6.0:'))) {
-                checks.push({ label: 'CVE-2014-8180: am 21.10.2026 als nicht betroffen bewertet. Setzt Red Hat Satellite 6 voraus; geprüft wird MongoDB Atlas 8.0.34. NVD enthält hier einen zu weit gefassten MongoDB-Versionseintrag.', ok: true });
+            const atlasReviewDate = atlasSatelliteReviews.get(version);
+            if (product === 'mongodb' && atlasReviewDate && atlas && cve.id === 'CVE-2014-8180' && matches.some(match => match.vulnerable === false && match.criteria?.startsWith('cpe:2.3:a:redhat:satellite:6.0:'))) {
+                checks.push({ label: `CVE-2014-8180: am ${atlasReviewDate} als nicht betroffen bewertet. Setzt Red Hat Satellite 6 voraus; geprüft wird MongoDB Atlas ${version}. NVD enthält hier einen zu weit gefassten MongoDB-Versionseintrag.`, ok: true });
                 continue;
             }
             const metric = cve.metrics?.cvssMetricV31?.[0] || cve.metrics?.cvssMetricV30?.[0] || cve.metrics?.cvssMetricV40?.[0];

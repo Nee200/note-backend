@@ -78,10 +78,18 @@ test('MongoDB flags broad runtime roles and accepts readWrite only on the applic
 
 test('historical Satellite-only MongoDB CVE assessment is restricted to the verified Atlas deployment/version', async () => {
     const response = async () => JSON.stringify({ totalResults: 1, vulnerabilities: [{ cve: { id: 'CVE-2014-8180', configurations: [{ nodes: [{ cpeMatch: [{ vulnerable: true, criteria: 'cpe:2.3:a:mongodb:mongodb:*:*:*:*:*:*:*:*' }, { vulnerable: false, criteria: 'cpe:2.3:a:redhat:satellite:6.0:*:*:*:*:*:*:*' }] }] }] } }] });
-    assert.equal((await nvdMatches('mongodb', '8.0.34', response)).findings.length, 1);
-    const atlas = await nvdMatches('mongodb', '8.0.34', response, { atlas: true });
-    assert.equal(atlas.findings.length, 0); assert.equal(atlas.checks.length, 1);
-    assert.equal((await nvdMatches('mongodb', '8.0.35', response, { atlas: true })).findings.length, 1);
+    for (const [version, date] of [['8.0.34', '21.10.2026'], ['8.0.36', '30.10.2026']]) {
+        assert.equal((await nvdMatches('mongodb', version, response)).findings.length, 1);
+        const atlas = await nvdMatches('mongodb', version, response, { atlas: true });
+        assert.equal(atlas.findings.length, 0); assert.equal(atlas.checks.length, 1);
+        assert.ok(atlas.checks[0].label.includes(version));
+        assert.ok(atlas.checks[0].label.includes(date));
+    }
+    for (const version of ['8.0.35', '8.0.37']) assert.equal((await nvdMatches('mongodb', version, response, { atlas: true })).findings.length, 1);
+    const changedPlatform = async () => (await response()).replace('redhat:satellite:6.0', 'other:platform:1.0');
+    assert.equal((await nvdMatches('mongodb', '8.0.36', changedPlatform, { atlas: true })).findings.length, 1);
+    const differentCve = async () => (await response()).replace('CVE-2014-8180', 'CVE-unreviewed');
+    assert.equal((await nvdMatches('mongodb', '8.0.36', differentCve, { atlas: true })).findings.length, 1);
 });
 
 test('missing, failed and stale sources never render as a fresh clean scan', () => {
