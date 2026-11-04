@@ -36,7 +36,7 @@
     "pdfkit": "^0.17.2",
     "qrcode": "1.5.4",
     "resend": "^6.37.0",
-    "semver": "7.8.5",
+    "semver": "7.8.6",
     "stripe": "^20.4.1"
   },
   "devDependencies": {
