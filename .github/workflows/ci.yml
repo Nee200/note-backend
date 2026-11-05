@@ -54,6 +54,12 @@ jobs:
           node-version: 24.22.1
           cache: npm
 
+      - name: Select patched npm
+        run: |
+          npm install --global npm@11.21.2
+          npm --version
+          test "$(npm --version)" = "$(tr -d '\r\n' < .npm-version)"
+
       - name: Install dependencies
         run: npm ci
 
