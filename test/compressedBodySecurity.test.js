@@ -40,6 +40,17 @@ for (const [kind, type, input, expected] of [
         assert.deepEqual(JSON.parse(response.body), expected);
         // The vulnerable decoder throws only after the successful HTTP response.
         await delay(200);
-        assert.equal((await fetch(`http://127.0.0.1:${server.address().port}/alive`)).status, 204);
+        // The OS may assign a port that Fetch's browser-style port policy forbids.
+        // Use the same loopback HTTP transport as the malformed-body probe.
+        const aliveStatus = await new Promise((resolve, reject) => {
+            const request = http.get({ hostname: '127.0.0.1', port: server.address().port, path: '/alive', agent: false }, res => {
+                res.on('error', reject);
+                res.on('end', () => resolve(res.statusCode));
+                res.resume();
+            });
+            request.on('error', reject);
+            request.setTimeout(2000, () => request.destroy(Error('Local liveness test timed out')));
+        });
+        assert.equal(aliveStatus, 204);
     });
 }
