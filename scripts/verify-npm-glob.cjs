@@ -49,6 +49,6 @@ async function verify(npmRoot) {
 }
 module.exports = verify;
 if (require.main === module) (async () => {
-    assert.ok(process.argv[2] && path.isAbsolute(process.argv[2]), 'Pass the absolute npm package directory');
-    console.log(JSON.stringify(await verify(await fs.realpath(process.argv[2]))));
+    // The patch helper starts this read-only check in the verified npm directory.
+    console.log(JSON.stringify(await verify(await fs.realpath(process.cwd()))));
 })().catch(error => { console.error(JSON.stringify({ name: error.name, code: error.code, message: error.message, actual: error.actual, expected: error.expected })); process.exitCode = 1; });

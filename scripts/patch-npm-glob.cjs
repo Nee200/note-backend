@@ -1,9 +1,7 @@
 // Temporary upstream backport for npm 11.21.2's bundled glob. Remove when npm ships it.
 // https://github.com/isaacs/node-glob/commit/d94a8c8d0a89b89436d9612ebea6f9995104e05e
 const fs = require('node:fs/promises');
-const nativeFs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
 const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const { createRequire } = require('node:module');
@@ -61,7 +59,7 @@ async function patch(npmRoot) {
         // Both rename targets are direct children of the verified npm node_modules.
         await fs.rename(destination, rollback); moved = true;
         await fs.rename(staged, destination); activated = true;
-        const checks = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'verify-npm-glob.cjs'), npmRoot], { encoding: 'utf8', windowsHide: true, timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] }));
+        const checks = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'verify-npm-glob.cjs')], { cwd: npmRoot, encoding: 'utf8', windowsHide: true, timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] }));
         await fs.writeFile(path.join(npmRoot, 'note-security-patches.json'), JSON.stringify({ npm: npm.version, package: 'glob', before: before.version, after: after.version, integrity, checkedAt: new Date().toISOString(), checks }, null, 2));
         moved = false; // Verified installation is committed; cleanup failure must not undo it.
         await removeOwned(modules, path.basename(rollback));
@@ -75,8 +73,11 @@ async function patch(npmRoot) {
     } finally { await removeOwned(modules, path.basename(staged)); }
 }
 if (require.main === module) (async () => {
-    const target = process.argv[2];
-    assert.ok(target && path.isAbsolute(target), 'Pass the absolute npm package directory');
+    // Only the npm bundled with the running Node distribution is a CLI target.
+    // CI and Cloudflare first install the pinned npm into that private prefix.
+    const target = process.platform === 'win32'
+        ? path.join(path.dirname(process.execPath), 'node_modules/npm')
+        : path.resolve(path.dirname(process.execPath), '../lib/node_modules/npm');
     const npmRoot = await fs.realpath(target);
     console.log(JSON.stringify(await patch(npmRoot)));
 })().catch(error => { console.error(JSON.stringify({ name: error.name, code: error.code, message: error.message, actual: error.actual, expected: error.expected })); process.exitCode = 1; });
