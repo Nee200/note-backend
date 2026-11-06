@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const { createRequire } = require('node:module');
 const { execFileSync } = require('node:child_process');
+const verify = require('./verify-npm-glob.cjs');
 const integrity = 'sha512-wfsFgXQ8A3SEI9XGf7Nl3Y9l7ffSrGh7SUCT7vU/2CzYPep9kjxAn1S40F9OPKxAMGCVl7HtNlJhrCJUeUq83g==';
 const readJson = async file => JSON.parse(await fs.readFile(file, 'utf8'));
 function child(parent, name) {
@@ -20,39 +21,6 @@ async function removeOwned(parent, name) {
     assert.equal(await fs.realpath(path.dirname(target)), parent);
     await fs.rm(target, { recursive: true, force: true });
 }
-async function verify(npmRoot) {
-    const fromNpm = createRequire(path.join(npmRoot, 'package.json'));
-    const { glob, globStreamSync } = fromNpm('glob');
-    const temp = await fs.realpath(os.tmpdir());
-    const fixture = await fs.mkdtemp(path.join(temp, 'note-glob-check-'));
-    const files = ['a/one.txt', 'a/b/two.txt', 'c/three.txt', 'c/d/four.txt'];
-    try {
-        for (const file of files) { await fs.mkdir(path.dirname(path.join(fixture, file)), { recursive: true }); await fs.writeFile(path.join(fixture, file), 'fixture'); }
-        assert.deepEqual((await glob('**/*.txt', { cwd: fixture })).map(file => file.split(path.sep).join('/')).sort(), [...files].sort());
-        const reason = Error('synthetic-abort');
-        const counted = controller => {
-            const stats = { reads: 0 };
-            const count = () => { if (++stats.reads === 1) controller.abort(reason); };
-            return { stats, fs: { ...nativeFs,
-                readdir: (...args) => { count(); return nativeFs.readdir(...args); },
-                readdirSync: (...args) => { count(); return nativeFs.readdirSync(...args); } } };
-        };
-        const controller = new AbortController();
-        const asyncFs = counted(controller);
-        await assert.rejects(glob('**', { cwd: fixture, signal: controller.signal, fs: asyncFs.fs }), reason);
-        const atReject = asyncFs.stats.reads;
-        await new Promise(resolve => setTimeout(resolve, 120));
-        assert.equal(asyncFs.stats.reads, atReject, 'Directory reads must stop after cancellation');
-        const syncController = new AbortController();
-        const syncFs = counted(syncController);
-        await new Promise((resolve, reject) => {
-            const stream = globStreamSync('**', { cwd: fixture, signal: syncController.signal, fs: syncFs.fs });
-            stream.on('error', error => { try { assert.equal(error, reason); assert.equal(syncFs.stats.reads, 1); resolve(); } catch (failure) { reject(failure); } });
-            stream.resume();
-        });
-        return { normalMatches: files.length, asyncReadsAfterReject: asyncFs.stats.reads - atReject, syncAbortReads: syncFs.stats.reads };
-    } finally { assert.ok(path.basename(fixture).startsWith('note-glob-check-')); await removeOwned(temp, path.basename(fixture)); }
-}
 async function patch(npmRoot) {
     const fromNpm = createRequire(path.join(npmRoot, 'package.json'));
     const npm = await readJson(path.join(npmRoot, 'package.json'));
@@ -62,8 +30,7 @@ async function patch(npmRoot) {
     assert.equal(await fs.realpath(destination), destination, 'Refusing a linked glob directory');
     assert.equal(fromNpm.resolve('glob/package.json'), path.join(destination, 'package.json'));
     const before = await readJson(path.join(destination, 'package.json'));
-    if (before.version === '13.0.7') return { status: 'already-patched', glob: before.version, checks: await verify(npmRoot) };
-    assert.equal(before.version, '13.0.6', 'Unexpected bundled glob; review before replacing');
+    assert.ok(['13.0.6', '13.0.7'].includes(before.version), 'Unexpected bundled glob; review before replacing');
     const response = await fetch('https://registry.npmjs.org/glob/-/glob-13.0.7.tgz', { redirect: 'error', signal: AbortSignal.timeout(30000) });
     assert.equal(response.status, 200);
     let size = 0; const chunks = [];
@@ -94,7 +61,7 @@ async function patch(npmRoot) {
         // Both rename targets are direct children of the verified npm node_modules.
         await fs.rename(destination, rollback); moved = true;
         await fs.rename(staged, destination); activated = true;
-        const checks = JSON.parse(execFileSync(process.execPath, [__filename, '--verify', npmRoot], { encoding: 'utf8', windowsHide: true, timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] }));
+        const checks = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'verify-npm-glob.cjs'), npmRoot], { encoding: 'utf8', windowsHide: true, timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] }));
         await fs.writeFile(path.join(npmRoot, 'note-security-patches.json'), JSON.stringify({ npm: npm.version, package: 'glob', before: before.version, after: after.version, integrity, checkedAt: new Date().toISOString(), checks }, null, 2));
         moved = false; // Verified installation is committed; cleanup failure must not undo it.
         await removeOwned(modules, path.basename(rollback));
@@ -108,10 +75,9 @@ async function patch(npmRoot) {
     } finally { await removeOwned(modules, path.basename(staged)); }
 }
 if (require.main === module) (async () => {
-    const onlyVerify = process.argv[2] === '--verify';
-    const target = process.argv[onlyVerify ? 3 : 2];
+    const target = process.argv[2];
     assert.ok(target && path.isAbsolute(target), 'Pass the absolute npm package directory');
     const npmRoot = await fs.realpath(target);
-    console.log(JSON.stringify(onlyVerify ? await verify(npmRoot) : await patch(npmRoot)));
+    console.log(JSON.stringify(await patch(npmRoot)));
 })().catch(error => { console.error(JSON.stringify({ name: error.name, code: error.code, message: error.message, actual: error.actual, expected: error.expected })); process.exitCode = 1; });
 module.exports = { patch, verify };
