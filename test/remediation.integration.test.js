@@ -16,7 +16,7 @@ const CheckoutRequest = require('../models/CheckoutRequest');
 const WebhookEvent = require('../models/WebhookEvent');
 
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-remediation' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.38' }, instance: { ip: '127.0.0.1', dbName: 'note-test-remediation' }, spawn: { windowsHide: true } });
     env.MONGO_URI = database.getUri('note-test-remediation');
     await mongoose.connect(env.MONGO_URI);
     app = require('../app').createApp({ env, stripe, mailProvider: { emails: { send: async () => ({ data: { id: 'synthetic-mail' } }) } } });

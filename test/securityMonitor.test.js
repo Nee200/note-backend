@@ -103,7 +103,7 @@ test('missing, failed and stale sources never render as a fresh clean scan', () 
 let mongo, server, base, app, queued = 0;
 const env = { NODE_ENV: 'test', JWT_SECRET: 'synthetic-monitor-test-secret-over-32-bytes', ADMIN_PASSWORD: 'synthetic-admin-monitor-password', FRONTEND_PUBLIC_URL: 'http://localhost:5500', INVOICES_ENABLED: 'false', STRIPE_SECRET_KEY: 'sk_test_synthetic', STRIPE_WEBHOOK_SECRET: 'whsec_synthetic' };
 before(async () => {
-    mongo = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-security-monitor' }, spawn: { windowsHide: true } });
+    mongo = await MongoMemoryServer.create({ binary: { version: '8.0.38' }, instance: { ip: '127.0.0.1', dbName: 'note-test-security-monitor' }, spawn: { windowsHide: true } });
     env.MONGO_URI = mongo.getUri('note-test-security-monitor');
     await mongoose.connect(env.MONGO_URI);
     app = require('../app').createApp({ env, stripe: { webhooks: {} }, mailProvider: { emails: { send: async () => { throw Error('No mail allowed'); } } }, securityMonitor: { status: async () => ({ sources: [], enabled: true }), request: async () => { queued++; return { accepted: true, reason: 'queued' }; } } });

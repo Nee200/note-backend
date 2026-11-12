@@ -21,7 +21,7 @@ const env = {
 };
 
 before(async () => {
-    database = await MongoMemoryServer.create({ binary: { version: '8.0.34' }, instance: { ip: '127.0.0.1', dbName: 'note-test-registration-security' }, spawn: { windowsHide: true } });
+    database = await MongoMemoryServer.create({ binary: { version: '8.0.38' }, instance: { ip: '127.0.0.1', dbName: 'note-test-registration-security' }, spawn: { windowsHide: true } });
     env.MONGO_URI = database.getUri('note-test-registration-security');
     await mongoose.connect(env.MONGO_URI);
     const app = require('../app').createApp({
